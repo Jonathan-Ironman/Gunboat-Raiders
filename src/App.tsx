@@ -3,6 +3,7 @@ import { Canvas } from '@react-three/fiber';
 import { KeyboardControls } from '@react-three/drei';
 import { Physics } from '@react-three/rapier';
 import { Water } from './environment/Water';
+import { Rocks } from './environment/Rocks';
 import { WaterProvider } from './environment/WaterContext';
 import { SkySetup } from './environment/Sky';
 import { PlayerBoat } from './entities/PlayerBoat';
@@ -83,6 +84,7 @@ export function App() {
             <Suspense fallback={null}>
               <Physics gravity={[0, -9.81, 0]}>
                 <GameEntities />
+                <Rocks />
               </Physics>
             </Suspense>
             <Water />
