@@ -21,6 +21,7 @@ import {
   registerEnemyBody,
   unregisterEnemyBody,
 } from '../systems/physicsRefs';
+import { BOAT_MASS } from '../utils/constants';
 
 // Preload models
 useGLTF.preload('/models/enemy-skiff.glb');
@@ -33,6 +34,15 @@ const CANNON_ROTATION_BY_QUADRANT: Record<string, number> = {
   starboard: Math.PI / 2,
   aft: Math.PI,
 };
+
+/**
+ * Enemy collider half-extents. Used to compute density so Rapier body mass
+ * matches BOAT_MASS from constants (required for correct buoyancy forces).
+ */
+const ENEMY_HALF_EXTENTS: [number, number, number] = [0.8, 0.5, 1.8];
+const ENEMY_COLLIDER_VOLUME =
+  2 * ENEMY_HALF_EXTENTS[0] * 2 * ENEMY_HALF_EXTENTS[1] * 2 * ENEMY_HALF_EXTENTS[2];
+const ENEMY_DENSITY = BOAT_MASS / ENEMY_COLLIDER_VOLUME;
 
 /** Collision groups: enemy collides with player, player projectile, environment, other enemies */
 const ENEMY_COLLISION_GROUPS = interactionGroups(COLLISION_GROUPS.ENEMY, [
@@ -124,7 +134,11 @@ export function EnemyBoat({ id, enemyType, position }: EnemyBoatProps) {
       position={position}
       colliders={false}
     >
-      <CuboidCollider args={[0.8, 0.5, 1.8]} collisionGroups={ENEMY_COLLISION_GROUPS} />
+      <CuboidCollider
+        args={ENEMY_HALF_EXTENTS}
+        collisionGroups={ENEMY_COLLISION_GROUPS}
+        density={ENEMY_DENSITY}
+      />
 
       {/* Enemy boat model */}
       <primitive object={boatGltf.scene.clone()} scale={[1, 1, 1]} rotation={[0, 0, 0]} />

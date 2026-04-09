@@ -10,6 +10,7 @@ import { useFrame } from '@react-three/fiber';
 import { useGameStore } from '@/store/gameStore';
 import { getExpiredProjectiles } from './ProjectileSystem';
 import { getProjectilePoolManager } from './projectilePoolRefs';
+import { getAllProjectileBodyStates } from './physicsRefs';
 import { emitVfxEvent } from '@/effects/vfxEvents';
 
 /** Tracks which pool slots have already triggered a splash to avoid duplicates. */
@@ -36,31 +37,29 @@ export function ProjectileSystemR3F() {
     const poolManager = getProjectilePoolManager();
 
     // --- Water splash detection ---
-    // Check active projectile bodies crossing Y=0 (water surface)
-    if (poolManager) {
-      const bodies = poolManager.getBodies();
-      const prevY = prevYRef.current;
-      for (let i = 0; i < bodies.length; i++) {
-        const body = bodies[i];
-        if (!body) continue;
-        const pos = body.translation();
-        // Skip sleeping/deactivated bodies (far below world)
-        if (pos.y < -100) {
-          prevY.delete(i);
-          splashedSlots.delete(i);
-          continue;
-        }
-        const py = prevY.get(i);
-        if (py !== undefined && py > 0 && pos.y <= 0 && !splashedSlots.has(i)) {
-          // Projectile just crossed water surface
-          splashedSlots.add(i);
-          emitVfxEvent({
-            type: 'water-splash',
-            position: [pos.x, 0, pos.z],
-            time: performance.now() / 1000,
-          });
-        }
-        prevY.set(i, pos.y);
+    // Read from cached projectile body states (safe during useFrame)
+    const projectileStates = getAllProjectileBodyStates();
+    const prevY = prevYRef.current;
+    for (const [i, state] of projectileStates) {
+      const pos = state.position;
+      const py = prevY.get(i);
+      if (py !== undefined && py > 0 && pos.y <= 0 && !splashedSlots.has(i)) {
+        // Projectile just crossed water surface
+        splashedSlots.add(i);
+        emitVfxEvent({
+          type: 'water-splash',
+          position: [pos.x, 0, pos.z],
+          time: performance.now() / 1000,
+        });
+      }
+      prevY.set(i, pos.y);
+    }
+
+    // Clean up tracking for slots no longer in the cache
+    for (const i of prevY.keys()) {
+      if (!projectileStates.has(i)) {
+        prevY.delete(i);
+        splashedSlots.delete(i);
       }
     }
 
@@ -70,21 +69,12 @@ export function ProjectileSystemR3F() {
       store.removeProjectile(id);
 
       // Deactivate pool slot — find by index
-      // Note: since we use nanoid for projectile IDs and numeric pool indices,
-      // the pool deactivation is handled separately.
-      // For a simple MVP, deactivate all active slots for expired projectiles.
       if (poolManager) {
-        const bodies = poolManager.getBodies();
-        for (let i = 0; i < bodies.length; i++) {
-          const body = bodies[i];
-          if (body) {
-            const pos = body.translation();
-            // Deactivate bodies that have fallen below sea level significantly
-            // (they've hit something or expired)
-            if (pos.y < -50) {
-              poolManager.deactivate(i);
-              splashedSlots.delete(i);
-            }
+        for (const [i, state] of projectileStates) {
+          // Deactivate bodies that have fallen below sea level significantly
+          if (state.position.y < -50) {
+            poolManager.deactivate(i);
+            splashedSlots.delete(i);
           }
         }
       }

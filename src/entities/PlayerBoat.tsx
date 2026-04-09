@@ -17,6 +17,8 @@ import {
   unregisterBuoyancyBody,
   setPlayerBody,
 } from '../systems/physicsRefs';
+import { BOAT_MASS } from '../utils/constants';
+import type { Mesh } from 'three';
 
 // Preload models for better loading performance
 useGLTF.preload('/models/player-boat.glb');
@@ -31,6 +33,15 @@ const CANNON_ROTATION_BY_QUADRANT: Record<string, number> = {
   starboard: Math.PI / 2, // faces +X (right)
   aft: Math.PI, // faces -Z (backward)
 };
+
+/**
+ * Player collider half-extents. Used to compute density so Rapier body mass
+ * matches BOAT_MASS from constants (required for correct buoyancy forces).
+ */
+const PLAYER_HALF_EXTENTS: [number, number, number] = [1.2, 0.75, 2.5];
+const PLAYER_COLLIDER_VOLUME =
+  2 * PLAYER_HALF_EXTENTS[0] * 2 * PLAYER_HALF_EXTENTS[1] * 2 * PLAYER_HALF_EXTENTS[2];
+const PLAYER_DENSITY = BOAT_MASS / PLAYER_COLLIDER_VOLUME;
 
 /** Collision groups: player collides with enemy, enemy projectile, environment */
 const PLAYER_COLLISION_GROUPS = interactionGroups(COLLISION_GROUPS.PLAYER, [
@@ -68,6 +79,30 @@ export function PlayerBoat() {
     }
   });
 
+  // Debug: log model bounding box on mount
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      const scene = boatGltf.scene;
+      scene.traverse((obj) => {
+        if ('isMesh' in obj && obj.isMesh === true) {
+          const mesh = obj as Mesh;
+          mesh.geometry.computeBoundingBox();
+          const bb = mesh.geometry.boundingBox;
+          if (bb) {
+            console.log(
+              '[PlayerBoat] Mesh bbox:',
+              JSON.stringify({
+                name: mesh.name,
+                min: [bb.min.x, bb.min.y, bb.min.z],
+                max: [bb.max.x, bb.max.y, bb.max.z],
+              }),
+            );
+          }
+        }
+      });
+    }
+  }, [boatGltf]);
+
   // Get weapon mounts from player stats for cannon placement
   const weaponMounts = BOAT_STATS.player.weapons.mounts;
 
@@ -76,12 +111,16 @@ export function PlayerBoat() {
       ref={rigidBodyRef}
       type="dynamic"
       gravityScale={0}
-      linearDamping={0.8}
+      linearDamping={0.5}
       angularDamping={3.0}
-      position={[0, 5.0, 0]}
+      position={[0, 1.0, 0]}
       colliders={false}
     >
-      <CuboidCollider args={[1.2, 0.75, 2.5]} collisionGroups={PLAYER_COLLISION_GROUPS} />
+      <CuboidCollider
+        args={PLAYER_HALF_EXTENTS}
+        collisionGroups={PLAYER_COLLISION_GROUPS}
+        density={PLAYER_DENSITY}
+      />
 
       {/* Player boat model */}
       <primitive object={boatGltf.scene.clone()} scale={[1, 1, 1]} rotation={[0, 0, 0]} />

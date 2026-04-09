@@ -9,7 +9,7 @@ interface BoatStatPreset {
 export const BOAT_STATS = {
   player: {
     health: { armor: 100, armorMax: 100, armorRegenRate: 3, hull: 100, hullMax: 100 },
-    movement: { thrustForce: 800, reverseForce: 300, turnTorque: 200, maxSpeed: 15 },
+    movement: { thrustForce: 1800, reverseForce: 600, turnTorque: 400, maxSpeed: 20 },
     weapons: {
       cooldown: 2.0,
       damage: 25,

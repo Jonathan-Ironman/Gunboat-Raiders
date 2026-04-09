@@ -15,7 +15,7 @@ import {
   Vector3,
 } from 'three';
 import { useGameStore, type FiringQuadrant, type WeaponMount } from '@/store/gameStore';
-import { getPlayerBody } from '@/systems/physicsRefs';
+import { getPlayerBodyState } from '@/systems/physicsRefs';
 
 const TRAJECTORY_STEPS = 60;
 const TRAJECTORY_DT = 0.05; // seconds per step
@@ -103,8 +103,9 @@ export function TrajectoryPreview() {
 
   useFrame(() => {
     const line = lineObjRef.current;
-    const body = getPlayerBody();
-    if (!body) return;
+    // Read from cached body state (safe during useFrame)
+    const bodyState = getPlayerBodyState();
+    if (!bodyState) return;
 
     const store = useGameStore.getState();
     const { player, activeQuadrant } = store;
@@ -113,8 +114,8 @@ export function TrajectoryPreview() {
     const mountData = getMeanMountData(player.weapons.mounts, activeQuadrant);
     if (!mountData) return;
 
-    const bPos = body.translation();
-    const bRot = body.rotation();
+    const bPos = bodyState.position;
+    const bRot = bodyState.rotation;
 
     // Transform mount offset to world space
     const worldOffset = rotateVec(mountData.offset, bRot.x, bRot.y, bRot.z, bRot.w);

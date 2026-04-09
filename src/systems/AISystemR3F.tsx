@@ -7,7 +7,7 @@
 import { useFrame } from '@react-three/fiber';
 import { Euler, Quaternion } from 'three';
 import { useGameStore } from '@/store/gameStore';
-import { getEnemyBody, getPlayerBody } from './physicsRefs';
+import { getEnemyBody, getPlayerBodyState, getEnemyBodyState } from './physicsRefs';
 import { getProjectilePoolManager } from './projectilePoolRefs';
 import { computeAIDecision } from './AISystem';
 import type { AIContext } from './AISystem';
@@ -27,11 +27,15 @@ export function AISystemR3F() {
     const { enemies, player } = store;
     if (!player) return;
 
-    const playerBody = getPlayerBody();
-    if (!playerBody) return;
+    // Read player position from cached state (safe during useFrame)
+    const playerState = getPlayerBodyState();
+    if (!playerState) return;
 
-    const playerPos = playerBody.translation();
-    const playerPosition: [number, number, number] = [playerPos.x, playerPos.y, playerPos.z];
+    const playerPosition: [number, number, number] = [
+      playerState.position.x,
+      playerState.position.y,
+      playerState.position.z,
+    ];
 
     const updatedEnemies = new Map(enemies);
     let hasChanges = false;
@@ -39,15 +43,19 @@ export function AISystemR3F() {
     for (const [id, enemy] of enemies) {
       if (!enemy.ai) continue;
 
+      // Read position/rotation from cached state (safe during useFrame)
+      const bodyState = getEnemyBodyState(id);
+      if (!bodyState) continue;
+
+      // Keep body ref for force application (writes are safe)
       const body = getEnemyBody(id);
       if (!body) continue;
 
       // Skip sinking enemies (animation handled by EnemyBoat component)
       if (enemy.isSinking) continue;
 
-      // Read position and heading from rigid body
-      const pos = body.translation();
-      const rot = body.rotation();
+      const pos = bodyState.position;
+      const rot = bodyState.rotation;
 
       // Guard against NaN state
       if (!isFinite(pos.x) || !isFinite(pos.y) || !isFinite(pos.z)) continue;

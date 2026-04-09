@@ -328,3 +328,8 @@ export const useGameStore = create<GameState>()((set, get) => ({
     });
   },
 }));
+
+// Expose store on window for debugging in development
+if (import.meta.env.DEV && typeof window !== 'undefined') {
+  (window as unknown as Record<string, unknown>).__GAME_STORE__ = useGameStore;
+}

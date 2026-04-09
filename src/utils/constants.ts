@@ -14,7 +14,7 @@ export const BUOYANCY_STRENGTH = 19620;
 
 /** Velocity-proportional vertical damping to prevent oscillation (multiplied by mass).
  *  Higher values = more critically damped = less bouncing. Range 4-12 typical. */
-export const BUOYANCY_VERTICAL_DAMPING = 8.0;
+export const BUOYANCY_VERTICAL_DAMPING = 10.0;
 
 /** Angular velocity damping for rotational stability (multiplied by mass).
  *  Stacks with Rapier's angularDamping on the RigidBody. */

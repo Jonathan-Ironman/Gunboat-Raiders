@@ -11,7 +11,7 @@
 import { useRef, useEffect, useCallback } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Euler, Quaternion, Vector3 } from 'three';
-import { getPlayerBody } from './physicsRefs';
+import { getPlayerBodyState } from './physicsRefs';
 import { computeQuadrant } from './CameraSystem';
 import { useGameStore } from '@/store/gameStore';
 
@@ -75,10 +75,12 @@ export function CameraSystemR3F() {
   }, [gl.domElement, onPointerDown, onPointerUp, onPointerMove]);
 
   useFrame(({ camera }) => {
-    const body = getPlayerBody();
-    if (!body) return;
+    // Read from cached body state (populated by PhysicsSyncSystem after each
+    // physics step) to avoid Rapier WASM "recursive use of an object" errors.
+    const bodyState = getPlayerBodyState();
+    if (!bodyState) return;
 
-    const pos = body.translation();
+    const pos = bodyState.position;
     if (!isFinite(pos.x) || !isFinite(pos.y) || !isFinite(pos.z)) return;
 
     // Guard: skip camera updates while physics body is at extreme positions
@@ -113,8 +115,8 @@ export function CameraSystemR3F() {
     _lookDir.subVectors(_target, _cameraPos);
     const cameraAngle = Math.atan2(_lookDir.x, _lookDir.z);
 
-    // Get boat heading from rigid body quaternion
-    const rot = body.rotation();
+    // Get boat heading from cached rotation
+    const rot = bodyState.rotation;
     _quat.set(rot.x, rot.y, rot.z, rot.w);
     _euler.setFromQuaternion(_quat, 'YXZ');
     const boatHeading = _euler.y;

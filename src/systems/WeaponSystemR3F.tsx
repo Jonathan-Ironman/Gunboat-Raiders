@@ -9,7 +9,7 @@ import { useEffect, useCallback, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Euler, Quaternion } from 'three';
 import { useGameStore } from '@/store/gameStore';
-import { getPlayerBody } from './physicsRefs';
+import { getPlayerBodyState } from './physicsRefs';
 import { getProjectilePoolManager } from './projectilePoolRefs';
 import { tickCooldowns, canFire, computeFireData } from './WeaponSystem';
 import { emitVfxEvent } from '@/effects/vfxEvents';
@@ -70,11 +70,12 @@ export function WeaponSystemR3F() {
       const quadrant = store.activeQuadrant;
 
       if (canFire(updatedWeaponState, quadrant)) {
-        const body = getPlayerBody();
-        if (!body) return;
+        // Read from cached body state (safe during useFrame)
+        const bodyState = getPlayerBodyState();
+        if (!bodyState) return;
 
-        const pos = body.translation();
-        const rot = body.rotation();
+        const pos = bodyState.position;
+        const rot = bodyState.rotation;
 
         // Get boat heading for elevation application
         _quat.set(rot.x, rot.y, rot.z, rot.w);

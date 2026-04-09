@@ -15,7 +15,9 @@ import { CameraSystemR3F } from './systems/CameraSystemR3F';
 import { WeaponSystemR3F } from './systems/WeaponSystemR3F';
 import { ProjectileSystemR3F } from './systems/ProjectileSystemR3F';
 import { AISystemR3F } from './systems/AISystemR3F';
+import { DamageSystemR3F } from './systems/DamageSystemR3F';
 import { WaveSystemR3F } from './systems/WaveSystemR3F';
+import { PhysicsSyncSystem } from './systems/PhysicsSyncSystem';
 import { TrajectoryPreview } from './effects/TrajectoryPreview';
 import { PostProcessing } from './effects/PostProcessing';
 import { ParticleManager } from './effects/ParticleManager';
@@ -23,6 +25,7 @@ import { useGameStore } from './store/gameStore';
 import { HUD } from './ui/HUD';
 import { TitleScreen } from './ui/TitleScreen';
 import { GameOverScreen } from './ui/GameOverScreen';
+import { PerfMonitorR3F } from './components/PerfMonitorR3F';
 
 const KEY_MAP = [
   { name: 'forward', keys: ['KeyW', 'ArrowUp'] },
@@ -65,6 +68,7 @@ function GameEntities() {
       <WeaponSystemR3F />
       <ProjectileSystemR3F />
       <AISystemR3F />
+      <DamageSystemR3F />
       <WaveSystemR3F />
       <TrajectoryPreview />
     </>
@@ -84,7 +88,13 @@ export function App() {
           <color attach="background" args={['#1a2a3a']} />
           <WaterProvider>
             <Suspense fallback={null}>
-              <Physics gravity={[0, -9.81, 0]}>
+              <Physics
+                gravity={[0, -9.81, 0]}
+                timeStep="vary"
+                interpolate={false}
+                updatePriority={-50}
+              >
+                <PhysicsSyncSystem />
                 <GameEntities />
                 <Rocks />
               </Physics>
@@ -94,6 +104,7 @@ export function App() {
             <CameraSystemR3F />
             <ParticleManager />
             <PostProcessing />
+            {import.meta.env.DEV && <PerfMonitorR3F />}
             <ambientLight intensity={0.5} />
             <directionalLight position={[100, 40, -100]} intensity={1.5} castShadow />
           </WaterProvider>
