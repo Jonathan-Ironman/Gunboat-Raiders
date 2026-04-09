@@ -1,15 +1,15 @@
 /**
  * Player boat entity — RigidBody with loaded 3D model and cannon mounts.
  *
- * Registers itself in the Zustand store on mount and with the buoyancy/movement
- * systems via their global registries.
+ * Registers itself with the buoyancy/movement systems via their global registries
+ * on mount. The player entity is pre-created in the store by startGame() before
+ * this component renders.
  */
 
 import { useEffect, useRef } from 'react';
 import { useGLTF } from '@react-three/drei';
 import { RigidBody, CuboidCollider, interactionGroups } from '@react-three/rapier';
 import type { RapierRigidBody } from '@react-three/rapier';
-import { useGameStore } from '../store/gameStore';
 import { BOAT_STATS } from '../utils/boatStats';
 import { COLLISION_GROUPS } from '../utils/collisionGroups';
 import {
@@ -44,10 +44,10 @@ export function PlayerBoat() {
   const boatGltf = useGLTF('/models/player-boat.glb');
   const cannonGltf = useGLTF('/models/cannon.glb');
 
-  // Spawn player in store and register with physics systems
+  // Register with physics systems on mount; clean up on unmount.
+  // The player entity is created in the store by startGame() before GameEntities
+  // renders, so we do not call spawnPlayer() here.
   useEffect(() => {
-    useGameStore.getState().spawnPlayer();
-
     return () => {
       unregisterBuoyancyBody(PLAYER_ID);
       setPlayerBody(null);

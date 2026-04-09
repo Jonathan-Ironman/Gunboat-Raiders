@@ -132,6 +132,12 @@ export interface GameState {
   addScore: (points: number) => void;
   setPhase: (phase: GamePhase) => void;
   resetGame: () => void;
+  /**
+   * Atomically reset all game state and start a new game session.
+   * Use this instead of resetGame() + spawnPlayer() to avoid an intermediate
+   * phase='title' render that would unmount all game entities.
+   */
+  startGame: () => void;
 }
 
 // ---- Initial State ----
@@ -288,6 +294,35 @@ export const useGameStore = create<GameState>()((set, get) => ({
   resetGame: () => {
     set({
       ...INITIAL_STATE,
+      enemies: new Map(),
+      projectiles: new Map(),
+    });
+  },
+
+  startGame: () => {
+    const preset = BOAT_STATS.player;
+    const player: BoatEntity = {
+      id: 'player',
+      type: 'player',
+      health: { ...preset.health },
+      movement: { ...preset.movement },
+      weapons: {
+        ...preset.weapons,
+        mounts: [...preset.weapons.mounts],
+        cooldownRemaining: makeDefaultCooldowns(),
+      },
+      position: [0, 0, 0],
+      rotation: [0, 0, 0, 1],
+      isSinking: false,
+    };
+    // Single atomic set: reset everything and start playing simultaneously.
+    // This prevents the intermediate phase='title' state that would unmount
+    // game entities and break physics body registration.
+    set({
+      ...INITIAL_STATE,
+      phase: 'playing',
+      wave: 1,
+      player,
       enemies: new Map(),
       projectiles: new Map(),
     });

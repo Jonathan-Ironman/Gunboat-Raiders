@@ -70,10 +70,9 @@ function formatScore(value: number): string {
 }
 
 function handlePlayAgain() {
-  const store = useGameStore.getState();
-  store.resetGame();
-  store.spawnPlayer();
-  store.setPhase('playing');
+  // Use startGame() for an atomic transition: single set() call avoids an
+  // intermediate phase='title' render that would unmount game entities.
+  useGameStore.getState().startGame();
 }
 
 export function GameOverScreen() {
