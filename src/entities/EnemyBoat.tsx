@@ -13,6 +13,7 @@ import type { RapierRigidBody } from '@react-three/rapier';
 import { useGameStore } from '../store/gameStore';
 import type { EnemyType } from '../store/gameStore';
 import { BOAT_STATS } from '../utils/boatStats';
+import { EnemyHealthBar } from '../ui/EnemyHealthBar';
 import { COLLISION_GROUPS } from '../utils/collisionGroups';
 import {
   registerBuoyancyBody,
@@ -55,6 +56,9 @@ export function EnemyBoat({ id, enemyType, position }: EnemyBoatProps) {
   const rigidBodyRef = useRef<RapierRigidBody>(null);
   const sinkTimerRef = useRef(0);
   const isSinkingRef = useRef(false);
+
+  // Reactive health for the health bar UI
+  const enemyHealth = useGameStore((s) => s.enemies.get(id)?.health ?? null);
 
   const boatGltf = useGLTF('/models/enemy-skiff.glb');
   const cannonGltf = useGLTF('/models/cannon.glb');
@@ -135,6 +139,9 @@ export function EnemyBoat({ id, enemyType, position }: EnemyBoatProps) {
           scale={[0.5, 0.5, 0.5]}
         />
       ))}
+
+      {/* Health bar above enemy (only visible when damaged) */}
+      {enemyHealth && <EnemyHealthBar health={enemyHealth} />}
     </RigidBody>
   );
 }

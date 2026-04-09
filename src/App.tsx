@@ -17,6 +17,9 @@ import { AISystemR3F } from './systems/AISystemR3F';
 import { WaveSystemR3F } from './systems/WaveSystemR3F';
 import { TrajectoryPreview } from './effects/TrajectoryPreview';
 import { useGameStore } from './store/gameStore';
+import { HUD } from './ui/HUD';
+import { TitleScreen } from './ui/TitleScreen';
+import { GameOverScreen } from './ui/GameOverScreen';
 
 const KEY_MAP = [
   { name: 'forward', keys: ['KeyW', 'ArrowUp'] },
@@ -44,41 +47,57 @@ function EnemyFleet() {
   );
 }
 
+/** Game entities that only render when not on title screen. */
+function GameEntities() {
+  const phase = useGameStore((s) => s.phase);
+  if (phase === 'title') return null;
+
+  return (
+    <>
+      <PlayerBoat />
+      <EnemyFleet />
+      <ProjectilePool />
+      <BuoyancySystemR3F />
+      <MovementSystemR3F />
+      <WeaponSystemR3F />
+      <ProjectileSystemR3F />
+      <AISystemR3F />
+      <WaveSystemR3F />
+      <TrajectoryPreview />
+    </>
+  );
+}
+
 export function App() {
   const keyMap = useMemo(() => KEY_MAP, []);
 
   return (
     <KeyboardControls map={keyMap}>
-      <Canvas
-        camera={{ position: [0, 8, 25], fov: 60 }}
-        style={{ width: '100vw', height: '100vh', display: 'block' }}
-      >
-        {/* Fallback background — Sky dome covers most of the view.
-            No scene-level fog: the water shader handles its own distance fog,
-            preventing fog from washing out the Sky dome. */}
-        <color attach="background" args={['#1a2a3a']} />
-        <WaterProvider>
-          <Suspense fallback={null}>
-            <Physics gravity={[0, -9.81, 0]}>
-              <PlayerBoat />
-              <EnemyFleet />
-              <ProjectilePool />
-              <BuoyancySystemR3F />
-              <MovementSystemR3F />
-              <WeaponSystemR3F />
-              <ProjectileSystemR3F />
-              <AISystemR3F />
-              <WaveSystemR3F />
-            </Physics>
-          </Suspense>
-          <Water />
-          <SkySetup />
-          <CameraSystemR3F />
-          <TrajectoryPreview />
-          <ambientLight intensity={0.5} />
-          <directionalLight position={[100, 40, -100]} intensity={1.5} castShadow />
-        </WaterProvider>
-      </Canvas>
+      <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>
+        <Canvas
+          camera={{ position: [0, 8, 25], fov: 60 }}
+          style={{ width: '100%', height: '100%', display: 'block' }}
+        >
+          <color attach="background" args={['#1a2a3a']} />
+          <WaterProvider>
+            <Suspense fallback={null}>
+              <Physics gravity={[0, -9.81, 0]}>
+                <GameEntities />
+              </Physics>
+            </Suspense>
+            <Water />
+            <SkySetup />
+            <CameraSystemR3F />
+            <ambientLight intensity={0.5} />
+            <directionalLight position={[100, 40, -100]} intensity={1.5} castShadow />
+          </WaterProvider>
+        </Canvas>
+
+        {/* HTML overlay UI -- sibling div outside Canvas */}
+        <HUD />
+        <TitleScreen />
+        <GameOverScreen />
+      </div>
     </KeyboardControls>
   );
 }
