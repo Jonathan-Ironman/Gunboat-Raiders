@@ -1,5 +1,6 @@
 import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
+import type { ShaderMaterial } from 'three';
 import { vertexShader, fragmentShader } from './waterShader';
 import { initWaves, DEFAULT_WAVES } from './gerstnerWaves';
 
@@ -28,46 +29,48 @@ function encodeWaveData(waves: ReturnType<typeof initWaves>): Float32Array {
   return data;
 }
 
-/** Typed uniform wrapper to avoid Three.js `any` in IUniform.value */
-interface WaterUniforms {
-  [uniform: string]: { value: number } | { value: Float32Array };
-  uTime: { value: number };
-  uWaveData: { value: Float32Array };
-}
-
 /**
  * Ocean surface mesh with Gerstner wave displacement via custom shaders.
  * PlaneGeometry lies in the XZ plane at Y=0.
+ *
+ * The material ref is used to update uTime directly on the GPU material
+ * each frame. Updating a detached uniforms object does NOT propagate to
+ * the ShaderMaterial instance created by R3F's reconciler — we must
+ * mutate material.uniforms.uTime.value via the ref.
  */
 export function Water() {
-  const uniformsRef = useRef<WaterUniforms | null>(null);
+  const matRef = useRef<ShaderMaterial>(null);
 
   const uniforms = useMemo(() => {
     const waves = initWaves([...DEFAULT_WAVES]);
     const waveData = encodeWaveData(waves);
-    const u: WaterUniforms = {
+    return {
       uTime: { value: 0 },
       uWaveData: { value: waveData },
     };
-    uniformsRef.current = u;
-    return u;
   }, []);
 
   useFrame((state) => {
-    const u = uniformsRef.current;
-    if (u) {
-      u.uTime.value = state.clock.elapsedTime;
+    const mat = matRef.current;
+    if (mat) {
+      const uTime = mat.uniforms['uTime'];
+      if (uTime) {
+        uTime.value = state.clock.elapsedTime;
+      }
     }
   });
 
   return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} renderOrder={-1}>
       <planeGeometry args={[PLANE_SIZE, PLANE_SIZE, PLANE_SEGMENTS, PLANE_SEGMENTS]} />
       <shaderMaterial
+        ref={matRef}
         vertexShader={vertexShader}
         fragmentShader={fragmentShader}
         uniforms={uniforms}
         toneMapped={false}
+        depthWrite={true}
+        depthTest={true}
       />
     </mesh>
   );

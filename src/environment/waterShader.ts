@@ -3,15 +3,15 @@
  * The vertex shader applies the same Gerstner formula as gerstnerWaves.ts (CPU mirror).
  */
 
-const NUM_WAVES = '4';
-const WAVE_DATA_LENGTH = '28'; // 4 waves * 7 floats per wave
+const NUM_WAVES = '8';
+const WAVE_DATA_LENGTH = '56'; // 8 waves * 7 floats per wave
 
 /**
  * Vertex shader: displaces a subdivided XZ plane using Gerstner waves.
  *
  * Uniforms:
  *   uTime — elapsed time in seconds
- *   uWaveData — flat array encoding 4 waves:
+ *   uWaveData — flat array encoding 8 waves:
  *     per wave: [dirX, dirZ, steepness, wavelength, amplitude, speed, phase] = 7 floats
  */
 export const vertexShader = /* glsl */ `
@@ -26,47 +26,88 @@ export const vertexShader = /* glsl */ `
   varying vec3 vNormal;
   varying vec3 vWorldPosition;
   varying float vHeight;
+  varying float vFoam;
+
+  // Hash-based noise for spatial amplitude modulation
+  float vertHash(vec2 p) {
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+  }
+
+  float vertNoise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    float a = vertHash(i);
+    float b = vertHash(i + vec2(1.0, 0.0));
+    float c = vertHash(i + vec2(0.0, 1.0));
+    float d = vertHash(i + vec2(1.0, 1.0));
+    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+  }
 
   void main() {
+    // PlaneGeometry is in XY plane (z=0 for all verts).
+    // Mesh is rotated -PI/2 around X, so local Y -> world Z, local Z -> world Y.
+    // We sample waves using local X (world X) and local Y (world Z).
     vec3 pos = position;
+    float gridX = pos.x;
+    float gridZ = pos.y; // local Y maps to world Z after rotation
+
     float dx = 0.0;
-    float dy = 0.0;
+    float dy = 0.0;  // vertical displacement (height)
     float dz = 0.0;
     float dNx = 0.0;
     float dNz = 0.0;
+    float jacobian = 1.0;
+
+    // Spatial amplitude modulation — drifting patches of calmer/rougher water
+    float modNoise = vertNoise(vec2(gridX * 0.005, gridZ * 0.005) + uTime * 0.01);
+    float ampMod = mix(0.6, 1.2, modNoise);
 
     for (int i = 0; i < NUM_WAVES; i++) {
       int base = i * 7;
       float dirX       = uWaveData[base + 0];
       float dirZ       = uWaveData[base + 1];
-      // steepness at base+2 (not used directly in displacement, encoded in amplitude)
+      float steepness  = uWaveData[base + 2];
       float wavelength  = uWaveData[base + 3];
       float amplitude   = uWaveData[base + 4];
       float speed       = uWaveData[base + 5];
       float phase       = uWaveData[base + 6];
 
+      // Modulate amplitude for first 2 waves (primary + secondary swell)
+      float amp = (i < 2) ? amplitude * ampMod : amplitude;
+
       float k = TWO_PI / wavelength;
-      float theta = k * (dirX * pos.x + dirZ * pos.z) - speed * k * uTime + phase;
+      float theta = k * (dirX * gridX + dirZ * gridZ) - speed * k * uTime + phase;
       float s = sin(theta);
       float c = cos(theta);
 
-      dx += dirX * amplitude * c;
-      dz += dirZ * amplitude * c;
-      dy += amplitude * s;
+      dx += dirX * amp * c;
+      dz += dirZ * amp * c;
+      dy += amp * s;
 
-      dNx += dirX * k * amplitude * c;
-      dNz += dirZ * k * amplitude * c;
+      dNx += dirX * k * amp * c;
+      dNz += dirZ * k * amp * c;
+
+      // Jacobian: track horizontal compression for foam
+      jacobian -= k * amp * steepness * c;
     }
 
+    // Apply displacements in LOCAL space:
+    // dx  -> local X (horizontal, world X)
+    // dz  -> local Y (horizontal, world Z after rotation)
+    // dy  -> local Z (vertical / height, world Y after rotation)
     pos.x += dx;
-    pos.z += dz;
-    pos.y += dy;
+    pos.y += dz;
+    pos.z += dy;
 
-    // Surface normal from partial derivatives
+    // Surface normal from partial derivatives, computed in world-aligned space.
+    // Since we only need it in world space for fragment shader lighting,
+    // we pass it directly without normalMatrix (which would transform to view space).
     vec3 n = normalize(vec3(-dNx, 1.0, -dNz));
-    vNormal = normalMatrix * n;
+    vNormal = n;
     vWorldPosition = (modelMatrix * vec4(pos, 1.0)).xyz;
     vHeight = dy;
+    vFoam = clamp((1.0 - jacobian) * 2.0, 0.0, 1.0);
 
     gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
   }
@@ -82,6 +123,7 @@ export const fragmentShader = /* glsl */ `
   varying vec3 vNormal;
   varying vec3 vWorldPosition;
   varying float vHeight;
+  varying float vFoam;
 
   // Simple hash-based noise for normal perturbation (no texture needed)
   float hash(vec2 p) {
@@ -204,10 +246,10 @@ export const fragmentShader = /* glsl */ `
     vec3 specular = sunColor * (specTight * 4.0 + specBroad * 0.25 + specWide * 0.05);
     color += specular * fresnel;
 
-    // --- Foam on steep wave crests ---
-    float foam = smoothstep(2.5, 4.0, vHeight) * 0.55;
-    vec3 foamColor = vec3(0.75, 0.85, 0.92);
-    color = mix(color, foamColor, foam);
+    // --- Jacobian-based foam on wave crests ---
+    float foam = vFoam;
+    vec3 foamColor = vec3(0.9, 0.95, 1.0);
+    color = mix(color, foamColor, foam * 0.6);
 
     // --- Sky reflection via Fresnel ---
     vec3 reflectDir = reflect(-viewDir, normal);
@@ -225,7 +267,7 @@ export const fragmentShader = /* glsl */ `
     // --- Distance fog for seamless horizon ---
     float dist = length(vWorldPosition - cameraPosition);
     float fogFactor = smoothstep(200.0, 800.0, dist);
-    vec3 fogColor = vec3(0.42, 0.55, 0.68);
+    vec3 fogColor = vec3(0.55, 0.65, 0.78);
     color = mix(color, fogColor, fogFactor);
 
     gl_FragColor = vec4(color, 1.0);

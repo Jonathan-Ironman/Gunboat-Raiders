@@ -22,12 +22,12 @@ export interface WaveSample {
 
 export const DEFAULT_WAVES: readonly GerstnerWave[] = [
   // Primary swell — large, slow, dramatic rolling waves
-  { direction: [0.8, 0.6], steepness: 0.45, wavelength: 90, amplitude: 0, speed: 0, phase: 0 },
+  { direction: [0.8, 0.6], steepness: 0.55, wavelength: 80, amplitude: 0, speed: 0, phase: 0 },
   // Secondary swell — crosses primary for a natural look
   {
     direction: [-0.4, 0.9],
-    steepness: 0.38,
-    wavelength: 60,
+    steepness: 0.48,
+    wavelength: 55,
     amplitude: 0,
     speed: 0,
     phase: 0.7,
@@ -35,8 +35,8 @@ export const DEFAULT_WAVES: readonly GerstnerWave[] = [
   // Medium chop — adds visible detail
   {
     direction: [0.6, -0.8],
-    steepness: 0.3,
-    wavelength: 35,
+    steepness: 0.38,
+    wavelength: 30,
     amplitude: 0,
     speed: 0,
     phase: 1.3,
@@ -44,11 +44,40 @@ export const DEFAULT_WAVES: readonly GerstnerWave[] = [
   // Small chop — fine detail and realism
   {
     direction: [-0.9, -0.4],
-    steepness: 0.22,
-    wavelength: 18,
+    steepness: 0.28,
+    wavelength: 15,
     amplitude: 0,
     speed: 0,
     phase: 2.1,
+  },
+  // Long diagonal swell — breaks tiling patterns
+  { direction: [0.3, 0.95], steepness: 0.22, wavelength: 42, amplitude: 0, speed: 0, phase: 3.5 },
+  // Cross-chop — adds asymmetric detail
+  {
+    direction: [-0.7, 0.3],
+    steepness: 0.18,
+    wavelength: 22,
+    amplitude: 0,
+    speed: 0,
+    phase: 0.4,
+  },
+  // Fine diagonal ripple — high-frequency variety
+  {
+    direction: [0.5, -0.5],
+    steepness: 0.14,
+    wavelength: 11,
+    amplitude: 0,
+    speed: 0,
+    phase: 1.9,
+  },
+  // Micro-chop — subtle texture breaker
+  {
+    direction: [-0.2, -0.8],
+    steepness: 0.1,
+    wavelength: 7,
+    amplitude: 0,
+    speed: 0,
+    phase: 5.1,
   },
 ];
 
