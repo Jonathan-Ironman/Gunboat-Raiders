@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useMemo } from 'react';
+import { Suspense, useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { KeyboardControls } from '@react-three/drei';
 import { Physics } from '@react-three/rapier';
@@ -14,6 +14,7 @@ import { CameraSystemR3F } from './systems/CameraSystemR3F';
 import { WeaponSystemR3F } from './systems/WeaponSystemR3F';
 import { ProjectileSystemR3F } from './systems/ProjectileSystemR3F';
 import { AISystemR3F } from './systems/AISystemR3F';
+import { WaveSystemR3F } from './systems/WaveSystemR3F';
 import { TrajectoryPreview } from './effects/TrajectoryPreview';
 import { useGameStore } from './store/gameStore';
 
@@ -43,18 +44,6 @@ function EnemyFleet() {
   );
 }
 
-/** Spawn test enemies on mount for development verification. */
-function TestEnemySpawner() {
-  useEffect(() => {
-    const store = useGameStore.getState();
-    // Spawn 2 test skiffs at different positions
-    store.spawnEnemy('skiff', [20, 5, -10]);
-    store.spawnEnemy('skiff', [-15, 5, -20]);
-  }, []);
-
-  return null;
-}
-
 export function App() {
   const keyMap = useMemo(() => KEY_MAP, []);
 
@@ -79,7 +68,7 @@ export function App() {
               <WeaponSystemR3F />
               <ProjectileSystemR3F />
               <AISystemR3F />
-              <TestEnemySpawner />
+              <WaveSystemR3F />
             </Physics>
           </Suspense>
           <Water />
