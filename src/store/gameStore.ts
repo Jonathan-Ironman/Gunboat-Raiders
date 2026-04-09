@@ -12,7 +12,13 @@ export type FiringQuadrant = 'fore' | 'aft' | 'port' | 'starboard';
 
 export type EnemyType = 'skiff' | 'barge';
 
-export type AIState = 'spawning' | 'approaching' | 'positioning' | 'broadside' | 'fleeing' | 'sinking';
+export type AIState =
+  | 'spawning'
+  | 'approaching'
+  | 'positioning'
+  | 'broadside'
+  | 'fleeing'
+  | 'sinking';
 
 export type GamePhase = 'title' | 'playing' | 'wave-clear' | 'game-over';
 
@@ -203,11 +209,7 @@ export const useGameStore = create<GameState>()((set, get) => ({
     const enemies = new Map(get().enemies);
     if (enemies.has(id)) {
       enemies.delete(id);
-      set({
-        enemies,
-        enemiesRemaining: Math.max(0, get().enemiesRemaining - 1),
-        enemiesSunkTotal: get().enemiesSunkTotal + 1,
-      });
+      set({ enemies });
     }
   },
 
@@ -231,8 +233,10 @@ export const useGameStore = create<GameState>()((set, get) => ({
     if (targetId === 'player' && player) {
       const health = { ...player.health };
       const armorAbsorb = Math.min(health.armor, damage);
+      const overflow = damage - armorAbsorb;
+      const hullDamage = Math.min(health.hull, overflow);
       health.armor -= armorAbsorb;
-      health.hull -= damage - armorAbsorb;
+      health.hull -= hullDamage;
       const isSinking = health.hull <= 0;
       set({ player: { ...player, health, isSinking } });
       if (isSinking) get().setPhase('game-over');
@@ -243,13 +247,25 @@ export const useGameStore = create<GameState>()((set, get) => ({
     if (enemy) {
       const health = { ...enemy.health };
       const armorAbsorb = Math.min(health.armor, damage);
+      const overflow = damage - armorAbsorb;
+      const hullDamage = Math.min(health.hull, overflow);
       health.armor -= armorAbsorb;
-      health.hull -= damage - armorAbsorb;
+      health.hull -= hullDamage;
       const isSinking = health.hull <= 0;
       const updatedEnemy = { ...enemy, health, isSinking };
       const updatedEnemies = new Map(enemies);
       updatedEnemies.set(targetId, updatedEnemy);
-      set({ enemies: updatedEnemies });
+
+      if (isSinking && !enemy.isSinking) {
+        // Enemy just sunk: decrement remaining, increment total
+        set({
+          enemies: updatedEnemies,
+          enemiesRemaining: Math.max(0, get().enemiesRemaining - 1),
+          enemiesSunkTotal: get().enemiesSunkTotal + 1,
+        });
+      } else {
+        set({ enemies: updatedEnemies });
+      }
     }
   },
 

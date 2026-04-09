@@ -88,7 +88,7 @@ describe('gameStore — applyDamage', () => {
   it('goes straight to hull when armor is depleted', () => {
     getStore().spawnPlayer();
     getStore().applyDamage('player', 100); // deplete armor
-    getStore().applyDamage('player', 50);  // hits hull directly
+    getStore().applyDamage('player', 50); // hits hull directly
     const { player } = getStore();
     expect(player?.health.armor).toBe(0);
     expect(player?.health.hull).toBe(50);
@@ -114,6 +114,34 @@ describe('gameStore — applyDamage', () => {
     expect(enemy?.health.armor).toBe(0);
     expect(enemy?.health.hull).toBe(20);
   });
+
+  it('does not make hull negative on overkill', () => {
+    getStore().spawnPlayer();
+    getStore().applyDamage('player', 9999);
+    expect(getStore().player?.health.hull).toBe(0);
+  });
+
+  it('decrements enemiesRemaining when enemy sinks via applyDamage', () => {
+    const id = getStore().spawnEnemy('skiff', [0, 0, 50]);
+    expect(getStore().enemiesRemaining).toBe(1);
+    // Skiff: armor=30, hull=40 => total 70 to sink
+    getStore().applyDamage(id, 100);
+    expect(getStore().enemiesRemaining).toBe(0);
+  });
+
+  it('increments enemiesSunkTotal when enemy sinks via applyDamage', () => {
+    const id = getStore().spawnEnemy('skiff', [0, 0, 50]);
+    getStore().applyDamage(id, 100);
+    expect(getStore().enemiesSunkTotal).toBe(1);
+  });
+
+  it('does not double-count if applyDamage called on already-sinking enemy', () => {
+    const id = getStore().spawnEnemy('skiff', [0, 0, 50]);
+    getStore().applyDamage(id, 100); // sinks
+    expect(getStore().enemiesSunkTotal).toBe(1);
+    getStore().applyDamage(id, 10); // already sinking
+    expect(getStore().enemiesSunkTotal).toBe(1); // no double-count
+  });
 });
 
 describe('gameStore — removeEnemy', () => {
@@ -123,17 +151,13 @@ describe('gameStore — removeEnemy', () => {
     expect(getStore().enemies.has(id)).toBe(false);
   });
 
-  it('decrements enemiesRemaining', () => {
+  it('does not change counters (applyDamage handles sink counting)', () => {
     const id = getStore().spawnEnemy('skiff', [0, 0, 50]);
     expect(getStore().enemiesRemaining).toBe(1);
     getStore().removeEnemy(id);
-    expect(getStore().enemiesRemaining).toBe(0);
-  });
-
-  it('increments enemiesSunkTotal', () => {
-    const id = getStore().spawnEnemy('skiff', [0, 0, 50]);
-    getStore().removeEnemy(id);
-    expect(getStore().enemiesSunkTotal).toBe(1);
+    // removeEnemy is now a pure cleanup — counters unchanged
+    expect(getStore().enemiesRemaining).toBe(1);
+    expect(getStore().enemiesSunkTotal).toBe(0);
   });
 });
 
