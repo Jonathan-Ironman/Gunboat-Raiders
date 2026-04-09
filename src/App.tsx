@@ -1,4 +1,4 @@
-import { Suspense, useMemo } from 'react';
+import { Suspense, useEffect, useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { KeyboardControls } from '@react-three/drei';
 import { Physics } from '@react-three/rapier';
@@ -6,13 +6,16 @@ import { Water } from './environment/Water';
 import { WaterProvider } from './environment/WaterContext';
 import { SkySetup } from './environment/Sky';
 import { PlayerBoat } from './entities/PlayerBoat';
+import { EnemyBoat } from './entities/EnemyBoat';
 import { ProjectilePool } from './entities/ProjectilePool';
 import { BuoyancySystemR3F } from './systems/BuoyancySystemR3F';
 import { MovementSystemR3F } from './systems/MovementSystemR3F';
 import { CameraSystemR3F } from './systems/CameraSystemR3F';
 import { WeaponSystemR3F } from './systems/WeaponSystemR3F';
 import { ProjectileSystemR3F } from './systems/ProjectileSystemR3F';
+import { AISystemR3F } from './systems/AISystemR3F';
 import { TrajectoryPreview } from './effects/TrajectoryPreview';
+import { useGameStore } from './store/gameStore';
 
 const KEY_MAP = [
   { name: 'forward', keys: ['KeyW', 'ArrowUp'] },
@@ -21,6 +24,36 @@ const KEY_MAP = [
   { name: 'right', keys: ['KeyD', 'ArrowRight'] },
   { name: 'fire', keys: ['Space'] },
 ];
+
+/** Renders all enemy boats from the store. */
+function EnemyFleet() {
+  const enemies = useGameStore((s) => s.enemies);
+
+  return (
+    <>
+      {[...enemies.values()].map((enemy) => (
+        <EnemyBoat
+          key={enemy.id}
+          id={enemy.id}
+          enemyType={enemy.enemyType ?? 'skiff'}
+          position={enemy.position}
+        />
+      ))}
+    </>
+  );
+}
+
+/** Spawn test enemies on mount for development verification. */
+function TestEnemySpawner() {
+  useEffect(() => {
+    const store = useGameStore.getState();
+    // Spawn 2 test skiffs at different positions
+    store.spawnEnemy('skiff', [20, 5, -10]);
+    store.spawnEnemy('skiff', [-15, 5, -20]);
+  }, []);
+
+  return null;
+}
 
 export function App() {
   const keyMap = useMemo(() => KEY_MAP, []);
@@ -39,11 +72,14 @@ export function App() {
           <Suspense fallback={null}>
             <Physics gravity={[0, -9.81, 0]}>
               <PlayerBoat />
+              <EnemyFleet />
               <ProjectilePool />
               <BuoyancySystemR3F />
               <MovementSystemR3F />
               <WeaponSystemR3F />
               <ProjectileSystemR3F />
+              <AISystemR3F />
+              <TestEnemySpawner />
             </Physics>
           </Suspense>
           <Water />

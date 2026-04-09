@@ -27,6 +27,31 @@ export function getBuoyancyBodies(): ReadonlyMap<string, RapierRigidBody> {
   return buoyancyBodies;
 }
 
+// ---- Enemy body registry ----
+
+/** Global registry for enemy rigid bodies — set by EnemyBoat on mount. */
+const enemyBodies = new Map<string, RapierRigidBody>();
+
+/** Register an enemy rigid body. */
+export function registerEnemyBody(id: string, body: RapierRigidBody): void {
+  enemyBodies.set(id, body);
+}
+
+/** Unregister an enemy rigid body. */
+export function unregisterEnemyBody(id: string): void {
+  enemyBodies.delete(id);
+}
+
+/** Get all registered enemy rigid bodies. */
+export function getEnemyBodies(): ReadonlyMap<string, RapierRigidBody> {
+  return enemyBodies;
+}
+
+/** Get a specific enemy rigid body by id. */
+export function getEnemyBody(id: string): RapierRigidBody | undefined {
+  return enemyBodies.get(id);
+}
+
 // ---- Player body ref ----
 
 /** Global ref for the player's rigid body — set by PlayerBoat on mount. */
