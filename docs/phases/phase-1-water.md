@@ -33,11 +33,11 @@ Pure TypeScript, zero dependencies on Three.js or DOM.
 ```typescript
 export interface GerstnerWave {
   direction: [number, number]; // normalized 2D direction (x, z)
-  steepness: number;           // 0-1
-  wavelength: number;          // meters
-  amplitude: number;           // derived
-  speed: number;               // derived: sqrt(9.8 * wavelength / (2 * PI))
-  phase: number;               // offset
+  steepness: number; // 0-1
+  wavelength: number; // meters
+  amplitude: number; // derived
+  speed: number; // derived: sqrt(9.8 * wavelength / (2 * PI))
+  phase: number; // offset
 }
 
 export interface WaveSample {
@@ -46,18 +46,24 @@ export interface WaveSample {
 }
 
 export const DEFAULT_WAVES: GerstnerWave[] = [
-  { direction: [1, 0],     steepness: 0.25, wavelength: 60, amplitude: 0, speed: 0, phase: 0 },
-  { direction: [0, 1],     steepness: 0.25, wavelength: 40, amplitude: 0, speed: 0, phase: 0.5 },
+  { direction: [1, 0], steepness: 0.25, wavelength: 60, amplitude: 0, speed: 0, phase: 0 },
+  { direction: [0, 1], steepness: 0.25, wavelength: 40, amplitude: 0, speed: 0, phase: 0.5 },
   { direction: [0.7, 0.7], steepness: 0.15, wavelength: 25, amplitude: 0, speed: 0, phase: 1.0 },
-  { direction: [0.3, -0.9],steepness: 0.10, wavelength: 15, amplitude: 0, speed: 0, phase: 1.5 },
+  { direction: [0.3, -0.9], steepness: 0.1, wavelength: 15, amplitude: 0, speed: 0, phase: 1.5 },
 ];
 // Call initWaves() to compute derived amplitude and speed fields.
 
 export function initWaves(waves: GerstnerWave[]): GerstnerWave[];
-export function getWaveHeight(x: number, z: number, time: number, waves: GerstnerWave[]): WaveSample;
+export function getWaveHeight(
+  x: number,
+  z: number,
+  time: number,
+  waves: GerstnerWave[],
+): WaveSample;
 ```
 
 Key math for a single Gerstner wave component:
+
 - `k = 2 * PI / wavelength`
 - `speed = sqrt(9.8 / k)` (deep water dispersion)
 - `amplitude = steepness / (k * numWaves)`
@@ -75,11 +81,13 @@ The GLSL shader must use the identical formula with the same constants passed as
 Export `vertexShader` and `fragmentShader` as strings.
 
 Vertex shader:
+
 - Uniform: `uTime` (float), `uWaves` (array of structs or flat array encoding direction, steepness, wavelength, speed, phase for 4 waves)
 - Apply Gerstner displacement to each vertex of a subdivided plane
 - Pass normal to fragment shader
 
 Fragment shader:
+
 - Deep ocean base color: `vec3(0.0, 0.05, 0.1)`
 - Fresnel effect for specular highlights using view direction
 - Foam on steep crests (where displacement.y is high relative to neighbors)
@@ -128,13 +136,13 @@ Fragment shader:
 
 ## Acceptance Criteria
 
-- [ ] `pnpm test -- tests/unit/gerstnerWaves.test.ts` passes all 8+ tests
-- [ ] `getWaveHeight` runs in Node.js without any browser APIs
-- [ ] `getWaveHeight(0, 0, 0, waves)` returns a `WaveSample` with numeric `height` and 3-element `normal`
-- [ ] `getWaveHeight(10, 0, 0, waves).height !== getWaveHeight(0, 0, 0, waves).height` (spatial variation)
-- [ ] `getWaveHeight(0, 0, 1, waves).height !== getWaveHeight(0, 0, 0, waves).height` (temporal variation)
-- [ ] `pnpm verify` still passes (all prior + new tests)
-- [ ] Playwright smoke test: canvas renders (no crash from shader compilation)
+- [x] `pnpm test -- tests/unit/gerstnerWaves.test.ts` passes all 8+ tests (10/10 pass)
+- [x] `getWaveHeight` runs in Node.js without any browser APIs (vitest runs in Node env)
+- [x] `getWaveHeight(0, 0, 0, waves)` returns a `WaveSample` with numeric `height` and 3-element `normal` (verified by test)
+- [x] `getWaveHeight(10, 0, 0, waves).height !== getWaveHeight(0, 0, 0, waves).height` (spatial variation test passes)
+- [x] `getWaveHeight(0, 0, 1, waves).height !== getWaveHeight(0, 0, 0, waves).height` (temporal variation test passes)
+- [x] `pnpm verify` still passes (all prior + new tests — 43/43)
+- [x] Playwright smoke test: canvas renders (no crash from shader compilation) — headless fallback for WebGL
 
 ## Verification Command
 

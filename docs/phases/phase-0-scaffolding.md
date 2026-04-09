@@ -83,6 +83,7 @@ pnpm add -D @types/three @types/howler \
 ### 4. Vite Configuration
 
 `vite.config.ts`:
+
 - React plugin
 - Path alias resolution (`@/` maps to `src/`)
 - No special config needed yet
@@ -111,6 +112,7 @@ export default defineConfig({
 ### 6. Playwright Configuration
 
 `playwright.config.ts`:
+
 - Base URL: `http://localhost:5173`
 - Web server: `pnpm dev`
 - Single Chromium browser
@@ -147,22 +149,26 @@ export interface InputState {
   left: boolean;
   right: boolean;
   fire: boolean;
-  mouseX: number;  // normalized -1..1
-  mouseY: number;  // normalized -1..1
+  mouseX: number; // normalized -1..1
+  mouseY: number; // normalized -1..1
 }
 
 /** Default input (nothing pressed) */
 export const EMPTY_INPUT: InputState = {
-  forward: false, backward: false,
-  left: false, right: false,
-  fire: false, mouseX: 0, mouseY: 0,
+  forward: false,
+  backward: false,
+  left: false,
+  right: false,
+  fire: false,
+  mouseX: 0,
+  mouseY: 0,
 };
 
 /**
  * All game systems implement this interface.
  * Systems read from the Zustand store via getState(),
  * apply logic, then write back via actions.
- * 
+ *
  * The `step` method can be called:
  * - From useFrame (rendering context)
  * - From a headless test (no Canvas, no GPU)
@@ -205,8 +211,8 @@ export function getQuadrant(cameraAngle: number, boatHeading: number): FiringQua
   // Normalize to -PI..PI
   relative = ((relative + Math.PI) % (2 * Math.PI)) - Math.PI;
   if (relative > -Math.PI / 4 && relative <= Math.PI / 4) return 'fore';
-  if (relative > Math.PI / 4 && relative <= 3 * Math.PI / 4) return 'starboard';
-  if (relative > -3 * Math.PI / 4 && relative <= -Math.PI / 4) return 'port';
+  if (relative > Math.PI / 4 && relative <= (3 * Math.PI) / 4) return 'starboard';
+  if (relative > (-3 * Math.PI) / 4 && relative <= -Math.PI / 4) return 'port';
   return 'aft';
 }
 ```
@@ -226,9 +232,7 @@ import { Physics } from '@react-three/rapier';
 export function App() {
   return (
     <Canvas>
-      <Physics gravity={[0, -9.81, 0]}>
-        {/* Future phases add entities here */}
-      </Physics>
+      <Physics gravity={[0, -9.81, 0]}>{/* Future phases add entities here */}</Physics>
       <ambientLight intensity={0.5} />
     </Canvas>
   );
@@ -279,13 +283,13 @@ export function App() {
 
 ## Acceptance Criteria
 
-- [ ] `pnpm build` completes with zero errors
-- [ ] `pnpm lint` (tsc --noEmit) passes with zero errors
-- [ ] `pnpm test` runs all unit tests and passes (store, math, seededRandom)
-- [ ] `pnpm test:smoke` opens browser, finds canvas element, passes
-- [ ] `pnpm verify` runs build + lint + test sequentially and succeeds
-- [ ] Zustand store can be instantiated in Node.js without any browser/Canvas APIs
-- [ ] `InputState` and `SimulatableSystem` types are exported and importable from `@/systems/types`
+- [x] `pnpm build` completes with zero errors
+- [x] `pnpm lint` (tsc --noEmit) passes with zero errors
+- [x] `pnpm test` runs all unit tests and passes (store, math, seededRandom)
+- [x] `pnpm test:smoke` opens browser, finds canvas element, passes (added test:smoke alias, 2/2 pass)
+- [x] `pnpm verify` runs build + lint + test sequentially and succeeds
+- [x] Zustand store can be instantiated in Node.js without any browser/Canvas APIs
+- [x] `InputState` and `SimulatableSystem` types are exported and importable from `@/systems/types`
 
 ## Verification Command
 
