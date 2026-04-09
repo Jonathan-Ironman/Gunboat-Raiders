@@ -1,0 +1,6 @@
+dist/
+coverage/
+playwright-report/
+pnpm-lock.yaml
+*.min.js
+public/

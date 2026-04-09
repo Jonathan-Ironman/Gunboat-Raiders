@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+
+# Build
+dist/
+
+# Raw asset packs (large zips, not for source control)
+assets-raw/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Testing
+coverage/
+playwright-report/
+test-results/
+blob-report/
+
+# Vite
+.vite/
+
+# TypeScript
+*.tsbuildinfo
+
+# Temp / scratch
+temp/
