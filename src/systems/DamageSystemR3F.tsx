@@ -8,9 +8,11 @@
  * - Sinking animation state (translate Y downward, slow roll, remove after 3s)
  */
 
+import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGameStore } from '@/store/gameStore';
 import { regenArmor } from './DamageSystem';
+import { emitVfxEvent } from '@/effects/vfxEvents';
 
 /** Duration in seconds before a sinking entity is removed from the store. */
 const SINK_REMOVE_DELAY = 3.0;
@@ -18,10 +20,51 @@ const SINK_REMOVE_DELAY = 3.0;
 /** Tracks how long each entity has been sinking, keyed by entity ID. */
 const sinkTimers = new Map<string, number>();
 
+/** Tracks previous total health (armor+hull) for damage detection. */
+const prevHealthMap = new Map<string, number>();
+
 export function DamageSystemR3F() {
+  // Track if we've emitted an explosion VFX this frame to avoid duplicates
+  const prevPlayerHealthRef = useRef<number | null>(null);
+
   useFrame((_state, delta) => {
     const store = useGameStore.getState();
     const { player, enemies } = store;
+
+    // --- Damage VFX Detection ---
+    // Detect health drops to trigger explosion VFX at entity positions
+
+    if (player) {
+      const currentHealth = player.health.armor + player.health.hull;
+      if (prevPlayerHealthRef.current !== null && currentHealth < prevPlayerHealthRef.current) {
+        emitVfxEvent({
+          type: 'explosion',
+          position: [...player.position],
+          time: performance.now() / 1000,
+        });
+      }
+      prevPlayerHealthRef.current = currentHealth;
+    }
+
+    for (const [id, enemy] of enemies) {
+      const currentHealth = enemy.health.armor + enemy.health.hull;
+      const prevHealth = prevHealthMap.get(id);
+      if (prevHealth !== undefined && currentHealth < prevHealth) {
+        emitVfxEvent({
+          type: 'explosion',
+          position: [...enemy.position],
+          time: performance.now() / 1000,
+        });
+      }
+      prevHealthMap.set(id, currentHealth);
+    }
+
+    // Clean up tracked enemies that no longer exist
+    for (const id of prevHealthMap.keys()) {
+      if (!enemies.has(id)) {
+        prevHealthMap.delete(id);
+      }
+    }
 
     // --- Armor Regeneration ---
 

@@ -17,6 +17,8 @@ import { ProjectileSystemR3F } from './systems/ProjectileSystemR3F';
 import { AISystemR3F } from './systems/AISystemR3F';
 import { WaveSystemR3F } from './systems/WaveSystemR3F';
 import { TrajectoryPreview } from './effects/TrajectoryPreview';
+import { PostProcessing } from './effects/PostProcessing';
+import { ParticleManager } from './effects/ParticleManager';
 import { useGameStore } from './store/gameStore';
 import { HUD } from './ui/HUD';
 import { TitleScreen } from './ui/TitleScreen';
@@ -90,6 +92,8 @@ export function App() {
             <Water />
             <SkySetup />
             <CameraSystemR3F />
+            <ParticleManager />
+            <PostProcessing />
             <ambientLight intensity={0.5} />
             <directionalLight position={[100, 40, -100]} intensity={1.5} castShadow />
           </WaterProvider>

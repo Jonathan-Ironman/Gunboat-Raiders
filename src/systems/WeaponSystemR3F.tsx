@@ -12,6 +12,7 @@ import { useGameStore } from '@/store/gameStore';
 import { getPlayerBody } from './physicsRefs';
 import { getProjectilePoolManager } from './projectilePoolRefs';
 import { tickCooldowns, canFire, computeFireData } from './WeaponSystem';
+import { emitVfxEvent } from '@/effects/vfxEvents';
 
 // Reusable Three.js objects
 const _quat = new Quaternion();
@@ -100,6 +101,13 @@ export function WeaponSystemR3F() {
               player.weapons.splashDamage,
               player.weapons.splashRadius,
             );
+
+            // Trigger muzzle flash VFX at each mount position
+            emitVfxEvent({
+              type: 'muzzle-flash',
+              position: spawn.position,
+              time: performance.now() / 1000,
+            });
           }
         }
 
