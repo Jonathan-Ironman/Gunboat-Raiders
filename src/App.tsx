@@ -1,13 +1,18 @@
 import { Suspense, useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { KeyboardControls, OrbitControls } from '@react-three/drei';
+import { KeyboardControls } from '@react-three/drei';
 import { Physics } from '@react-three/rapier';
 import { Water } from './environment/Water';
 import { WaterProvider } from './environment/WaterContext';
 import { SkySetup } from './environment/Sky';
 import { PlayerBoat } from './entities/PlayerBoat';
+import { ProjectilePool } from './entities/ProjectilePool';
 import { BuoyancySystemR3F } from './systems/BuoyancySystemR3F';
 import { MovementSystemR3F } from './systems/MovementSystemR3F';
+import { CameraSystemR3F } from './systems/CameraSystemR3F';
+import { WeaponSystemR3F } from './systems/WeaponSystemR3F';
+import { ProjectileSystemR3F } from './systems/ProjectileSystemR3F';
+import { TrajectoryPreview } from './effects/TrajectoryPreview';
 
 const KEY_MAP = [
   { name: 'forward', keys: ['KeyW', 'ArrowUp'] },
@@ -34,15 +39,19 @@ export function App() {
           <Suspense fallback={null}>
             <Physics gravity={[0, -9.81, 0]}>
               <PlayerBoat />
+              <ProjectilePool />
               <BuoyancySystemR3F />
               <MovementSystemR3F />
+              <WeaponSystemR3F />
+              <ProjectileSystemR3F />
             </Physics>
           </Suspense>
           <Water />
           <SkySetup />
+          <CameraSystemR3F />
+          <TrajectoryPreview />
           <ambientLight intensity={0.5} />
           <directionalLight position={[100, 40, -100]} intensity={1.5} castShadow />
-          <OrbitControls />
         </WaterProvider>
       </Canvas>
     </KeyboardControls>
