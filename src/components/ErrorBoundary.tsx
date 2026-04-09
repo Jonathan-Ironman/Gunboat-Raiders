@@ -12,6 +12,9 @@ interface ErrorBoundaryState {
 /**
  * Catches render errors in the component tree and displays an error message
  * instead of a blank white screen.
+ *
+ * In development mode, caught errors are also pushed to `window.__GAME_ERRORS__`
+ * so Playwright tests can detect them via `page.evaluate()`.
  */
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
@@ -25,6 +28,13 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
     console.error('[ErrorBoundary] Uncaught error:', error, info.componentStack);
+
+    if (import.meta.env.DEV) {
+      // Dynamic import keeps the logger out of the production bundle.
+      void import('../utils/errorLogger').then(({ recordBoundaryError }) => {
+        recordBoundaryError(error, info.componentStack ?? undefined);
+      });
+    }
   }
 
   render(): ReactNode {
