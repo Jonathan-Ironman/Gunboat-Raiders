@@ -111,7 +111,12 @@ export function PlayerBoat() {
       ref={rigidBodyRef}
       type="dynamic"
       gravityScale={0}
-      linearDamping={0.2}
+      // Low linear damping so the powerboat accelerates crisply and coasts
+      // when the throttle is released (water drag on an actual planing hull
+      // at speed is low). Combined with thrustForce=8000 this gives a
+      // terminal speed of ~53 m/s in open water, but wave resistance and
+      // planing pitch bleed off energy well before that.
+      linearDamping={0.15}
       // Low angular damping so the boat can freely pitch and roll with the
       // Gerstner wave surface. Buoyancy torque supplies its own velocity
       // damping; this value just tames the residual yaw spin from turns.

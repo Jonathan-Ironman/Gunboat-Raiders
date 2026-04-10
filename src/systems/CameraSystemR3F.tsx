@@ -92,6 +92,10 @@ export function CameraSystemR3F() {
     };
   }, [gl.domElement, onCanvasClick, onPointerLockChange, onMouseMove]);
 
+  // Priority -1: runs before WeaponSystemR3F (priority 0) so that
+  // activeQuadrant is always written before the weapon system reads it.
+  // PhysicsSyncSystem runs at -20, so cached body state is ready by the time
+  // this runs.
   useFrame(({ camera }) => {
     // Read from cached body state (populated by PhysicsSyncSystem after each
     // physics step) to avoid Rapier WASM "recursive use of an object" errors.
@@ -148,7 +152,7 @@ export function CameraSystemR3F() {
       lastWrittenQuadrantRef.current = quadrant;
       useGameStore.getState().setActiveQuadrant(quadrant);
     }
-  });
+  }, -1);
 
   return null;
 }

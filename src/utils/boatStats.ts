@@ -9,7 +9,13 @@ interface BoatStatPreset {
 export const BOAT_STATS = {
   player: {
     health: { armor: 100, armorMax: 100, armorRegenRate: 3, hull: 100, hullMax: 100 },
-    movement: { thrustForce: 6000, reverseForce: 2000, turnTorque: 400, maxSpeed: 20 },
+    // Powerboat feel: high thrust for punchy acceleration, high turn torque so
+    // A/D produce clearly visible yaw within ~0.5s. With Rapier angularDamping
+    // = 0.8 and yaw moment of inertia ~2560 kg·m², turnTorque of 2000 N·m
+    // yields a terminal yaw rate of ~0.98 rad/s (~56 deg/s) — comfortably
+    // above the 45 deg/s target, with the first-order response feeling
+    // responsive from the very first frame.
+    movement: { thrustForce: 8000, reverseForce: 2500, turnTorque: 2000, maxSpeed: 22 },
     weapons: {
       cooldown: 2.0,
       damage: 25,

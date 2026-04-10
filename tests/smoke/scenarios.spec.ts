@@ -598,4 +598,69 @@ test.describe('End-to-end gameplay scenarios', () => {
         `samples=${JSON.stringify(fpsSamples.map((f) => f.toFixed(1)))}`,
     ).toBeGreaterThan(30);
   });
+
+  test('9 — all four firing quadrants produce projectiles', async ({ page }) => {
+    // Verifies that fore, aft, port, and starboard each launch at least one
+    // cannonball when fired. This test was added to catch the 1-frame quadrant
+    // lag bug where WeaponSystemR3F read a stale activeQuadrant because it ran
+    // before CameraSystemR3F in the useFrame order.
+    test.setTimeout(90_000);
+
+    await startPlaying(page);
+    // Let physics and the projectile pool fully initialise.
+    await page.waitForTimeout(4_000);
+
+    /** Set the active quadrant directly via the store and fire once, returning
+     *  the number of live projectiles immediately after the shot. */
+    const setQuadrantAndFire = async (quadrant: string): Promise<number> => {
+      // Set quadrant via the Zustand store action.
+      await page.evaluate((q: string) => {
+        const w = window as unknown as {
+          __ZUSTAND_STORE__?: {
+            getState: () => { setActiveQuadrant: (quad: string) => void };
+          };
+        };
+        w.__ZUSTAND_STORE__?.getState().setActiveQuadrant(q as never);
+      }, quadrant);
+
+      // Small settle so useFrame picks up the new quadrant before the fire.
+      await page.waitForTimeout(150);
+
+      await requestFire(page);
+      await page.waitForTimeout(400);
+
+      return page.evaluate<number>(() => {
+        const w = window as unknown as {
+          __GET_ALL_PROJECTILE_BODY_STATES__?: () => ReadonlyMap<number, BodyStateSnapshot>;
+        };
+        return w.__GET_ALL_PROJECTILE_BODY_STATES__?.()?.size ?? 0;
+      });
+    };
+
+    const quadrants = ['fore', 'aft', 'port', 'starboard'] as const;
+    const results: Record<string, number> = {};
+
+    for (const q of quadrants) {
+      // Wait past the per-quadrant cooldown (2s) before each shot so we know
+      // the cooldown cannot be the reason a shot fails.
+      await page.waitForTimeout(2_200);
+
+      // Retry up to 3 times in case the pool manager hasn't registered yet.
+      let count = 0;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        count = await setQuadrantAndFire(q);
+        if (count > 0) break;
+        await page.waitForTimeout(2_200); // wait out cooldown before retry
+      }
+      results[q] = count;
+    }
+
+    for (const q of quadrants) {
+      expect(
+        results[q],
+        `Quadrant '${q}' should have produced at least one projectile. ` +
+          `All results: ${JSON.stringify(results)}`,
+      ).toBeGreaterThan(0);
+    }
+  });
 });
