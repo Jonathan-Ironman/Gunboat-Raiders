@@ -110,7 +110,7 @@ type DevWindow = Window &
  * Does not start the RAF loop. Safe to call multiple times.
  */
 export function exposeGamePerf(): void {
-  if (!import.meta.env.DEV) return;
+  if (!import.meta.env.DEV && import.meta.env.VITE_E2E !== '1') return;
   (window as DevWindow).__GAME_PERF__ = snapshot;
 }
 
@@ -121,7 +121,7 @@ export function exposeGamePerf(): void {
  * take over timing via `feedR3FFrame()`.
  */
 export function installPerfMonitor(): void {
-  if (!import.meta.env.DEV) return;
+  if (!import.meta.env.DEV && import.meta.env.VITE_E2E !== '1') return;
   exposeGamePerf();
   if (rafHandle === null) {
     rafHandle = requestAnimationFrame(rafTick);
@@ -146,7 +146,7 @@ export function stopPerfMonitorRAF(): void {
  * @param deltaSeconds - Frame delta in seconds (R3F useFrame `delta` arg).
  */
 export function feedR3FFrame(deltaSeconds: number): void {
-  if (!import.meta.env.DEV) return;
+  if (!import.meta.env.DEV && import.meta.env.VITE_E2E !== '1') return;
   recordFrame(deltaSeconds * 1_000);
 }
 

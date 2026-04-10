@@ -1,5 +1,6 @@
 import { Component } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
+import { recordBoundaryError } from '../utils/errorLogger';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -29,12 +30,11 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   componentDidCatch(error: Error, info: ErrorInfo): void {
     console.error('[ErrorBoundary] Uncaught error:', error, info.componentStack);
 
-    if (import.meta.env.DEV) {
-      // Dynamic import keeps the logger out of the production bundle.
-      void import('../utils/errorLogger').then(({ recordBoundaryError }) => {
-        recordBoundaryError(error, info.componentStack ?? undefined);
-      });
-    }
+    // `recordBoundaryError` is a no-op in production builds (its internal
+    // guard checks `import.meta.env.DEV || VITE_E2E === '1'`). The function
+    // body still ships, but it is a few bytes and tree-shaking keeps it
+    // next to the ErrorBoundary which is always loaded.
+    recordBoundaryError(error, info.componentStack ?? undefined);
   }
 
   render(): ReactNode {

@@ -104,7 +104,7 @@ export function App() {
             <CameraSystemR3F />
             <ParticleManager />
             <PostProcessing />
-            {import.meta.env.DEV && <PerfMonitorR3F />}
+            {(import.meta.env.DEV || import.meta.env.VITE_E2E === '1') && <PerfMonitorR3F />}
             <ambientLight intensity={0.5} />
             <directionalLight position={[100, 40, -100]} intensity={1.5} castShadow />
           </WaterProvider>

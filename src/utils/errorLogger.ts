@@ -22,7 +22,7 @@ export interface GameError {
 
 /** Push a recorded error into the window-level accumulator. */
 function pushError(entry: GameError): void {
-  if (!import.meta.env.DEV) return;
+  if (!import.meta.env.DEV && import.meta.env.VITE_E2E !== '1') return;
 
   const store = (window as Window & { __GAME_ERRORS__?: GameError[] }).__GAME_ERRORS__;
   if (store) {
@@ -37,7 +37,7 @@ function pushError(entry: GameError): void {
 let installed = false;
 
 export function installErrorLogger(): void {
-  if (!import.meta.env.DEV) return;
+  if (!import.meta.env.DEV && import.meta.env.VITE_E2E !== '1') return;
   if (installed) return;
   installed = true;
 
@@ -132,7 +132,7 @@ export function installErrorLogger(): void {
  * This is the only function called from outside this module (by ErrorBoundary).
  */
 export function recordBoundaryError(error: Error, componentStack?: string): void {
-  if (!import.meta.env.DEV) return;
+  if (!import.meta.env.DEV && import.meta.env.VITE_E2E !== '1') return;
 
   const boundaryEntry: GameError = {
     timestamp: new Date().toISOString(),
