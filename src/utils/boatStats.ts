@@ -46,7 +46,12 @@ export const BOAT_STATS = {
   },
   skiff: {
     health: { armor: 30, armorMax: 30, armorRegenRate: 1, hull: 40, hullMax: 40 },
-    movement: { thrustForce: 600, reverseForce: 200, turnTorque: 250, maxSpeed: 18 },
+    // thrustForce must overcome linearDamping (0.8) on a 1000kg boat to
+    // achieve any meaningful pursuit speed. Terminal velocity is roughly
+    // F / (m * damping) = 2000 / (1000 * 0.8) = 2.5 m/s, fast enough to
+    // close on the player from the 80-120m spawn ring during a wave while
+    // still being a hittable target for aimed cannon volleys.
+    movement: { thrustForce: 2000, reverseForce: 800, turnTorque: 350, maxSpeed: 18 },
     weapons: {
       cooldown: 3.0,
       damage: 15,
@@ -62,7 +67,9 @@ export const BOAT_STATS = {
   },
   barge: {
     health: { armor: 80, armorMax: 80, armorRegenRate: 2, hull: 120, hullMax: 120 },
-    movement: { thrustForce: 400, reverseForce: 150, turnTorque: 100, maxSpeed: 8 },
+    // Slower and heavier-feeling than a skiff but still capable of pursuit.
+    // Terminal velocity ~= 1200 / (1000 * 0.8) = 1.5 m/s.
+    movement: { thrustForce: 1200, reverseForce: 500, turnTorque: 150, maxSpeed: 8 },
     weapons: {
       cooldown: 2.5,
       damage: 20,

@@ -144,14 +144,18 @@ describe('AISystem -- computeAIDecision', () => {
     expect(result.thrust).toBeGreaterThan(0);
   });
 
-  it('AI beyond detection range does not engage (stays neutral)', () => {
+  it('APPROACHING pursues unconditionally even beyond detection range', () => {
+    // Regression: enemies spawn at 80-120m; detection range used to gate the
+    // approaching state and left them motionless at the spawn ring forever.
+    // Once an enemy is in the approaching state, pursuit must be unconditional.
     const ctx = makeContext({
       currentState: 'approaching',
-      distanceToTarget: 100,
+      distanceToTarget: 150,
       detectionRange: 80,
     });
     const result = computeAIDecision(ctx, 0.016);
-    expect(result.thrust).toBe(0);
+    expect(result.newState).toBe('approaching');
+    expect(result.thrust).toBeGreaterThan(0);
   });
 });
 

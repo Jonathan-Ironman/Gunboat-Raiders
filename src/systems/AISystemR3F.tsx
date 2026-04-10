@@ -112,7 +112,12 @@ export function AISystemR3F() {
       const forceX = Math.sin(heading) * thrustForce;
       const forceZ = Math.cos(heading) * thrustForce;
       body.addForce({ x: forceX, y: 0, z: forceZ }, true);
-      body.addTorque({ x: 0, y: -turnTorque, z: 0 }, true);
+      // Torque sign must match the player-movement convention: a positive
+      // `decision.turn` (from steerToward) means "increase heading", and in
+      // this codebase positive Y torque increases heading (same as MovementSystem
+      // where left/A = +turnTorque). Previously we negated this, which made
+      // enemies steer the wrong way and thrust away from the player.
+      body.addTorque({ x: 0, y: turnTorque, z: 0 }, true);
 
       // Handle firing
       if (decision.fire && decision.fireQuadrant) {

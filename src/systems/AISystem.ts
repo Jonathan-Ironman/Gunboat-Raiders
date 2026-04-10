@@ -117,18 +117,10 @@ export function computeAIDecision(ctx: AIContext, delta: number): AIDecision {
     return neutralDecision('sinking', 0);
   }
 
-  // Out of detection range: stay neutral (no engagement)
-  if (ctx.distanceToTarget > ctx.detectionRange && ctx.currentState === 'spawning') {
-    // If still spawning and out of range, just tick down spawn timer
-    const newTimer = ctx.stateTimer - delta;
-    if (newTimer <= 0) {
-      return neutralDecision('approaching', 0);
-    }
-    return neutralDecision('spawning', newTimer);
-  }
-
   switch (ctx.currentState) {
     case 'spawning': {
+      // Spawning is a brief initial delay regardless of distance -- once it
+      // elapses the enemy transitions to approaching and always pursues.
       const newTimer = ctx.stateTimer - delta;
       if (newTimer <= 0) {
         return neutralDecision('approaching', 0);
@@ -137,11 +129,11 @@ export function computeAIDecision(ctx: AIContext, delta: number): AIDecision {
     }
 
     case 'approaching': {
-      // Beyond detection range: do not engage
-      if (ctx.distanceToTarget > ctx.detectionRange) {
-        return neutralDecision('approaching', 0);
-      }
-
+      // Enemies in the approaching state ALWAYS pursue the player at full
+      // thrust, regardless of detectionRange. A spawned enemy is, by
+      // definition, already aware of the player; gating pursuit on distance
+      // would leave enemies motionless at their spawn ring forever.
+      //
       // Within preferred range: transition to positioning
       if (ctx.distanceToTarget <= ctx.preferredRange) {
         // Start positioning immediately

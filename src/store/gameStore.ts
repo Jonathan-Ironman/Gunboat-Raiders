@@ -199,7 +199,10 @@ export const useGameStore = create<GameState>()((set, get) => ({
         targetId: 'player',
         stateTimer: 0,
         preferredRange: type === 'skiff' ? 15 : 25,
-        detectionRange: type === 'skiff' ? 80 : 60,
+        // detectionRange must exceed the spawn ring (80-120) so enemies
+        // pursue from the moment they spawn. Once in the approaching state
+        // pursuit is unconditional (see AISystem.ts).
+        detectionRange: 200,
       },
       position,
       rotation: [0, 0, 0, 1],

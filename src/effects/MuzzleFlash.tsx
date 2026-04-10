@@ -11,8 +11,8 @@ import { AdditiveBlending, BufferGeometry, Float32BufferAttribute } from 'three'
 import type { Points } from 'three';
 
 const MAX_PARTICLES = 10;
-const LIFETIME = 0.15;
-const INITIAL_SPEED = 8;
+const LIFETIME = 0.22;
+const INITIAL_SPEED = 10;
 
 export interface MuzzleFlashInstance {
   position: [number, number, number];
@@ -51,7 +51,7 @@ export function MuzzleFlash({ instances }: { instances: MuzzleFlashInstance[] })
       for (let i = lastSpawnedRef.current; i < instances.length; i++) {
         const inst = instances[i];
         if (!inst) continue;
-        const count = 5 + Math.floor(Math.random() * 6); // 5-10 particles
+        const count = 10 + Math.floor(Math.random() * 8); // 10-17 particles
         for (let j = 0; j < count; j++) {
           const theta = Math.random() * Math.PI * 2;
           const phi = Math.random() * Math.PI * 0.5;
@@ -111,11 +111,11 @@ export function MuzzleFlash({ instances }: { instances: MuzzleFlashInstance[] })
   return (
     <points ref={pointsRef} geometry={geometry}>
       <pointsMaterial
-        color={[5, 3, 0]}
-        size={3}
+        color={[6, 3.5, 0.5]}
+        size={6}
         sizeAttenuation
         transparent
-        opacity={0.9}
+        opacity={0.95}
         depthWrite={false}
         blending={AdditiveBlending}
         toneMapped={false}

@@ -316,7 +316,9 @@ describe('Scenario: AI approaching target', () => {
     expect(decision.newState).toBe('positioning');
   });
 
-  it('AI does not engage when beyond detection range', () => {
+  it('AI pursues unconditionally once in the approaching state', () => {
+    // Regression: enemies spawn at 80-120m; if approaching ever gated on
+    // distance they would freeze at the spawn ring and never engage.
     const ctx = makeAIContext({
       currentState: 'approaching',
       distanceToTarget: 150,
@@ -325,7 +327,8 @@ describe('Scenario: AI approaching target', () => {
 
     const decision = computeAIDecision(ctx, 0.016);
 
-    expect(decision.thrust).toBe(0);
+    expect(decision.newState).toBe('approaching');
+    expect(decision.thrust).toBeGreaterThan(0);
   });
 });
 

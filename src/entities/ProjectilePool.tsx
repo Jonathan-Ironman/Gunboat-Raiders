@@ -12,15 +12,25 @@
  * Collision pipeline:
  * - A single `onCollisionEnter` is attached at the InstancedRigidBodies
  *   wrapper level and dispatched to every instance. The hit pool index is
- *   recovered by matching `target.rigidBody.handle` against the pool array.
+ *   recovered by matching `target.rigidBody.handle` (a plain JS integer
+ *   field, safe to read) against the pool array.
  * - Metadata for the slot (owner, damage, store id) is looked up in the
  *   pool refs module; the target entity is identified via the enemy/player
  *   body registries.
- * - Damage is applied through the store, an explosion VFX is emitted, and
- *   the slot is queued for deactivation on the next frame.
- * - Deactivation is deferred because we cannot safely mutate rigid body state
- *   from inside a Rapier collision callback (recursive WASM access).
- *   ProjectileSystemR3F drains the pending queue each frame.
+ * - Damage is applied through the store, an explosion VFX is emitted at the
+ *   last cached projectile position, and the slot is queued for deactivation
+ *   on the next frame.
+ * - Collision callbacks run INSIDE Rapier's physics step, so they must
+ *   never read or write rigid body state via WASM calls (translation(),
+ *   linvel(), setLinvel(), etc.). Doing so re-enters the WASM world and
+ *   triggers "recursive use of an object detected" errors that eventually
+ *   corrupt physics state and crash the game. The callback here only:
+ *     - reads plain JS fields (body.handle)
+ *     - mutates Zustand store state
+ *     - emits VFX events
+ *     - queues deferred cleanup
+ *   ProjectileSystemR3F drains the pending queue each frame, OUTSIDE the
+ *   physics step, where WASM calls are safe.
  */
 
 import { useRef, useEffect, useMemo, useCallback } from 'react';
@@ -32,8 +42,7 @@ import {
   type CollisionEnterPayload,
 } from '@react-three/rapier';
 import type { RapierRigidBody } from '@react-three/rapier';
-import { useGLTF } from '@react-three/drei';
-import type { BufferGeometry, Material, Mesh } from 'three';
+import { SphereGeometry, MeshStandardMaterial, Color } from 'three';
 import { useGameStore } from '@/store/gameStore';
 import { COLLISION_GROUPS } from '@/utils/collisionGroups';
 import {
@@ -46,13 +55,19 @@ import {
   isProjectileDeactivationPending,
   clearAllPendingProjectileDeactivations,
 } from '@/systems/projectilePoolRefs';
-import { findEnemyIdByBody, isPlayerBody } from '@/systems/physicsRefs';
+import { findEnemyIdByBody, isPlayerBody, getProjectileBodyState } from '@/systems/physicsRefs';
 import { emitVfxEvent } from '@/effects/vfxEvents';
-
-useGLTF.preload('/models/cannon-ball.glb');
 
 const POOL_SIZE = 50;
 const SLEEP_POSITION_Y = -1000;
+
+/**
+ * Radius used for both the cannonball visual mesh and its BallCollider.
+ * A value around 0.35 m is large enough to be clearly visible at 60 m/s
+ * muzzle velocity while staying small relative to boat hulls, giving
+ * reliable hit detection without looking comically oversized.
+ */
+const PROJECTILE_VISUAL_RADIUS = 0.35;
 
 /** Collision groups for player projectiles: collide with enemy + environment */
 const PLAYER_PROJECTILE_GROUPS = interactionGroups(COLLISION_GROUPS.PLAYER_PROJECTILE, [
@@ -65,7 +80,6 @@ const PROJECTILE_MAX_LIFETIME = 8;
 
 export function ProjectilePool() {
   const rigidBodiesRef = useRef<RapierRigidBody[]>(null);
-  const cannonBallGltf = useGLTF('/models/cannon-ball.glb');
   const activeIndicesRef = useRef(new Set<number>());
 
   /**
@@ -152,16 +166,24 @@ export function ProjectilePool() {
       useGameStore.getState().applyDamage(targetId, metadata.damage);
     }
 
-    // Emit explosion VFX at the projectile's current position.
-    try {
-      const p = targetBody.translation();
+    // Emit explosion VFX at the projectile's last cached position.
+    //
+    // CRITICAL: We MUST NOT call targetBody.translation() here. Collision
+    // callbacks run synchronously inside Rapier's WASM physics step, so any
+    // read of a rigid body's world state re-enters the WASM world and
+    // triggers "recursive use of an object detected" errors. Over time this
+    // corrupts the physics state and crashes the game with an `unreachable`
+    // runtime error. The cached projectile state (populated by
+    // PhysicsSyncSystem at the top of each render frame) is one frame behind
+    // the contact point, which is imperceptible for a cosmetic explosion.
+    const cachedState = getProjectileBodyState(index);
+    if (cachedState) {
+      const p = cachedState.position;
       emitVfxEvent({
         type: 'explosion',
         position: [p.x, p.y, p.z],
         time: performance.now() / 1000,
       });
-    } catch {
-      // VFX is cosmetic — safe to drop on the rare mid-step error.
     }
 
     // Queue deactivation — the next frame drains the queue and recycles the
@@ -288,21 +310,32 @@ export function ProjectilePool() {
     }
   }, []);
 
-  // Get geometry and material from the loaded model
+  /**
+   * Bright emissive sphere for the cannonball. Using a custom standard
+   * material (rather than the GLB model's baked material) guarantees the
+   * ball is clearly visible against water and sky and that emissive HDR
+   * values above 1 trigger the scene bloom pass.
+   */
   const { geometry, material } = useMemo(() => {
-    let foundGeometry: BufferGeometry | undefined;
-    let foundMaterial: Material | undefined;
-    cannonBallGltf.scene.traverse((child) => {
-      if ('isMesh' in child && !foundGeometry) {
-        const mesh = child as Mesh;
-        foundGeometry = mesh.geometry;
-        foundMaterial = mesh.material as Material;
-      }
+    const geo = new SphereGeometry(PROJECTILE_VISUAL_RADIUS, 16, 12);
+    const mat = new MeshStandardMaterial({
+      color: new Color('#1a1a1a'),
+      emissive: new Color(4, 2, 0.4),
+      emissiveIntensity: 1,
+      roughness: 0.4,
+      metalness: 0.6,
+      toneMapped: false,
     });
-    return { geometry: foundGeometry, material: foundMaterial };
-  }, [cannonBallGltf.scene]);
+    return { geometry: geo, material: mat };
+  }, []);
 
-  if (!geometry || !material) return null;
+  // Dispose on unmount to avoid GPU resource leaks.
+  useEffect(() => {
+    return () => {
+      geometry.dispose();
+      material.dispose();
+    };
+  }, [geometry, material]);
 
   return (
     <InstancedRigidBodies
@@ -315,7 +348,7 @@ export function ProjectilePool() {
       colliderNodes={[
         <BallCollider
           key="projectile-collider"
-          args={[0.15]}
+          args={[PROJECTILE_VISUAL_RADIUS]}
           collisionGroups={PLAYER_PROJECTILE_GROUPS}
         />,
       ]}
