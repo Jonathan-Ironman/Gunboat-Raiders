@@ -34,16 +34,38 @@ if (import.meta.env.DEV) {
     (window as DevWindow).__ZUSTAND_STORE__ = useGameStore;
   });
 
-  // Expose physics body state cache and raw body accessor so tests can read positions.
-  void import('./systems/physicsRefs').then(({ getPlayerBodyState, getPlayerBody }) => {
-    type DevWindow = Window &
-      typeof globalThis & {
-        __GET_PLAYER_BODY_STATE__: typeof getPlayerBodyState;
-        __GET_PLAYER_BODY__: typeof getPlayerBody;
-      };
-    (window as DevWindow).__GET_PLAYER_BODY_STATE__ = getPlayerBodyState;
-    (window as DevWindow).__GET_PLAYER_BODY__ = getPlayerBody;
+  // Expose test-only fire bridge so Playwright can trigger cannons without
+  // needing pointer lock (headless browsers cannot reliably acquire it).
+  void import('./systems/weaponTestBridge').then(({ requestTestFire }) => {
+    type DevWindow = Window & typeof globalThis & { __TEST_REQUEST_FIRE__: typeof requestTestFire };
+    (window as DevWindow).__TEST_REQUEST_FIRE__ = requestTestFire;
   });
+
+  // Expose physics body state cache and raw body accessor so tests can read positions.
+  void import('./systems/physicsRefs').then(
+    ({
+      getPlayerBodyState,
+      getPlayerBody,
+      getAllEnemyBodyStates,
+      getEnemyBodyState,
+      getAllProjectileBodyStates,
+    }) => {
+      type DevWindow = Window &
+        typeof globalThis & {
+          __GET_PLAYER_BODY_STATE__: typeof getPlayerBodyState;
+          __GET_PLAYER_BODY__: typeof getPlayerBody;
+          __GET_ALL_ENEMY_BODY_STATES__: typeof getAllEnemyBodyStates;
+          __GET_ENEMY_BODY_STATE__: typeof getEnemyBodyState;
+          __GET_ALL_PROJECTILE_BODY_STATES__: typeof getAllProjectileBodyStates;
+        };
+      const devWindow = window as DevWindow;
+      devWindow.__GET_PLAYER_BODY_STATE__ = getPlayerBodyState;
+      devWindow.__GET_PLAYER_BODY__ = getPlayerBody;
+      devWindow.__GET_ALL_ENEMY_BODY_STATES__ = getAllEnemyBodyStates;
+      devWindow.__GET_ENEMY_BODY_STATE__ = getEnemyBodyState;
+      devWindow.__GET_ALL_PROJECTILE_BODY_STATES__ = getAllProjectileBodyStates;
+    },
+  );
 }
 // -----------------------------------------------------------------------------
 
