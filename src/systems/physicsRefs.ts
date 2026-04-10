@@ -52,6 +52,19 @@ export function getEnemyBody(id: string): RapierRigidBody | undefined {
   return enemyBodies.get(id);
 }
 
+/**
+ * Reverse-lookup: find an enemy's store id from a Rapier rigid body.
+ * Compares by Rapier handle (integer), which is stable for the body's lifetime.
+ * Returns undefined if the body is not a registered enemy.
+ */
+export function findEnemyIdByBody(body: RapierRigidBody): string | undefined {
+  const targetHandle = body.handle;
+  for (const [id, registered] of enemyBodies) {
+    if (registered.handle === targetHandle) return id;
+  }
+  return undefined;
+}
+
 // ---- Player body ref ----
 
 /** Global ref for the player's rigid body — set by PlayerBoat on mount. */
@@ -63,6 +76,11 @@ export function setPlayerBody(body: RapierRigidBody | null): void {
 
 export function getPlayerBody(): RapierRigidBody | null {
   return playerBodyRef;
+}
+
+/** True if the given body is the currently registered player rigid body. */
+export function isPlayerBody(body: RapierRigidBody): boolean {
+  return playerBodyRef !== null && playerBodyRef.handle === body.handle;
 }
 
 // ---- Cached body state (populated after each physics step) ----

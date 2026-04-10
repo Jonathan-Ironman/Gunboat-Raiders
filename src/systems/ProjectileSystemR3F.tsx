@@ -9,7 +9,10 @@ import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGameStore } from '@/store/gameStore';
 import { getExpiredProjectiles } from './ProjectileSystem';
-import { getProjectilePoolManager } from './projectilePoolRefs';
+import {
+  getProjectilePoolManager,
+  drainPendingProjectileDeactivations,
+} from './projectilePoolRefs';
 import { getAllProjectileBodyStates } from './physicsRefs';
 import { emitVfxEvent } from '@/effects/vfxEvents';
 
@@ -22,6 +25,20 @@ export function ProjectileSystemR3F() {
 
   useFrame(() => {
     const store = useGameStore.getState();
+
+    // Drain any collision-queued deactivations BEFORE any other work so that
+    // freed pool slots are immediately reusable this frame. This is outside
+    // the `projectiles.size === 0` early-exit because a frame with an empty
+    // store map can still have pending deactivations when the last active
+    // projectile hit something (the store entry is removed via deactivate).
+    const poolManagerEarly = getProjectilePoolManager();
+    if (poolManagerEarly) {
+      const pending = drainPendingProjectileDeactivations();
+      for (const i of pending) {
+        poolManagerEarly.deactivate(i);
+      }
+    }
+
     const { projectiles } = store;
     if (projectiles.size === 0) return;
 

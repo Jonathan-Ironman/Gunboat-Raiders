@@ -1,8 +1,26 @@
 /**
  * Projectile pool — pre-allocated cannonball rigid bodies.
  *
- * Uses InstancedRigidBodies for efficient rendering and physics.
+ * Uses InstancedRigidBodies for efficient rendering and physics. Each instance
+ * shares a single BallCollider declared through the `colliderNodes` prop so
+ * that per-instance colliders are created (r3r only reparents `colliderNodes`
+ * into each RigidBody; a collider placed in plain `children` would stay as a
+ * single orphan at the wrapper level and never collide).
+ *
  * Inactive projectiles are placed far below the world and put to sleep.
+ *
+ * Collision pipeline:
+ * - A single `onCollisionEnter` is attached at the InstancedRigidBodies
+ *   wrapper level and dispatched to every instance. The hit pool index is
+ *   recovered by matching `target.rigidBody.handle` against the pool array.
+ * - Metadata for the slot (owner, damage, store id) is looked up in the
+ *   pool refs module; the target entity is identified via the enemy/player
+ *   body registries.
+ * - Damage is applied through the store, an explosion VFX is emitted, and
+ *   the slot is queued for deactivation on the next frame.
+ * - Deactivation is deferred because we cannot safely mutate rigid body state
+ *   from inside a Rapier collision callback (recursive WASM access).
+ *   ProjectileSystemR3F drains the pending queue each frame.
  */
 
 import { useRef, useEffect, useMemo, useCallback } from 'react';
@@ -11,13 +29,25 @@ import {
   BallCollider,
   interactionGroups,
   type InstancedRigidBodyProps,
+  type CollisionEnterPayload,
 } from '@react-three/rapier';
 import type { RapierRigidBody } from '@react-three/rapier';
 import { useGLTF } from '@react-three/drei';
 import type { BufferGeometry, Material, Mesh } from 'three';
 import { useGameStore } from '@/store/gameStore';
 import { COLLISION_GROUPS } from '@/utils/collisionGroups';
-import { setProjectilePoolManager } from '@/systems/projectilePoolRefs';
+import {
+  setProjectilePoolManager,
+  setProjectileSlotMetadata,
+  getProjectileSlotMetadata,
+  clearProjectileSlotMetadata,
+  clearAllProjectileSlotMetadata,
+  queueProjectileDeactivation,
+  isProjectileDeactivationPending,
+  clearAllPendingProjectileDeactivations,
+} from '@/systems/projectilePoolRefs';
+import { findEnemyIdByBody, isPlayerBody } from '@/systems/physicsRefs';
+import { emitVfxEvent } from '@/effects/vfxEvents';
 
 useGLTF.preload('/models/cannon-ball.glb');
 
@@ -38,7 +68,110 @@ export function ProjectilePool() {
   const cannonBallGltf = useGLTF('/models/cannon-ball.glb');
   const activeIndicesRef = useRef(new Set<number>());
 
-  // Initial instances: all at sleep position
+  /**
+   * Core deactivation logic — moves the body to the sleep position, zeroes
+   * velocity, sleeps it, and clears slot metadata. Safe to call from useFrame
+   * (which runs outside the physics step) but NOT from a collision callback.
+   */
+  const deactivateSlot = useCallback((index: number): void => {
+    const bodies = rigidBodiesRef.current;
+    if (!bodies) return;
+
+    const body = bodies[index];
+    if (!body) return;
+
+    if (!activeIndicesRef.current.has(index)) {
+      // Still clear metadata in case it lingered.
+      clearProjectileSlotMetadata(index);
+      return;
+    }
+    activeIndicesRef.current.delete(index);
+    clearProjectileSlotMetadata(index);
+
+    try {
+      body.setTranslation({ x: 0, y: SLEEP_POSITION_Y, z: 0 }, true);
+      body.setLinvel({ x: 0, y: 0, z: 0 }, true);
+      body.setAngvel({ x: 0, y: 0, z: 0 }, true);
+      body.setGravityScale(0, true);
+      body.sleep();
+    } catch {
+      // Rapier may still be mid-step on some edge cases. The slot is already
+      // marked inactive, so subsequent activations will reclaim it.
+    }
+  }, []);
+
+  /**
+   * Shared collision handler for all pool instances.
+   *
+   * Called synchronously from inside the physics step, so we MUST NOT mutate
+   * any rigid body state here — we only apply store damage, emit a VFX
+   * event, and queue deferred cleanup. The pool index for the hit projectile
+   * is recovered by matching the target rigid body's Rapier handle against
+   * the pool body array.
+   */
+  const handleCollisionEnter = useCallback((payload: CollisionEnterPayload): void => {
+    const bodies = rigidBodiesRef.current;
+    if (!bodies) return;
+
+    const targetBody = payload.target.rigidBody;
+    if (!targetBody) return;
+
+    // Find which pool slot this projectile belongs to by handle match.
+    let index = -1;
+    for (let i = 0; i < bodies.length; i++) {
+      const b = bodies[i];
+      if (b && b.handle === targetBody.handle) {
+        index = i;
+        break;
+      }
+    }
+    if (index === -1) return;
+
+    // Ignore if this slot is already inactive or already queued.
+    if (!activeIndicesRef.current.has(index)) return;
+    if (isProjectileDeactivationPending(index)) return;
+
+    const metadata = getProjectileSlotMetadata(index);
+    if (!metadata) return;
+
+    const otherBody = payload.other.rigidBody;
+
+    // Identify the target entity via registered body lookups.
+    let targetId: string | undefined;
+    if (otherBody) {
+      if (isPlayerBody(otherBody)) {
+        targetId = 'player';
+      } else {
+        targetId = findEnemyIdByBody(otherBody);
+      }
+    }
+
+    // Prevent self-damage: a projectile fired by an entity must never damage
+    // its own owner. Rare but possible at point-blank muzzle exit.
+    if (targetId && targetId !== metadata.ownerId) {
+      useGameStore.getState().applyDamage(targetId, metadata.damage);
+    }
+
+    // Emit explosion VFX at the projectile's current position.
+    try {
+      const p = targetBody.translation();
+      emitVfxEvent({
+        type: 'explosion',
+        position: [p.x, p.y, p.z],
+        time: performance.now() / 1000,
+      });
+    } catch {
+      // VFX is cosmetic — safe to drop on the rare mid-step error.
+    }
+
+    // Queue deactivation — the next frame drains the queue and recycles the
+    // slot.
+    queueProjectileDeactivation(index);
+  }, []);
+
+  // Initial instances: all at sleep position. The shared collision handler
+  // is attached at the wrapper level (see the InstancedRigidBodies props
+  // below) so we do not need to set it per-instance.
   const instances = useMemo<InstancedRigidBodyProps[]>(() => {
     const result: InstancedRigidBodyProps[] = [];
     for (let i = 0; i < POOL_SIZE; i++) {
@@ -79,17 +212,18 @@ export function ProjectilePool() {
 
       activeIndicesRef.current.add(index);
 
-      // Wake and position the body
+      // Wake and position the body, then set velocity directly.
+      // setLinvel is used instead of applyImpulse to guarantee the desired
+      // muzzle velocity regardless of the projectile's collider mass.
       body.setTranslation({ x: position[0], y: position[1], z: position[2] }, true);
-      body.setLinvel({ x: 0, y: 0, z: 0 }, true);
       body.setAngvel({ x: 0, y: 0, z: 0 }, true);
       body.setGravityScale(1, true);
       body.wakeUp();
-      body.applyImpulse({ x: impulse[0], y: impulse[1], z: impulse[2] }, true);
+      body.setLinvel({ x: impulse[0], y: impulse[1], z: impulse[2] }, true);
 
-      // Register in store
+      // Register in store and capture the store id for collision cleanup.
       const currentTime = performance.now() / 1000;
-      useGameStore.getState().spawnProjectile({
+      const storeId = useGameStore.getState().spawnProjectile({
         ownerId,
         ownerType,
         damage,
@@ -99,27 +233,32 @@ export function ProjectilePool() {
         maxLifetime: PROJECTILE_MAX_LIFETIME,
       });
 
+      setProjectileSlotMetadata(index, {
+        ownerId,
+        ownerType,
+        damage,
+        splashDamage,
+        splashRadius,
+        storeId,
+      });
+
       return index;
     },
     [],
   );
 
-  const deactivate = useCallback((index: number): void => {
-    const bodies = rigidBodiesRef.current;
-    if (!bodies) return;
-
-    const body = bodies[index];
-    if (!body) return;
-
-    activeIndicesRef.current.delete(index);
-
-    // Move to sleep position and put to sleep
-    body.setTranslation({ x: 0, y: SLEEP_POSITION_Y, z: 0 }, true);
-    body.setLinvel({ x: 0, y: 0, z: 0 }, true);
-    body.setAngvel({ x: 0, y: 0, z: 0 }, true);
-    body.setGravityScale(0, true);
-    body.sleep();
-  }, []);
+  const deactivate = useCallback(
+    (index: number): void => {
+      // Look up the store id BEFORE clearing metadata, so the store entry can
+      // also be removed for callers (e.g. the lifetime expiry path).
+      const meta = getProjectileSlotMetadata(index);
+      if (meta) {
+        useGameStore.getState().removeProjectile(meta.storeId);
+      }
+      deactivateSlot(index);
+    },
+    [deactivateSlot],
+  );
 
   const getBodies = useCallback((): (RapierRigidBody | null)[] => {
     return rigidBodiesRef.current ?? [];
@@ -130,6 +269,8 @@ export function ProjectilePool() {
     setProjectilePoolManager({ activate, deactivate, getBodies });
     return () => {
       setProjectilePoolManager(null);
+      clearAllProjectileSlotMetadata();
+      clearAllPendingProjectileDeactivations();
     };
   }, [activate, deactivate, getBodies]);
 
@@ -169,12 +310,17 @@ export function ProjectilePool() {
       instances={instances}
       type="dynamic"
       ccd
-      gravityScale={0}
       colliders={false}
+      onCollisionEnter={handleCollisionEnter}
+      colliderNodes={[
+        <BallCollider
+          key="projectile-collider"
+          args={[0.15]}
+          collisionGroups={PLAYER_PROJECTILE_GROUPS}
+        />,
+      ]}
     >
-      <instancedMesh args={[geometry, material, POOL_SIZE]} count={POOL_SIZE}>
-        <BallCollider args={[0.15]} collisionGroups={PLAYER_PROJECTILE_GROUPS} />
-      </instancedMesh>
+      <instancedMesh args={[geometry, material, POOL_SIZE]} count={POOL_SIZE} />
     </InstancedRigidBodies>
   );
 }
