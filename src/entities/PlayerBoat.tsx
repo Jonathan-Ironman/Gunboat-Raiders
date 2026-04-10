@@ -111,7 +111,7 @@ export function PlayerBoat() {
       ref={rigidBodyRef}
       type="dynamic"
       gravityScale={0}
-      linearDamping={0.5}
+      linearDamping={0.2}
       angularDamping={3.0}
       position={[0, 1.0, 0]}
       colliders={false}

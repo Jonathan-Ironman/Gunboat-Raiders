@@ -9,14 +9,22 @@ interface BoatStatPreset {
 export const BOAT_STATS = {
   player: {
     health: { armor: 100, armorMax: 100, armorRegenRate: 3, hull: 100, hullMax: 100 },
-    movement: { thrustForce: 1800, reverseForce: 600, turnTorque: 400, maxSpeed: 20 },
+    movement: { thrustForce: 6000, reverseForce: 2000, turnTorque: 400, maxSpeed: 20 },
     weapons: {
       cooldown: 2.0,
       damage: 25,
       splashDamage: 10,
-      splashRadius: 3,
-      muzzleVelocity: 30,
-      elevationAngle: 0.35, // ~20 degrees
+      // Splash radius tuned so a near-miss (ball striking water within ~5m of
+      // an enemy) still chips hull — important for the combat loop because
+      // the player's muzzle velocity and elevation produce a fairly flat arc
+      // that lands projectiles close to, not exactly on, the target.
+      splashRadius: 5,
+      muzzleVelocity: 60,
+      // Near-flat fire: a 3.4° elevation plus 60 m/s gives a sweet-spot hit
+      // around 55–65 m and a ballistic range under 80 m. This matches the
+      // game's intended combat envelope (boats at arena-scale distances)
+      // without turning the cannons into long-range artillery.
+      elevationAngle: 0.06,
       mounts: [
         // Fore (2 small)
         { quadrant: 'fore', localOffset: [0.4, 0.8, 2.0], localDirection: [0, 0.3, 1] },
