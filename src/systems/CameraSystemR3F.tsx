@@ -58,10 +58,10 @@ export function CameraSystemR3F() {
   const onMouseMove = useCallback((e: MouseEvent) => {
     // Only rotate camera when pointer is locked — raw movementX/Y give true deltas
     if (!isPointerLockedRef.current) return;
-    azimuthRef.current += e.movementX * CAMERA_SENSITIVITY_X;
+    azimuthRef.current -= e.movementX * CAMERA_SENSITIVITY_X;
     elevationRef.current = Math.max(
       CAMERA_MIN_ELEVATION,
-      Math.min(CAMERA_MAX_ELEVATION, elevationRef.current - e.movementY * CAMERA_SENSITIVITY_Y),
+      Math.min(CAMERA_MAX_ELEVATION, elevationRef.current + e.movementY * CAMERA_SENSITIVITY_Y),
     );
   }, []);
 

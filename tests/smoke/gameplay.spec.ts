@@ -230,26 +230,55 @@ test.describe('Gameplay scenarios', () => {
     expect(viewChanged, 'Scene should visually change after camera interaction').toBe(true);
   });
 
-  test('4 — clicking canvas fires projectile', async ({ page }) => {
+  test('4 — firing spawns a projectile', async ({ page }) => {
     await startPlaying(page);
 
-    // Wait for physics and weapon system to initialize
-    await page.waitForTimeout(2_000);
+    // Wait until the player's physics body state cache is populated. The
+    // weapon system silently drops fire requests if getPlayerBodyState()
+    // returns null, which happens for the first few frames while the
+    // PhysicsSyncSystem warms up.
+    await page.waitForFunction(
+      () => {
+        type W = Window & {
+          __GET_PLAYER_BODY_STATE__?: () => { position: { x: number } } | null;
+        };
+        const w = window as W;
+        return w.__GET_PLAYER_BODY_STATE__?.() != null;
+      },
+      undefined,
+      { timeout: 10_000 },
+    );
 
     const projectilesBefore = await getProjectileCount(page);
 
-    // Click the canvas to fire — the weapon system fires on pointerdown with button 0
-    const canvas = page.locator('canvas');
-    await canvas.click({ position: { x: 100, y: 100 } });
-
-    // Wait for projectile to be spawned (needs a frame tick)
-    await page.waitForTimeout(500);
-
-    const projectilesAfter = await getProjectileCount(page);
+    // Fire via the dev-only test bridge. The production fire path requires
+    // pointer lock, which headless Chromium cannot acquire from a synthetic
+    // click; the bridge exists specifically so tests can exercise the
+    // weapon pipeline without fighting the pointer lock API.
+    //
+    // Retry a few times because the bridge drains once per frame — a single
+    // request can be eaten by a frame that sees bodyState=null or a race
+    // with the camera quadrant update. Up to 5 attempts spaced 200 ms apart
+    // is plenty for a dev build at 60 fps.
+    const projectilesAfter = await (async (): Promise<number> => {
+      for (let i = 0; i < 5; i++) {
+        await page.evaluate(() => {
+          type FireWindow = Window & { __TEST_REQUEST_FIRE__?: () => void };
+          const w = window as FireWindow;
+          if (typeof w.__TEST_REQUEST_FIRE__ === 'function') {
+            w.__TEST_REQUEST_FIRE__();
+          }
+        });
+        await page.waitForTimeout(200);
+        const count = await getProjectileCount(page);
+        if (count > projectilesBefore) return count;
+      }
+      return getProjectileCount(page);
+    })();
 
     expect(
       projectilesAfter,
-      `Projectile count should increase after clicking. ` +
+      `Projectile count should increase after firing. ` +
         `Before: ${projectilesBefore}, After: ${projectilesAfter}`,
     ).toBeGreaterThan(projectilesBefore);
   });

@@ -3,6 +3,8 @@ import { HealthBar } from './HealthBar';
 import { WaveCounter } from './WaveCounter';
 import { ScoreDisplay } from './ScoreDisplay';
 import { QuadrantIndicator } from './QuadrantIndicator';
+import { Crosshair } from './Crosshair';
+import { PointerLockHint } from './PointerLockHint';
 
 const hudStyle: React.CSSProperties = {
   position: 'absolute',
@@ -23,6 +25,8 @@ export function HUD() {
       <WaveCounter />
       <ScoreDisplay />
       <QuadrantIndicator />
+      <Crosshair />
+      <PointerLockHint />
     </div>
   );
 }
