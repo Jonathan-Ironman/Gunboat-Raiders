@@ -130,7 +130,9 @@ export function EnemyBoat({ id, enemyType, position }: EnemyBoatProps) {
       type="dynamic"
       gravityScale={0}
       linearDamping={0.8}
-      angularDamping={3.0}
+      // Low angular damping so the boat can freely pitch and roll with the
+      // Gerstner wave surface. Buoyancy torque handles its own damping.
+      angularDamping={0.8}
       position={position}
       colliders={false}
     >

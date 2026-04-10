@@ -164,14 +164,22 @@ describe('BuoyancySystem — computeBuoyancy', () => {
   });
 
   it('submersion is clamped to maxSubmersion', () => {
-    // Boat at moderate depth
-    const moderateResult = computeBuoyancy(makeInput([0, -2, 0]), flatWater, 0, DEFAULT_CONFIG);
+    // Boat deep enough that every sample point exceeds the clamp.
+    // At body Y = -(maxSubmersion + 0.5) sample points sit exactly at
+    // -(maxSubmersion + 1.0), producing rawSubmersion > maxSubmersion.
+    const justPastClampY = -(DEFAULT_CONFIG.maxSubmersion + 1.0);
+    const moderateResult = computeBuoyancy(
+      makeInput([0, justPastClampY, 0]),
+      flatWater,
+      0,
+      DEFAULT_CONFIG,
+    );
 
-    // Boat at extreme depth — force should not grow indefinitely
+    // Boat at extreme depth — force should not grow indefinitely.
     const deepResult = computeBuoyancy(makeInput([0, -100, 0]), flatWater, 0, DEFAULT_CONFIG);
 
     // Both should produce the same buoyancy because submersion is clamped
-    // (at -2 the points are at -2.5, submersion=2.5 > maxSubmersion=2.0, so also clamped)
+    // to maxSubmersion in both cases.
     expect(deepResult.force[1]).toBeCloseTo(moderateResult.force[1], 1);
   });
 });
