@@ -5,7 +5,7 @@ import { vertexShader, fragmentShader } from './waterShader';
 import { initWaves, DEFAULT_WAVES } from './gerstnerWaves';
 
 const PLANE_SIZE = 2000;
-const PLANE_SEGMENTS = 512;
+const PLANE_SEGMENTS = 128;
 const FLOATS_PER_WAVE = 7;
 
 /**

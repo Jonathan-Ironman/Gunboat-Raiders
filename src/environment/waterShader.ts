@@ -141,11 +141,11 @@ export const fragmentShader = /* glsl */ `
     return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
   }
 
-  // Fractal Brownian Motion for layered detail
+  // Fractal Brownian Motion for layered detail (3 octaves for performance)
   float fbm(vec2 p) {
     float value = 0.0;
     float amplitude = 0.5;
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 3; i++) {
       value += amplitude * noise(p);
       p *= 2.2;
       amplitude *= 0.45;
@@ -162,28 +162,21 @@ export const fragmentShader = /* glsl */ `
     // Two octaves of ripples at different scales, animated
     vec2 worldXZ = vWorldPosition.xz;
 
-    // Layer 1: medium-scale ripples
+    // Single layer of medium-scale ripples (cheaper than two layers)
     float s1 = 0.6;
     float n1 = fbm(worldXZ * s1 + uTime * vec2(0.4, 0.3));
     float n1x = fbm((worldXZ + vec2(0.3, 0.0)) * s1 + uTime * vec2(0.4, 0.3)) - n1;
     float n1z = fbm((worldXZ + vec2(0.0, 0.3)) * s1 + uTime * vec2(0.4, 0.3)) - n1;
 
-    // Layer 2: fine-scale ripples (different direction)
-    float s2 = 1.8;
-    float n2 = fbm(worldXZ * s2 + uTime * vec2(-0.25, 0.35) + vec2(50.0, 80.0));
-    float n2x = fbm((worldXZ + vec2(0.15, 0.0)) * s2 + uTime * vec2(-0.25, 0.35) + vec2(50.0, 80.0)) - n2;
-    float n2z = fbm((worldXZ + vec2(0.0, 0.15)) * s2 + uTime * vec2(-0.25, 0.35) + vec2(50.0, 80.0)) - n2;
-
     // Blend strength: stronger close up, fade with distance
     float detailDist = length(vWorldPosition - cameraPosition);
     float detailFade = smoothstep(400.0, 15.0, detailDist);
-    float strength1 = 0.3 * detailFade;
-    float strength2 = 0.15 * detailFade;
+    float strength1 = 0.35 * detailFade;
 
     vec3 perturbation = vec3(
-      n1x * strength1 / 0.3 + n2x * strength2 / 0.15,
+      n1x * strength1 / 0.3,
       0.0,
-      n1z * strength1 / 0.3 + n2z * strength2 / 0.15
+      n1z * strength1 / 0.3
     );
     vec3 normal = normalize(baseNormal + perturbation);
 
