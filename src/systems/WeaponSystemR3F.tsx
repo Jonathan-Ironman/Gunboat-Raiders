@@ -3,40 +3,39 @@
  *
  * Ticks cooldowns, listens for mouse click to fire,
  * spawns projectiles through the pool manager.
+ *
+ * Firing requires pointer lock to be active (left click while locked fires
+ * cannons). The first canvas click acquires pointer lock (handled by
+ * CameraSystemR3F); subsequent clicks trigger fire.
  */
 
 import { useEffect, useCallback, useRef } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
-import { Euler, Quaternion } from 'three';
+import { useFrame } from '@react-three/fiber';
 import { useGameStore } from '@/store/gameStore';
 import { getPlayerBodyState } from './physicsRefs';
 import { getProjectilePoolManager } from './projectilePoolRefs';
 import { tickCooldowns, canFire, computeFireData } from './WeaponSystem';
+import { consumeTestFireRequest } from './weaponTestBridge';
 import { emitVfxEvent } from '@/effects/vfxEvents';
 
-// Reusable Three.js objects
-const _quat = new Quaternion();
-const _euler = new Euler();
-
 export function WeaponSystemR3F() {
-  const { gl } = useThree();
   const fireRequestedRef = useRef(false);
 
-  // Listen for click on the canvas to request fire
-  const onPointerDown = useCallback((e: PointerEvent) => {
-    // Only fire on left mouse button (button 0)
-    if (e.button === 0) {
+  // Listen for mousedown on document to capture clicks while pointer-locked.
+  // Pointer lock must be active (acquired by CameraSystemR3F on first canvas
+  // click) — the first click requests lock and does not fire.
+  const onMouseDown = useCallback((e: MouseEvent) => {
+    if (e.button === 0 && document.pointerLockElement !== null) {
       fireRequestedRef.current = true;
     }
   }, []);
 
   useEffect(() => {
-    const domElement = gl.domElement;
-    domElement.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('mousedown', onMouseDown);
     return () => {
-      domElement.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('mousedown', onMouseDown);
     };
-  }, [gl.domElement, onPointerDown]);
+  }, [onMouseDown]);
 
   useFrame((_state, delta) => {
     const store = useGameStore.getState();
@@ -63,6 +62,11 @@ export function WeaponSystemR3F() {
       },
     });
 
+    // Drain any test-bridge fire request (dev-only, used by Playwright).
+    if (consumeTestFireRequest()) {
+      fireRequestedRef.current = true;
+    }
+
     // Handle fire request
     if (fireRequestedRef.current) {
       fireRequestedRef.current = false;
@@ -76,10 +80,6 @@ export function WeaponSystemR3F() {
 
         const pos = bodyState.position;
         const rot = bodyState.rotation;
-
-        // Get boat heading for elevation application
-        _quat.set(rot.x, rot.y, rot.z, rot.w);
-        _euler.setFromQuaternion(_quat, 'YXZ');
 
         const spawns = computeFireData(
           player.weapons.mounts,

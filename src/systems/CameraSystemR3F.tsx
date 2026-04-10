@@ -2,6 +2,7 @@
  * R3F camera system — custom orbit camera around the player boat.
  *
  * Tracks mouse movement to rotate azimuth/elevation in spherical coordinates.
+ * Uses pointer lock so camera rotates freely without requiring a mouse button hold.
  * Each frame: positions camera around player, computes active firing quadrant.
  *
  * Includes a position guard to prevent the camera from following the player
@@ -39,20 +40,24 @@ const _lookDir = new Vector3();
 
 export function CameraSystemR3F() {
   const gl = useThree((state) => state.gl);
-  const azimuthRef = useRef(0);
+  // Initial azimuth = PI places the camera behind the boat (-Z side),
+  // looking forward along +Z, so the default firing quadrant is 'fore'.
+  const azimuthRef = useRef(Math.PI);
   const elevationRef = useRef(CAMERA_INITIAL_ELEVATION);
-  const isPointerDownRef = useRef(false);
+  const isPointerLockedRef = useRef(false);
 
-  const onPointerDown = useCallback(() => {
-    isPointerDownRef.current = true;
-  }, []);
+  /**
+   * Last quadrant we wrote to the store. Kept here (not read from the store)
+   * so that external callers — particularly automated tests that call
+   * `setActiveQuadrant` directly — can override the quadrant without the
+   * camera system immediately clobbering it. We only push an update when
+   * the camera-computed quadrant actually changes between frames.
+   */
+  const lastWrittenQuadrantRef = useRef<ReturnType<typeof computeQuadrant> | null>(null);
 
-  const onPointerUp = useCallback(() => {
-    isPointerDownRef.current = false;
-  }, []);
-
-  const onPointerMove = useCallback((e: PointerEvent) => {
-    if (!isPointerDownRef.current) return;
+  const onMouseMove = useCallback((e: MouseEvent) => {
+    // Only rotate camera when pointer is locked — raw movementX/Y give true deltas
+    if (!isPointerLockedRef.current) return;
     azimuthRef.current += e.movementX * CAMERA_SENSITIVITY_X;
     elevationRef.current = Math.max(
       CAMERA_MIN_ELEVATION,
@@ -60,19 +65,32 @@ export function CameraSystemR3F() {
     );
   }, []);
 
+  const onPointerLockChange = useCallback(() => {
+    isPointerLockedRef.current = document.pointerLockElement === gl.domElement;
+  }, [gl.domElement]);
+
+  const onCanvasClick = useCallback(() => {
+    // First click on canvas requests pointer lock for camera + fire control
+    if (!isPointerLockedRef.current) {
+      void gl.domElement.requestPointerLock();
+    }
+  }, [gl.domElement]);
+
   useEffect(() => {
     const domElement = gl.domElement;
-    domElement.addEventListener('pointerdown', onPointerDown);
-    domElement.addEventListener('pointerup', onPointerUp);
-    domElement.addEventListener('pointerleave', onPointerUp);
-    domElement.addEventListener('pointermove', onPointerMove);
+    domElement.addEventListener('click', onCanvasClick);
+    document.addEventListener('pointerlockchange', onPointerLockChange);
+    document.addEventListener('mousemove', onMouseMove);
     return () => {
-      domElement.removeEventListener('pointerdown', onPointerDown);
-      domElement.removeEventListener('pointerup', onPointerUp);
-      domElement.removeEventListener('pointerleave', onPointerUp);
-      domElement.removeEventListener('pointermove', onPointerMove);
+      domElement.removeEventListener('click', onCanvasClick);
+      document.removeEventListener('pointerlockchange', onPointerLockChange);
+      document.removeEventListener('mousemove', onMouseMove);
+      // Release pointer lock on unmount
+      if (document.pointerLockElement === domElement) {
+        document.exitPointerLock();
+      }
     };
-  }, [gl.domElement, onPointerDown, onPointerUp, onPointerMove]);
+  }, [gl.domElement, onCanvasClick, onPointerLockChange, onMouseMove]);
 
   useFrame(({ camera }) => {
     // Read from cached body state (populated by PhysicsSyncSystem after each
@@ -121,11 +139,14 @@ export function CameraSystemR3F() {
     _euler.setFromQuaternion(_quat, 'YXZ');
     const boatHeading = _euler.y;
 
-    // Compute and update active quadrant
+    // Compute active quadrant and only push to the store when OUR computed
+    // value changes — not when the store value disagrees. This allows
+    // external callers (e.g. tests) to set the quadrant independently
+    // without the camera system immediately overwriting it every frame.
     const quadrant = computeQuadrant(cameraAngle, boatHeading);
-    const store = useGameStore.getState();
-    if (store.activeQuadrant !== quadrant) {
-      store.setActiveQuadrant(quadrant);
+    if (lastWrittenQuadrantRef.current !== quadrant) {
+      lastWrittenQuadrantRef.current = quadrant;
+      useGameStore.getState().setActiveQuadrant(quadrant);
     }
   });
 
