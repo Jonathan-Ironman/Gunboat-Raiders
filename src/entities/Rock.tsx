@@ -1,13 +1,15 @@
 /**
- * Rock entity -- static rigid body with faceted icosahedron visual.
+ * Rock entity -- static rigid body with a Kenney pirate-kit rock GLB model.
  *
- * Placed as a fixed obstacle in the arena. Does not move or bob with waves.
+ * Six distinct GLB variants (rocks-a/b/c + rocks-sand-a/b/c) are selected
+ * via the `variant` field on RockConfig so the world has visual variety.
  */
 
+import { useGLTF } from '@react-three/drei';
 import { RigidBody, CuboidCollider, interactionGroups } from '@react-three/rapier';
-import { Icosahedron } from '@react-three/drei';
 import { COLLISION_GROUPS } from '../utils/collisionGroups';
 import type { RockConfig } from '../utils/rockPlacement';
+import { ROCK_MODEL_PATHS } from '../utils/rockPreload';
 
 /** Environment collides with Player, Enemy, PlayerProjectile, EnemyProjectile */
 const ENVIRONMENT_COLLISION_GROUPS = interactionGroups(COLLISION_GROUPS.ENVIRONMENT, [
@@ -21,23 +23,32 @@ interface RockProps {
   config: RockConfig;
 }
 
-export function Rock({ config }: RockProps) {
-  const { position, scale, rotation } = config;
+function RockModel({ variant }: { variant: number }) {
+  const index = variant % ROCK_MODEL_PATHS.length;
+  // ROCK_MODEL_PATHS is a const tuple; modulo guarantees index is in range.
+  // Cast to string to satisfy useGLTF's overloaded string signature.
+  const path = ROCK_MODEL_PATHS[index] as string;
+  const { scene } = useGLTF(path);
+  return <primitive object={scene.clone(true)} />;
+}
 
-  // Collider half-extents: approximate the icosahedron at the given scale.
-  // Icosahedron with args=[1] has radius 1, so half-extents ~ scale * 0.7
+export function Rock({ config }: RockProps) {
+  const { position, scale, rotation, variant } = config;
+
+  // Collider half-extents approximate the rock cluster footprint.
+  // The Kenney rock models fit roughly within a [1, 0.6, 1] unit box.
   const colliderHalfExtents: [number, number, number] = [
-    scale[0] * 0.7,
-    scale[1] * 0.7,
-    scale[2] * 0.7,
+    scale[0] * 0.55,
+    scale[1] * 0.45,
+    scale[2] * 0.55,
   ];
 
   return (
     <RigidBody type="fixed" position={position} colliders={false}>
       <CuboidCollider args={colliderHalfExtents} collisionGroups={ENVIRONMENT_COLLISION_GROUPS} />
-      <Icosahedron args={[1, 1]} scale={scale} rotation={rotation}>
-        <meshStandardMaterial color="#3a3a3a" roughness={0.9} metalness={0.1} />
-      </Icosahedron>
+      <group scale={scale} rotation={rotation}>
+        <RockModel variant={variant} />
+      </group>
     </RigidBody>
   );
 }

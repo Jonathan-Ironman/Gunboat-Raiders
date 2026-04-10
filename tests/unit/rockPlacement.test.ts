@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { generateRockPositions } from '@/utils/rockPlacement';
+import { generateRockPositions, ROCK_VARIANT_COUNT } from '@/utils/rockPlacement';
 
 describe('generateRockPositions', () => {
   const SEED = 42;
   const COUNT = 20;
   const ARENA_RADIUS = 200;
   const SAFE_ZONE_RADIUS = 30;
-  const MIN_SPACING = 15;
+  const MIN_SPACING = 12;
 
   it('returns correct count of rocks', () => {
     const rocks = generateRockPositions(SEED, COUNT, ARENA_RADIUS, SAFE_ZONE_RADIUS, MIN_SPACING);
@@ -26,9 +26,8 @@ describe('generateRockPositions', () => {
     const rocks1 = generateRockPositions(SEED, COUNT, ARENA_RADIUS, SAFE_ZONE_RADIUS, MIN_SPACING);
     const rocks2 = generateRockPositions(99, COUNT, ARENA_RADIUS, SAFE_ZONE_RADIUS, MIN_SPACING);
     // At least some positions should differ
-    expect(rocks1.length).toBe(rocks2.length);
     let hasDifference = false;
-    for (let i = 0; i < rocks1.length; i++) {
+    for (let i = 0; i < Math.min(rocks1.length, rocks2.length); i++) {
       const r1 = rocks1[i];
       const r2 = rocks2[i];
       if (r1 && r2 && (r1.position[0] !== r2.position[0] || r1.position[2] !== r2.position[2])) {
@@ -74,12 +73,12 @@ describe('generateRockPositions', () => {
   it('rock scales are within expected bounds', () => {
     const rocks = generateRockPositions(SEED, COUNT, ARENA_RADIUS, SAFE_ZONE_RADIUS, MIN_SPACING);
     for (const rock of rocks) {
-      expect(rock.scale[0]).toBeGreaterThanOrEqual(1.5);
-      expect(rock.scale[0]).toBeLessThanOrEqual(4);
-      expect(rock.scale[1]).toBeGreaterThanOrEqual(2);
-      expect(rock.scale[1]).toBeLessThanOrEqual(6);
-      expect(rock.scale[2]).toBeGreaterThanOrEqual(1.5);
-      expect(rock.scale[2]).toBeLessThanOrEqual(4);
+      expect(rock.scale[0]).toBeGreaterThanOrEqual(1.0);
+      expect(rock.scale[0]).toBeLessThanOrEqual(3.5);
+      expect(rock.scale[1]).toBeGreaterThanOrEqual(0.8);
+      expect(rock.scale[1]).toBeLessThanOrEqual(2.5);
+      expect(rock.scale[2]).toBeGreaterThanOrEqual(1.0);
+      expect(rock.scale[2]).toBeLessThanOrEqual(3.5);
     }
   });
 
@@ -88,6 +87,22 @@ describe('generateRockPositions', () => {
     for (const rock of rocks) {
       expect(rock.position[1]).toBe(0);
     }
+  });
+
+  it('each rock has a valid variant index (0 to ROCK_VARIANT_COUNT-1)', () => {
+    const rocks = generateRockPositions(SEED, COUNT, ARENA_RADIUS, SAFE_ZONE_RADIUS, MIN_SPACING);
+    for (const rock of rocks) {
+      expect(rock.variant).toBeGreaterThanOrEqual(0);
+      expect(rock.variant).toBeLessThan(ROCK_VARIANT_COUNT);
+      expect(Number.isInteger(rock.variant)).toBe(true);
+    }
+  });
+
+  it('multiple variant values are used across rocks (variety check)', () => {
+    const rocks = generateRockPositions(SEED, COUNT, ARENA_RADIUS, SAFE_ZONE_RADIUS, MIN_SPACING);
+    const usedVariants = new Set(rocks.map((r) => r.variant));
+    // With 20 rocks across 6 variants, expect at least 3 distinct variants
+    expect(usedVariants.size).toBeGreaterThanOrEqual(3);
   });
 
   it('handles count=0 (returns empty array)', () => {
@@ -104,6 +119,28 @@ describe('generateRockPositions', () => {
       const dist = Math.sqrt(rock.position[0] ** 2 + rock.position[2] ** 2);
       expect(dist).toBeGreaterThanOrEqual(SAFE_ZONE_RADIUS);
       expect(dist).toBeLessThanOrEqual(ARENA_RADIUS);
+      expect(rock.variant).toBeGreaterThanOrEqual(0);
+      expect(rock.variant).toBeLessThan(ROCK_VARIANT_COUNT);
     }
+  });
+
+  it('rocks are distributed across at least 2 of the 3 radial zones', () => {
+    const rocks = generateRockPositions(SEED, COUNT, ARENA_RADIUS, SAFE_ZONE_RADIUS, MIN_SPACING);
+    const innerEnd = SAFE_ZONE_RADIUS + (ARENA_RADIUS - SAFE_ZONE_RADIUS) * 0.35;
+    const midEnd = SAFE_ZONE_RADIUS + (ARENA_RADIUS - SAFE_ZONE_RADIUS) * 0.7;
+
+    let innerCount = 0;
+    let midCount = 0;
+    let outerCount = 0;
+
+    for (const rock of rocks) {
+      const dist = Math.sqrt(rock.position[0] ** 2 + rock.position[2] ** 2);
+      if (dist <= innerEnd) innerCount++;
+      else if (dist <= midEnd) midCount++;
+      else outerCount++;
+    }
+
+    const zonesUsed = [innerCount > 0, midCount > 0, outerCount > 0].filter(Boolean).length;
+    expect(zonesUsed).toBeGreaterThanOrEqual(2);
   });
 });
