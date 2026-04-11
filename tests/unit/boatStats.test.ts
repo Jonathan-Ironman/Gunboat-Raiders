@@ -76,14 +76,14 @@ describe('BOAT_STATS movement values', () => {
       }
     });
 
-    it('fore/aft Z values unchanged', () => {
+    it('fore/aft Z values moved inward by 0.75 from ±2.0 to ±1.25', () => {
       const fore = w.mounts.filter((m) => m.quadrant === 'fore');
       for (const m of fore) {
-        expect(m.localOffset[2]).toBe(2.0);
+        expect(m.localOffset[2]).toBe(1.25);
       }
       const aft = w.mounts.filter((m) => m.quadrant === 'aft');
       for (const m of aft) {
-        expect(m.localOffset[2]).toBe(-2.0);
+        expect(m.localOffset[2]).toBe(-1.25);
       }
     });
 

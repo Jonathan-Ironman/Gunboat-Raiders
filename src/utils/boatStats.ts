@@ -40,9 +40,9 @@ export const BOAT_STATS = {
       // well within a safe arc and under any elevation cap.
       elevationAngle: 0.1,
       mounts: [
-        // Fore (2 small) — pulled inward (x: ±0.4→±0.2) and lowered (y: 0.8→0.4)
-        { quadrant: 'fore', localOffset: [0.2, 0.4, 2.0], localDirection: [0, 0.3, 1] },
-        { quadrant: 'fore', localOffset: [-0.2, 0.4, 2.0], localDirection: [0, 0.3, 1] },
+        // Fore (2 small) — pulled inward (x: ±0.4→±0.2) and lowered (y: 0.8→0.4); z moved inward by 0.75
+        { quadrant: 'fore', localOffset: [0.2, 0.4, 1.25], localDirection: [0, 0.3, 1] },
+        { quadrant: 'fore', localOffset: [-0.2, 0.4, 1.25], localDirection: [0, 0.3, 1] },
         // Port broadside (4) — evenly spaced at Z: 0.5, 0.0, -0.5, -1.0 (0.5 gap each)
         { quadrant: 'port', localOffset: [-0.6, 0.4, 0.5], localDirection: [-1, 0.3, 0] },
         { quadrant: 'port', localOffset: [-0.6, 0.4, 0.0], localDirection: [-1, 0.3, 0] },
@@ -53,8 +53,8 @@ export const BOAT_STATS = {
         { quadrant: 'starboard', localOffset: [0.6, 0.4, 0.0], localDirection: [1, 0.3, 0] },
         { quadrant: 'starboard', localOffset: [0.6, 0.4, -0.5], localDirection: [1, 0.3, 0] },
         { quadrant: 'starboard', localOffset: [0.6, 0.4, -1.0], localDirection: [1, 0.3, 0] },
-        // Aft (1 small) — lowered (y: 0.8→0.4), x stays 0
-        { quadrant: 'aft', localOffset: [0, 0.4, -2.0], localDirection: [0, 0.3, -1] },
+        // Aft (1 small) — lowered (y: 0.8→0.4), x stays 0; z moved inward by 0.75
+        { quadrant: 'aft', localOffset: [0, 0.4, -1.25], localDirection: [0, 0.3, -1] },
       ],
     },
   },
