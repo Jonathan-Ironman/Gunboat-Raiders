@@ -59,6 +59,11 @@ export function MovementSystemR3F() {
   const [, getKeys] = useKeyboardControls<Controls>();
 
   useFrame(() => {
+    // R4: skip input→force translation while paused. Otherwise a held WASD
+    // key would queue forces all through the pause, and they'd snap the
+    // boat forward the moment we resume.
+    if (useGameStore.getState().phase === 'paused') return;
+
     const body = getPlayerBody();
     if (!body) return;
 

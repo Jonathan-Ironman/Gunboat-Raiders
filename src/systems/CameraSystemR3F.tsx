@@ -85,7 +85,28 @@ export function CameraSystemR3F() {
   }, []);
 
   const onPointerLockChange = useCallback(() => {
-    isPointerLockedRef.current = document.pointerLockElement === gl.domElement;
+    const wasLocked = isPointerLockedRef.current;
+    const nowLocked = document.pointerLockElement === gl.domElement;
+    isPointerLockedRef.current = nowLocked;
+
+    // R4 — Pause-on-pointer-lock-loss.
+    //
+    // The browser releases pointer lock on Escape (and on alt-tab, context
+    // menu, dev-tools focus, etc.). We listen for the lock-loss transition
+    // and pause the game whenever it happens mid-play. No explicit Escape
+    // key handler is needed — that would actually double-fire because the
+    // browser already translates Escape into a lock-loss event.
+    //
+    // `pauseGame()` itself is a no-op outside `'playing' | 'wave-clear'`,
+    // so we don't need to re-check the phase here, but we do to keep the
+    // intent explicit and to avoid a pointless `getState()` call during
+    // main-menu / briefing / paused transitions that also fire this event.
+    if (wasLocked && !nowLocked) {
+      const { phase, pauseGame } = useGameStore.getState();
+      if (phase === 'playing') {
+        pauseGame();
+      }
+    }
   }, [gl.domElement]);
 
   const onCanvasClick = useCallback(() => {
@@ -116,6 +137,12 @@ export function CameraSystemR3F() {
   // PhysicsSyncSystem runs at -20, so cached body state is ready by the time
   // this runs.
   useFrame(({ camera }) => {
+    // R4: halt per-frame camera/quadrant updates while paused. The
+    // `pointerlockchange` event listener (attached above via useEffect) is
+    // not affected by this early-return — document events fire regardless,
+    // so Escape still releases lock and our handler still catches it.
+    if (useGameStore.getState().phase === 'paused') return;
+
     // Read from cached body state (populated by PhysicsSyncSystem after each
     // physics step) to avoid Rapier WASM "recursive use of an object" errors.
     const bodyState = getPlayerBodyState();

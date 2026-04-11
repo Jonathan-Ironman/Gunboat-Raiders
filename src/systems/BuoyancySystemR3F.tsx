@@ -14,6 +14,7 @@ import { useContext } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { computeBuoyancy, HULL_SAMPLE_POINTS } from './BuoyancySystem';
 import { getBuoyancyBodies } from './physicsRefs';
+import { useGameStore } from '@/store/gameStore';
 import { WaterCtx } from '../environment/waterTypes';
 import {
   BUOYANCY_STRENGTH,
@@ -48,6 +49,11 @@ export function BuoyancySystemR3F() {
   // ensuring buoyancy resets and applies forces before MovementSystemR3F adds
   // its forces on top.
   useFrame((state) => {
+    // R4: halt buoyancy while paused. Without this guard, `resetForces` and
+    // `addForce` would still be queued every frame — harmless because
+    // `<Physics paused>` skips `world.step`, but wasteful and a trap for
+    // future maintainers who'd expect no side-effects mid-pause.
+    if (useGameStore.getState().phase === 'paused') return;
     if (!waterCtx) return;
 
     const time = state.clock.elapsedTime;

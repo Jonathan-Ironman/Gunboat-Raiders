@@ -27,6 +27,10 @@ export function ProjectileSystemR3F() {
 
   useFrame(() => {
     const store = useGameStore.getState();
+    // R4: don't tick lifetimes or emit splash VFX while paused. The
+    // projectile pool's physics bodies are frozen by `<Physics paused>`
+    // anyway, so there's nothing useful for this system to do.
+    if (store.phase === 'paused') return;
 
     // Drain any collision-queued deactivations BEFORE any other work so that
     // freed pool slots are immediately reusable this frame. This is outside

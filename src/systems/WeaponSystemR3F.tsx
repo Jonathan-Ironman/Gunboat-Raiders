@@ -121,6 +121,11 @@ export function WeaponSystemR3F() {
 
   useFrame((_state, delta) => {
     const store = useGameStore.getState();
+    // R4: halt firing logic entirely while paused. Heat decay, cooldown
+    // ticks, pending-fire drain — all frozen. On resume the weapon picks
+    // up exactly where it left off (cooldowns and heat are stored in
+    // player.weapons, not local refs).
+    if (store.phase === 'paused') return;
     const { player } = store;
     if (!player) return;
 

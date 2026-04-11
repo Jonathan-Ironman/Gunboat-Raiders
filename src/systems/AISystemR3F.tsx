@@ -24,6 +24,10 @@ const _euler = new Euler();
 export function AISystemR3F() {
   useFrame((_state, delta) => {
     const store = useGameStore.getState();
+    // R4: freeze all AI updates while paused. Physics is also halted via
+    // `<Physics paused>` so skipping work here just prevents store mutations
+    // from piling up behind a frozen world.
+    if (store.phase === 'paused') return;
     const { enemies, player } = store;
     if (!player) return;
 

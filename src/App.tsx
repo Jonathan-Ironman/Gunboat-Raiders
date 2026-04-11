@@ -79,6 +79,12 @@ function GameEntities() {
 
 export function App() {
   const keyMap = useMemo(() => KEY_MAP, []);
+  // R4: physics must halt while paused. The `paused` prop on `@react-three/rapier`
+  // `<Physics>` short-circuits `step(delta)` and freezes the interpolation alpha
+  // (verified against the v2.2.0 source), so bodies stop moving without any
+  // fallback velocity-zeroing. Re-reading through a selector keeps this reactive:
+  // any phase change re-renders App and re-evaluates `isPaused`.
+  const isPaused = useGameStore((s) => s.phase === 'paused');
 
   return (
     <KeyboardControls map={keyMap}>
@@ -95,6 +101,7 @@ export function App() {
                 timeStep="vary"
                 interpolate={false}
                 updatePriority={-50}
+                paused={isPaused}
               >
                 <PhysicsSyncSystem />
                 <GameEntities />

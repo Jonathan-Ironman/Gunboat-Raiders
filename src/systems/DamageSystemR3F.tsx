@@ -29,6 +29,10 @@ export function DamageSystemR3F() {
 
   useFrame((_state, delta) => {
     const store = useGameStore.getState();
+    // R4: stop armor regen / sink timers / VFX detection while paused.
+    // Without this, armor would visibly tick up while the rest of the
+    // world stood still.
+    if (store.phase === 'paused') return;
     const { player, enemies } = store;
 
     // --- Damage VFX Detection ---
