@@ -1,29 +1,28 @@
 import { useScore } from '../store/selectors';
+import {
+  formatScore,
+  scoreDisplayContainerStyle,
+  scoreDisplayLabelStyle,
+  scoreDisplayValueStyle,
+} from './ScoreDisplay.styles';
 
-const containerStyle: React.CSSProperties = {
-  position: 'absolute',
-  top: '1.5rem',
-  right: '2rem',
-  fontFamily: "'Rajdhani', sans-serif",
-  fontWeight: 700,
-  fontSize: 'clamp(1rem, 2.5vw, 1.5rem)',
-  color: '#e2e8f0',
-  textShadow: '0 2px 8px rgba(0, 0, 0, 0.7)',
-  letterSpacing: '0.05em',
-  fontVariantNumeric: 'tabular-nums',
-  userSelect: 'none',
-};
-
-function formatScore(value: number): string {
-  return value.toLocaleString('en-US');
-}
-
+/**
+ * ScoreDisplay HUD element.
+ *
+ * Top-right anchored readout showing the player's current score. Follows the
+ * Harbour Dawn `.score-disp` pattern: a small muted "SCORE" label above a
+ * large gold numeric value. Score is motivational, so gold (the brand
+ * energy accent) is the correct visual weight.
+ *
+ * Style tokens and pure helpers live in `ScoreDisplay.styles.ts`.
+ */
 export function ScoreDisplay() {
   const score = useScore();
 
   return (
-    <div style={containerStyle} data-testid="score-display">
-      {formatScore(score)}
+    <div style={scoreDisplayContainerStyle} data-testid="score-display">
+      <p style={scoreDisplayLabelStyle}>SCORE</p>
+      <p style={scoreDisplayValueStyle}>{formatScore(score)}</p>
     </div>
   );
 }
