@@ -6,6 +6,7 @@ import { installErrorLogger } from './utils/errorLogger';
 import { installPerfMonitor } from './utils/perfMonitor';
 import { useGameStore } from './store/gameStore';
 import { requestTestFire } from './systems/weaponTestBridge';
+import { requestTestAzimuth } from './systems/cameraTestBridge';
 import {
   getPlayerBodyState,
   getPlayerBody,
@@ -30,6 +31,7 @@ if (import.meta.env.DEV || import.meta.env.VITE_E2E === '1') {
       __GAME_ERRORS__: unknown[];
       __ZUSTAND_STORE__: typeof useGameStore;
       __TEST_REQUEST_FIRE__: typeof requestTestFire;
+      __SET_CAMERA_AZIMUTH__: typeof requestTestAzimuth;
       __GET_PLAYER_BODY_STATE__: typeof getPlayerBodyState;
       __GET_PLAYER_BODY__: typeof getPlayerBody;
       __GET_ALL_ENEMY_BODY_STATES__: typeof getAllEnemyBodyStates;
@@ -56,6 +58,10 @@ if (import.meta.env.DEV || import.meta.env.VITE_E2E === '1') {
   // Expose test-only fire bridge so Playwright can trigger cannons without
   // needing pointer lock (headless browsers cannot reliably acquire it).
   w.__TEST_REQUEST_FIRE__ = requestTestFire;
+
+  // Expose camera azimuth setter so tests can drive the orbit angle without
+  // simulating pointer-lock mouse deltas.
+  w.__SET_CAMERA_AZIMUTH__ = requestTestAzimuth;
 
   // Expose physics body state cache and raw body accessor so tests can read positions.
   w.__GET_PLAYER_BODY_STATE__ = getPlayerBodyState;
