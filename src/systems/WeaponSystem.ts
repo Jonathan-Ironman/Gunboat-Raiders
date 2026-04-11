@@ -23,7 +23,13 @@ export function tickCooldowns(state: WeaponState, delta: number): WeaponState {
   };
 }
 
-/** Check if a quadrant can fire (cooldown expired). */
+/**
+ * Check if a quadrant can fire.
+ *
+ * Returns true only when the quadrant's cooldown has fully elapsed (≤ 0).
+ * Per-quadrant cooldown of 150 ms gives the player a consistent, spammable
+ * fire rate (~6.7 shots/s per quadrant) without exhausting the projectile pool.
+ */
 export function canFire(state: WeaponState, quadrant: FiringQuadrant): boolean {
   return state.cooldownRemaining[quadrant] <= 0;
 }
