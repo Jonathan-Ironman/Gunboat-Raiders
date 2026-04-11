@@ -505,6 +505,14 @@ export const useGameStore = create<GameState>()((set, get) => {
         projectiles: new Map(),
         briefingLevelIndex: levelIndex,
       });
+      // R18 — SaveSystem: checkpoint at the level the player just
+      // entered. Putting the call here means Continue is enabled the
+      // instant play begins, a reload or exit-to-main-menu always lands
+      // the player back at the same level, and a replay (PLAY AGAIN →
+      // same level) idempotently refreshes the save. `saveAtLevel`
+      // uses `Math.max` on best-wave / best-score, so rewriting with
+      // the freshly reset wave=1/score=0 never regresses records.
+      get().saveAtLevel(levelIndex);
     },
 
     returnToMainMenu: () => {

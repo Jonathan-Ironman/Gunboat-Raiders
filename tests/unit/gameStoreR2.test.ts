@@ -330,6 +330,135 @@ describe('gameStore R2 — save', () => {
 });
 
 // ---------------------------------------------------------------------------
+// R18 — SaveSystem: `startLevel` is the save trigger for V1 because it's
+// the single atomic entry point into a mission. Calling saveAtLevel at the
+// tail of startLevel guarantees Continue is enabled the instant play
+// begins, a reload lands on the same level, and replays idempotently
+// refresh the save.
+// ---------------------------------------------------------------------------
+
+describe('gameStore R18 — startLevel writes a save checkpoint', () => {
+  it('persists a save blob with the correct level index', () => {
+    expect(getState().save).toBeNull();
+    getState().startLevel(0);
+
+    const save = getState().save;
+    expect(save).not.toBeNull();
+    expect(save?.currentLevelIndex).toBe(0);
+    expect(save?.bestWave).toBe(1); // freshly reset wave
+    expect(save?.bestScore).toBe(0);
+
+    // Persisted to the expected localStorage key.
+    const raw = storage.getItem(STORAGE_KEY);
+    if (raw === null) throw new Error('expected save blob to persist');
+    const parsed = JSON.parse(raw) as PersistedState;
+    expect(parsed.save).not.toBeNull();
+    expect(parsed.save?.currentLevelIndex).toBe(0);
+  });
+
+  it('keeps best-so-far records monotonic across replays', () => {
+    getState().startLevel(0);
+    getState().addScore(2500);
+    getState().advanceWave();
+    getState().advanceWave();
+    // Manual checkpoint with the new best values — simulates a later
+    // save trigger (e.g. wave-clear, game-over, explicit exit).
+    getState().saveAtLevel(0);
+    expect(getState().save?.bestScore).toBe(2500);
+    expect(getState().save?.bestWave).toBe(3);
+
+    // Replay (PLAY AGAIN path): startLevel resets wave=1/score=0 and
+    // re-saves. Records must not regress.
+    getState().startLevel(0);
+    expect(getState().save?.bestScore).toBe(2500);
+    expect(getState().save?.bestWave).toBe(3);
+    // But currentLevelIndex still points at the started level.
+    expect(getState().save?.currentLevelIndex).toBe(0);
+  });
+
+  it('startLevel does not double-save (single persisted write per call)', () => {
+    const setItemSpy = vi.spyOn(storage, 'setItem');
+    getState().startLevel(0);
+    // Every `setItem` invocation is a distinct persist. R18 wires a
+    // single saveAtLevel call at the end of startLevel — so exactly
+    // one persist should happen per startLevel invocation.
+    expect(setItemSpy).toHaveBeenCalledTimes(1);
+    expect(setItemSpy).toHaveBeenCalledWith(STORAGE_KEY, expect.any(String));
+    setItemSpy.mockRestore();
+  });
+});
+
+describe('gameStore R18 — save round-trip (save → clear)', () => {
+  it('Continue predicate flips true after startLevel and false after clearSave', () => {
+    // Mirror of the `useHasSave()` selector closure.
+    const hasSave = () => getState().save !== null;
+
+    expect(hasSave()).toBe(false);
+
+    getState().startLevel(0);
+    expect(hasSave()).toBe(true);
+
+    getState().clearSave();
+    expect(hasSave()).toBe(false);
+
+    // localStorage still holds a settings-only blob (clearSave preserves
+    // settings) — but with save === null.
+    const raw = storage.getItem(STORAGE_KEY);
+    if (raw === null) throw new Error('expected settings-only blob to persist');
+    const parsed = JSON.parse(raw) as PersistedState;
+    expect(parsed.save).toBeNull();
+  });
+
+  it('startLevel → clearSave → startLevel rewrites the save', () => {
+    getState().startLevel(0);
+    expect(getState().save).not.toBeNull();
+
+    getState().clearSave();
+    expect(getState().save).toBeNull();
+
+    getState().startLevel(0);
+    expect(getState().save).not.toBeNull();
+    expect(getState().save?.currentLevelIndex).toBe(0);
+  });
+});
+
+describe('gameStore R18 — hydration from localStorage', () => {
+  it('reloads a persisted save into the fresh store instance', async () => {
+    // Seed localStorage with a known save blob BEFORE importing the
+    // store module. `vi.resetModules()` throws away the cached module
+    // graph so the hydration code in `gameStore.ts` runs again against
+    // the seeded storage.
+    const seeded: PersistedState = {
+      settings: { sfxVolume: 0.7, musicVolume: 0.3 },
+      save: { currentLevelIndex: 0, bestWave: 4, bestScore: 8_000 },
+    };
+    storage.setItem(STORAGE_KEY, JSON.stringify(seeded));
+
+    vi.resetModules();
+    const mod = await import('@/store/gameStore');
+    const hydrated = mod.useGameStore.getState();
+
+    expect(hydrated.settings.sfxVolume).toBe(0.7);
+    expect(hydrated.settings.musicVolume).toBe(0.3);
+    expect(hydrated.save).not.toBeNull();
+    expect(hydrated.save?.currentLevelIndex).toBe(0);
+    expect(hydrated.save?.bestWave).toBe(4);
+    expect(hydrated.save?.bestScore).toBe(8_000);
+  });
+
+  it('hydrates save=null when no blob is present', async () => {
+    // No storage seed — module eval should fall back to defaults.
+    vi.resetModules();
+    const mod = await import('@/store/gameStore');
+    const hydrated = mod.useGameStore.getState();
+
+    expect(hydrated.save).toBeNull();
+    expect(hydrated.settings.sfxVolume).toBe(1);
+    expect(hydrated.settings.musicVolume).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // usePlayerWeaponHeat selector — reads the overheat mechanic field.
 // ---------------------------------------------------------------------------
 
