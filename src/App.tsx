@@ -28,6 +28,7 @@ import { TitleScreen } from './ui/TitleScreen';
 import { LevelBriefingModal } from './ui/LevelBriefingModal';
 import { GameOverScreen } from './ui/GameOverScreen';
 import { PerfMonitorR3F } from './components/PerfMonitorR3F';
+import { ShowcaseScene } from './scenes/ShowcaseScene';
 
 const KEY_MAP = [
   { name: 'forward', keys: ['KeyW', 'ArrowUp'] },
@@ -55,11 +56,14 @@ function EnemyFleet() {
   );
 }
 
-/** Game entities that only render when not on title screen. */
+/**
+ * Game entities that render during every phase except `mainMenu`.
+ *
+ * When the phase is `mainMenu` the sibling `<ShowcaseScene />` takes
+ * this slot (see `SceneRoot` below) so the canvas shows nothing but
+ * water, sky, and the cinematic showcase boat.
+ */
 function GameEntities() {
-  const phase = useGameStore((s) => s.phase);
-  if (phase === 'mainMenu') return null;
-
   return (
     <>
       <PlayerBoat />
@@ -76,6 +80,17 @@ function GameEntities() {
       <TrajectoryPreview />
     </>
   );
+}
+
+/**
+ * Swap between the cinematic `ShowcaseScene` (main menu backdrop) and
+ * the regular `GameEntities` tree (everything else). Kept as its own
+ * component so the phase subscription stays a sibling of `<Physics>`
+ * — re-renders here do not reach the `Physics` provider itself.
+ */
+function SceneRoot() {
+  const phase = useGameStore((s) => s.phase);
+  return phase === 'mainMenu' ? <ShowcaseScene /> : <GameEntities />;
 }
 
 export function App() {
@@ -105,7 +120,7 @@ export function App() {
                 paused={isPaused}
               >
                 <PhysicsSyncSystem />
-                <GameEntities />
+                <SceneRoot />
                 <Rocks />
               </Physics>
             </Suspense>

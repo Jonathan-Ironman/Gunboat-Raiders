@@ -110,10 +110,17 @@ export function CameraSystemR3F() {
   }, [gl.domElement]);
 
   const onCanvasClick = useCallback(() => {
-    // First click on canvas requests pointer lock for camera + fire control
-    if (!isPointerLockedRef.current) {
-      void gl.domElement.requestPointerLock();
-    }
+    // R8: never steal pointer lock away from the main menu or briefing
+    // modals. The lock request MUST only be issued while the player is
+    // actively in control of the boat — otherwise clicking the Start
+    // button on the title screen would silently grab the mouse and
+    // blackhole every subsequent menu interaction. `wave-clear` is
+    // included because the wave-transition overlay leaves gameplay
+    // input fully active (see R4 pause flow).
+    if (isPointerLockedRef.current) return;
+    const phase = useGameStore.getState().phase;
+    if (phase !== 'playing' && phase !== 'wave-clear') return;
+    void gl.domElement.requestPointerLock();
   }, [gl.domElement]);
 
   useEffect(() => {
