@@ -85,7 +85,7 @@ function embossShadow(edgeColor: string, glowColor: string): string {
 /**
  * Builds a three-layer emboss shadow: the standard two-layer base
  * (hard bottom edge + drop-shadow) plus an additional ambient accent
- * bloom (`0 0 24px <accentColor>`).
+ * bloom (`0 0 40px <accentColor>`).
  *
  * Used for secondary and destructive variants so they have a visible
  * outer glow against the dark `SURFACE_EL` background. The accent
@@ -94,7 +94,7 @@ function embossShadow(edgeColor: string, glowColor: string): string {
  * - destructive → faint red bloom (danger hint without alarming red)
  */
 function embossShadowWithAccent(edgeColor: string, glowColor: string, accentColor: string): string {
-  return `0 4px 0 ${edgeColor}, 0 6px 18px ${glowColor}, 0 0 24px ${accentColor}`;
+  return `0 4px 0 ${edgeColor}, 0 6px 18px ${glowColor}, 0 0 40px ${accentColor}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -139,7 +139,7 @@ const SHARED_DROP_SHADOW = 'rgba(7, 17, 32, 0.6)';
  * Uses the `OCEAN` hue family (rgba of #4a8ac4) at low opacity so it
  * reads as "lit from behind" rather than a colored accent.
  */
-const SECONDARY_AMBIENT_GLOW = 'rgba(74, 138, 196, 0.18)';
+const SECONDARY_AMBIENT_GLOW = 'rgba(100, 180, 240, 0.45)';
 
 /**
  * Resting red accent glow that distinguishes the destructive variant
@@ -148,7 +148,7 @@ const SECONDARY_AMBIENT_GLOW = 'rgba(74, 138, 196, 0.18)';
  * Uses `RED_DARK` (#cc3333) at low opacity so it reads as a faint
  * danger hint rather than an alarm.
  */
-const DESTRUCTIVE_REST_GLOW = 'rgba(204, 51, 51, 0.25)';
+const DESTRUCTIVE_REST_GLOW = 'rgba(255, 80, 80, 0.65)';
 
 // ---------------------------------------------------------------------------
 // Recipe shape
