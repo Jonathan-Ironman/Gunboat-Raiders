@@ -34,18 +34,16 @@ const TRAJECTORY_DT = 0.05; // seconds per step
 const GRAVITY_Y = -9.81;
 
 // Width per cannon mount — so 4 broadside mounts → ~4× wider than 1 fore mount.
-// Base half-width per mount, in world units.
-// Tuned 0.4 → 0.28 after playtest: previous width felt slightly heavy on
-// the broadside ribbons; current value still spans the cannon spread but
-// reads as a sharper aim line.
+// Half-width per mount in world units. Kept narrow so the ribbon reads as a
+// sharp aim line rather than a broad spread indicator — a 4-mount broadside
+// produces ~1.1 unit total half-width.
 const HALF_WIDTH_PER_MOUNT = 0.28;
 
 // Minimum half-width even with a single mount (visual floor)
 const MIN_HALF_WIDTH = 0.28;
 
-// Neutral white ribbon — replaces the previous gold (0xFFD700) per playtest
-// feedback. White reads as a UI / aim cue rather than a "danger" or "loot"
-// signal, which is the right semantic for a trajectory preview.
+// White ribbon so the aim arc reads as a UI / targeting cue rather than a
+// "loot" or "danger" signal.
 const RIBBON_COLOR = 0xffffff;
 const RIBBON_OPACITY = 0.3;
 

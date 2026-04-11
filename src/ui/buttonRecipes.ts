@@ -49,7 +49,11 @@ import {
   EASE_OUT,
   FONT_DISPLAY,
   GOLD,
+  GOLD_LIGHT,
+  GOLD_MID,
   RADIUS_MD,
+  RED_LIGHT,
+  RED_MID,
   SP_3,
   SP_6,
   SURFACE_EL,
@@ -109,10 +113,8 @@ const DESTRUCTIVE_EDGE = '#7a1a1a';
 /**
  * Shared drop-shadow glow color used by ALL button variants.
  *
- * Subtle near-black halo — identical across every variant so buttons
- * have a uniform perceived depth regardless of background color. The
- * low opacity keeps the shadow "almost invisible" against the dark
- * `SURFACE_EL` (#1c3556) background, which is the intended effect.
+ * Near-black halo at low opacity — provides uniform perceived depth
+ * across all variants without competing with the button face color.
  */
 const SHARED_DROP_SHADOW = 'rgba(7, 17, 32, 0.35)';
 
@@ -260,13 +262,25 @@ export const BUTTON_RECIPE: ButtonRecipe = {
  * Brightened secondary emboss edge for hover — one step lighter than
  * the resting edge so the lift reads a touch taller on mouse-over.
  *
- * Note: the secondary hover BACKGROUND is the same red gradient used
- * by destructive hover (per Jonathan's explicit request — Settings
- * should turn red on hover just like Exit does). Only the bottom
- * 4px emboss edge keeps its blue tint to subtly distinguish from
- * the destructive variant at rest.
+ * Note: the secondary hover BACKGROUND is the same red gradient as
+ * destructive hover. Red is the game's universal hover/active tint,
+ * so all interactive secondary buttons share the same feedback signal.
+ * Only the resting-state edge color (blue vs dark-red) differentiates
+ * secondary from destructive.
  */
 const SECONDARY_HOVER_EDGE = '#0d2540';
+
+/**
+ * Hover background for destructive AND secondary buttons — red gradient
+ * that signals danger/action on mouse-over.
+ */
+const DESTRUCTIVE_HOVER_BG = `linear-gradient(135deg, ${RED_LIGHT}, ${RED_MID})`;
+
+/**
+ * Hover background for the primary (gold) button — lighter gold gradient
+ * that brightens the resting state on mouse-over.
+ */
+const BTN_PRI_HOVER_BG = `linear-gradient(135deg, ${GOLD_LIGHT}, ${GOLD_MID})`;
 
 /**
  * The CSS `box-shadow` for the active (pressed) state — bottom edge
@@ -302,7 +316,7 @@ export function buttonStylesheet(): string {
 
 /* Primary (gold) hover + active */
 .gbr-btn--primary:not(:disabled):hover {
-  background: linear-gradient(135deg, #f7c850, #e0a020);
+  background: ${BTN_PRI_HOVER_BG};
   filter: brightness(1.1);
   box-shadow: ${embossShadow(PRIMARY_EDGE, SHARED_DROP_SHADOW)};
 }
@@ -313,7 +327,7 @@ export function buttonStylesheet(): string {
 
 /* Secondary (neutral) hover + active — body color matches destructive on hover */
 .gbr-btn--secondary:not(:disabled):hover {
-  background: linear-gradient(135deg, #ff9090, #e03030);
+  background: ${DESTRUCTIVE_HOVER_BG};
   filter: brightness(1.1);
   box-shadow: ${embossShadow(SECONDARY_HOVER_EDGE, SHARED_DROP_SHADOW)};
 }
@@ -324,7 +338,7 @@ export function buttonStylesheet(): string {
 
 /* Destructive (red) hover + active */
 .gbr-btn--destructive:not(:disabled):hover {
-  background: linear-gradient(135deg, #ff9090, #e03030);
+  background: ${DESTRUCTIVE_HOVER_BG};
   filter: brightness(1.1);
   box-shadow: ${embossShadow(DESTRUCTIVE_EDGE, SHARED_DROP_SHADOW)};
 }

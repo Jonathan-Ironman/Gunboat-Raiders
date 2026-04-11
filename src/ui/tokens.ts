@@ -51,6 +51,10 @@ export const BORDER_SUB: HexColor = '#1a3454';
 export const GOLD: HexColor = '#f2b640';
 /** Dark gold — gradient stop, pressed state, shadow tint. */
 export const GOLD_DARK: HexColor = '#c8921a';
+/** Light gold — hover gradient start for the primary button. */
+export const GOLD_LIGHT: HexColor = '#f7c850';
+/** Mid gold — hover gradient end for the primary button. */
+export const GOLD_MID: HexColor = '#e0a020';
 /** Teal — armor, heal, positive status. */
 export const TEAL: HexColor = '#2dd4aa';
 /** Dark teal — gradient stop. */
@@ -59,6 +63,10 @@ export const TEAL_DARK: HexColor = '#1aaa84';
 export const RED: HexColor = '#ff8080';
 /** Dark red — gradient stop, pressed destructive state. */
 export const RED_DARK: HexColor = '#cc3333';
+/** Light red — hover gradient start for destructive / secondary buttons. */
+export const RED_LIGHT: HexColor = '#ff9090';
+/** Mid red — hover gradient end for destructive / secondary buttons. */
+export const RED_MID: HexColor = '#e03030';
 /** Ocean blue — wave/water accents, informational highlights. Armor base hue. */
 export const OCEAN: HexColor = '#4a8ac4';
 /** Deep ocean — darker blue stop for ocean gradients. */

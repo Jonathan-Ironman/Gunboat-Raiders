@@ -24,7 +24,7 @@ import { getPlayerBodyState } from './physicsRefs';
 import { computeQuadrant } from './CameraSystem';
 import { useGameStore, type FiringQuadrant } from '@/store/gameStore';
 import { setAimOffset, MAX_PITCH_OFFSET_UP, MAX_PITCH_OFFSET_DOWN } from './aimOffsetRefs';
-import { setIsPointerLocked } from './pointerLockRefs';
+import { setIsPointerLocked, resetPointerLockRefs } from './pointerLockRefs';
 
 /** Camera orbit configuration */
 const CAMERA_RADIUS = 15;
@@ -223,6 +223,11 @@ export function CameraSystemR3F() {
       if (document.pointerLockElement === domElement) {
         document.exitPointerLock();
       }
+      // Reset module-scope pointer-lock flag so the next mount starts
+      // with a clean unlocked state (matches the JSDoc on resetPointerLockRefs).
+      // Note: resetAimOffset() is NOT called here — that is a separate
+      // gap flagged for follow-up; fixing it is out of scope for this commit.
+      resetPointerLockRefs();
     };
   }, [gl.domElement, onCanvasClick, onPointerLockChange, onMouseMove]);
 

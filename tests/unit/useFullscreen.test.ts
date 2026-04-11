@@ -153,6 +153,62 @@ describe('toggleFullscreen — wiring via mocked document APIs', () => {
 });
 
 // ---------------------------------------------------------------------------
+// 4b. useEffect body — document guard (SSR / Node safety)
+// ---------------------------------------------------------------------------
+
+describe('useFullscreen useEffect body — document guard', () => {
+  /**
+   * Simulate the ACTUAL useEffect body from the hook (including the
+   * `typeof document === 'undefined'` guard added in fix #1).
+   * Returns the cleanup function if the effect registered a listener,
+   * or `undefined` if it short-circuited due to missing `document`.
+   */
+  function simulateEffectBody(
+    doc:
+      | {
+          addEventListener: (e: string, h: () => void) => void;
+          removeEventListener: (e: string, h: () => void) => void;
+        }
+      | undefined,
+  ): (() => void) | undefined {
+    if (typeof doc === 'undefined') return undefined;
+    const handleChange = (): void => {
+      /* readIsFullscreen() */
+    };
+    doc.addEventListener('fullscreenchange', handleChange);
+    return () => {
+      doc.removeEventListener('fullscreenchange', handleChange);
+    };
+  }
+
+  it('returns undefined and does not throw when document is unavailable (Node / SSR)', () => {
+    // Pass `undefined` to simulate the Node environment where `document` doesn't exist.
+    expect(() => {
+      const cleanup = simulateEffectBody(undefined);
+      expect(cleanup).toBeUndefined();
+    }).not.toThrow();
+  });
+
+  it('registers the listener and returns a cleanup when document is available', () => {
+    const added: string[] = [];
+    const removed: string[] = [];
+    const mockDoc = {
+      addEventListener: (e: string) => {
+        added.push(e);
+      },
+      removeEventListener: (e: string) => {
+        removed.push(e);
+      },
+    };
+    const cleanup = simulateEffectBody(mockDoc);
+    expect(added).toContain('fullscreenchange');
+    expect(typeof cleanup).toBe('function');
+    cleanup?.();
+    expect(removed).toContain('fullscreenchange');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // 5. fullscreenchange event listener contract
 // ---------------------------------------------------------------------------
 

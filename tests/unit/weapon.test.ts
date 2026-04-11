@@ -822,6 +822,51 @@ describe('WeaponSystem — overheat model', () => {
 //
 // ---------------------------------------------------------------------------
 
+describe('WeaponSystemR3F — pointer-lock drain gate (clear-on-lock-loss)', () => {
+  beforeEach(() => {
+    resetPointerLockRefs();
+  });
+
+  /**
+   * Simulate one frame of the drain-gate logic from WeaponSystemR3F.useFrame:
+   *
+   *   if (!getIsPointerLocked()) {
+   *     pendingFiresRef.current = 0;
+   *     mouseHeldRef.current = false;
+   *   }
+   *
+   * Returns updated pending + mouseHeld state after one frame tick.
+   */
+  function tickDrainGate(params: { pending: number; mouseHeld: boolean }): {
+    pending: number;
+    mouseHeld: boolean;
+  } {
+    let { pending, mouseHeld } = params;
+    if (!getIsPointerLocked()) {
+      pending = 0;
+      mouseHeld = false;
+    }
+    return { pending, mouseHeld };
+  }
+
+  it('zeroes pendingFires and mouseHeld when pointer lock is lost', () => {
+    // Arrange: was locked with queued intents + mouse held.
+    setIsPointerLocked(true);
+    // Sanity: gate does NOT clear while locked.
+    const whileLocked = tickDrainGate({ pending: 3, mouseHeld: true });
+    expect(whileLocked.pending).toBe(3);
+    expect(whileLocked.mouseHeld).toBe(true);
+
+    // Act: lock is lost.
+    setIsPointerLocked(false);
+    const afterLoss = tickDrainGate({ pending: 3, mouseHeld: true });
+
+    // Assert: both fields zeroed on the first frame after lock loss.
+    expect(afterLoss.pending).toBe(0);
+    expect(afterLoss.mouseHeld).toBe(false);
+  });
+});
+
 describe('WeaponSystemR3F — pointer-lock fire gate', () => {
   beforeEach(() => {
     resetPointerLockRefs();

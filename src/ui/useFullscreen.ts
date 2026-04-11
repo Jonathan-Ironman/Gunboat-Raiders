@@ -15,9 +15,9 @@
  * - Unsubscribes on unmount to prevent memory leaks.
  * - `toggleFullscreen` calls `document.documentElement.requestFullscreen()`
  *   when not in fullscreen, and `document.exitFullscreen()` when in
- *   fullscreen. Both branches are wrapped in a try/catch — a browser
- *   rejection (e.g. iframe sandbox) silently no-ops; it must never
- *   crash or propagate to the React error boundary.
+ *   fullscreen. Both branches are wrapped in a `.catch()` handler — a
+ *   browser rejection (e.g. iframe sandbox) silently no-ops; it must
+ *   never crash or propagate to the React error boundary.
  *
  * ### Standard API only
  *
@@ -29,11 +29,13 @@
  *
  * ### SSR safety
  *
- * All `document` accesses are guarded with `typeof document !== 'undefined'`
- * so the module is safe to import in a Node.js test runner (our Vitest
- * environment is `node`, not `jsdom`). The hook itself must only be
- * called in a browser (React requires a DOM for effects), but the
- * module import must not throw.
+ * Module imports are safe in Node — `readIsFullscreen` and the `useEffect`
+ * body both guard against missing `document`. The hook may be mounted in
+ * any environment; if `document` is unavailable the hook returns a benign
+ * default state and registers no listeners. The `toggleFullscreen` body
+ * calls `document.documentElement.requestFullscreen()`, but that is only
+ * triggered by a user click — never on render or import — so module-import
+ * safety is preserved.
  */
 
 import { useCallback, useEffect, useState } from 'react';
@@ -90,6 +92,8 @@ export function useFullscreen(): UseFullscreenResult {
 
   // Sync state whenever fullscreen changes via any means.
   useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+
     const handleChange = (): void => {
       setIsFullscreen(readIsFullscreen());
     };
@@ -101,18 +105,20 @@ export function useFullscreen(): UseFullscreenResult {
   }, []);
 
   const toggleFullscreen = useCallback((): void => {
-    if (fullscreenAction(isFullscreen) === 'request') {
-      document.documentElement.requestFullscreen().catch(() => {
-        // Browser rejected the request (e.g. iframe sandbox, user
-        // gesture policy). Silently ignore — the button label will
-        // simply not change.
+    if (fullscreenAction(readIsFullscreen()) === 'request') {
+      document.documentElement.requestFullscreen().catch((err: unknown) => {
+        // Expected on iframe sandbox / missing user gesture. Logged so dev
+        // builds surface unexpected failures.
+        console.warn('[useFullscreen] requestFullscreen rejected:', err);
       });
     } else {
-      document.exitFullscreen().catch(() => {
-        // Unlikely — exit almost never fails — but guard anyway.
+      document.exitFullscreen().catch((err: unknown) => {
+        // Expected on iframe sandbox / missing user gesture. Logged so dev
+        // builds surface unexpected failures.
+        console.warn('[useFullscreen] exitFullscreen rejected:', err);
       });
     }
-  }, [isFullscreen]);
+  }, []);
 
   return { isFullscreen, toggleFullscreen };
 }

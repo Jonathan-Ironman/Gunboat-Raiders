@@ -42,7 +42,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { useGamePhase, useHasSave, useScore, useWaveNumber } from '../store/selectors';
 import { Button } from './Button';
-import { useFullscreen } from './useFullscreen';
 import { ConfirmDialog } from './ConfirmDialog';
 import {
   formatRunSummary,
@@ -56,6 +55,7 @@ import {
   pauseTitleStyle,
 } from './pauseMenu.helpers';
 import { SettingsModal } from './SettingsModal';
+import { useFullscreen } from './useFullscreen';
 
 /** Local view state for the pause menu — controls SettingsModal mounting. */
 type PauseView = 'menu' | 'settings';

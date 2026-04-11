@@ -48,7 +48,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { useGamePhase, useHasSave } from '../store/selectors';
 import { Button } from './Button';
-import { useFullscreen } from './useFullscreen';
 import { ConfirmDialog } from './ConfirmDialog';
 import {
   MAIN_MENU_FOOTER_CREDIT,
@@ -66,6 +65,7 @@ import {
   mainMenuTitleStyle,
 } from './mainMenuScene.helpers';
 import { SettingsModal } from './SettingsModal';
+import { useFullscreen } from './useFullscreen';
 
 /** Local view state — controls SettingsModal mounting. */
 type MainMenuView = 'menu' | 'settings';
