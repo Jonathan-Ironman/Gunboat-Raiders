@@ -1,20 +1,18 @@
 /**
- * Unit tests for `src/ui/WeaponHeatBar.tsx` — R13 slice.
+ * Unit tests for `src/ui/WeaponHeatBar.tsx`.
  *
- * The WeaponHeatBar is a centered HUD readout that visualizes the player's
- * weapon overheat ratio (`player.weapons.heat`) as an inverted-fill bar
- * with three color brackets and an `OVERHEATED` pulse label. These tests
- * cover:
+ * Post playtest 2026-04-11: the heat bar is a SEGMENTED row of discrete
+ * blocks (N = HEAT_SEGMENT_COUNT) stacked at the top-left of the HUD.
+ * Color bracket and the `HEAT` / `OVERHEATED` label behaviors are
+ * unchanged; the fill mechanic is what flipped.
  *
- * 1. The pure helpers in `weaponHeatBar.helpers.ts` — heat-to-bracket
- *    mapping, inverted fill math, label switch, and the token-driven
- *    gradient / style outputs.
- * 2. The React component itself, rendered through `react-dom/server` so we
- *    can assert phase gating, test ids, aria attributes, and data attributes
- *    without mounting a DOM.
- * 3. Token usage — assert that colors, fonts, radius, and motion values
- *    come from `src/ui/tokens.ts` and not from magic numbers inside the
- *    helper / component files.
+ * Coverage:
+ * 1. Pure helpers in `weaponHeatBar.helpers.ts` — heat-to-bracket,
+ *    segment-fill math, label switch, token-driven gradients/styles.
+ * 2. The React component (via `react-dom/server`) for phase gating,
+ *    test ids, aria attributes, segment rendering, data attributes.
+ * 3. Token usage — colors, fonts, radius, motion values all come from
+ *    `src/ui/tokens.ts`.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -22,18 +20,18 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 
 import {
-  BAR_BOTTOM_REM,
-  BAR_HEIGHT_PX,
-  BAR_WIDTH_PX,
+  BAR_LEFT_REM,
+  BAR_TOP_REM,
   buildContainerStyle,
-  buildFillStyle,
   buildLabelStyle,
+  buildSegmentStyle,
   buildTrackStyle,
   computeHeatBarState,
   HEAT_COOL_GRADIENT,
   HEAT_COOL_MAX,
   HEAT_HOT_GRADIENT,
   HEAT_OVERHEATED_THRESHOLD,
+  HEAT_SEGMENT_COUNT,
   HEAT_WARM_GRADIENT,
   HEAT_WARM_MAX,
   LABEL_FONT_SIZE_PX,
@@ -42,6 +40,11 @@ import {
   OVERHEAT_PULSE_ANIMATION_NAME,
   OVERHEAT_PULSE_CLASS,
   OVERHEAT_PULSE_DURATION_MS,
+  SEGMENT_GAP_PX,
+  SEGMENT_HEIGHT_PX,
+  SEGMENT_RADIUS_PX,
+  SEGMENT_WIDTH_PX,
+  TRACK_WIDTH_PX,
   weaponHeatBarKeyframes,
 } from '@/ui/weaponHeatBar.helpers';
 import {
@@ -51,7 +54,6 @@ import {
   FONT_UI,
   GOLD,
   GOLD_DARK,
-  RADIUS_SM,
   RED,
   RED_DARK,
   TEAL,
@@ -120,25 +122,24 @@ describe('WeaponHeatBar — normalizeHeat', () => {
 });
 
 // ---------------------------------------------------------------------------
-// computeHeatBarState — bracket mapping, inverted fill, label switch
+// computeHeatBarState — bracket mapping, segment fill, label switch
 // ---------------------------------------------------------------------------
 
 describe('WeaponHeatBar — computeHeatBarState brackets', () => {
-  it('classifies heat = 0 as cool with full drained fill', () => {
+  it('classifies heat = 0 as cool with ZERO filled segments', () => {
     const s = computeHeatBarState(0);
     expect(s.heatBracket).toBe('cool');
     expect(s.gradientCss).toBe(HEAT_COOL_GRADIENT);
-    expect(s.fillWidthPct).toBe(100);
+    expect(s.filledSegments).toBe(0);
     expect(s.labelText).toBe('HEAT');
     expect(s.isOverheated).toBe(false);
   });
 
-  it('classifies heat = 0.4 as cool (teal)', () => {
+  it('classifies heat = 0.4 as cool with 4/10 segments', () => {
     const s = computeHeatBarState(0.4);
     expect(s.heatBracket).toBe('cool');
     expect(s.gradientCss).toBe(HEAT_COOL_GRADIENT);
-    // Inverted fill: (1 - 0.4) * 100 = 60.
-    expect(s.fillWidthPct).toBeCloseTo(60, 10);
+    expect(s.filledSegments).toBe(4);
   });
 
   it('classifies heat exactly at HEAT_COOL_MAX (0.5) as cool (inclusive upper bound)', () => {
@@ -146,13 +147,14 @@ describe('WeaponHeatBar — computeHeatBarState brackets', () => {
     const s = computeHeatBarState(HEAT_COOL_MAX);
     expect(s.heatBracket).toBe('cool');
     expect(s.gradientCss).toBe(HEAT_COOL_GRADIENT);
+    expect(s.filledSegments).toBe(5);
   });
 
-  it('classifies heat = 0.6 as warm (gold)', () => {
+  it('classifies heat = 0.6 as warm (gold) with 6/10 segments', () => {
     const s = computeHeatBarState(0.6);
     expect(s.heatBracket).toBe('warm');
     expect(s.gradientCss).toBe(HEAT_WARM_GRADIENT);
-    expect(s.fillWidthPct).toBeCloseTo(40, 10);
+    expect(s.filledSegments).toBe(6);
     expect(s.labelText).toBe('HEAT');
     expect(s.isOverheated).toBe(false);
   });
@@ -162,13 +164,16 @@ describe('WeaponHeatBar — computeHeatBarState brackets', () => {
     const s = computeHeatBarState(HEAT_WARM_MAX);
     expect(s.heatBracket).toBe('warm');
     expect(s.gradientCss).toBe(HEAT_WARM_GRADIENT);
+    // 0.75 × 10 = 7.5 → rounds to 8.
+    expect(s.filledSegments).toBe(8);
   });
 
-  it('classifies heat = 0.85 as hot (red) with HEAT label still', () => {
+  it('classifies heat = 0.85 as hot (red) with 8–9 filled segments and HEAT label still', () => {
     const s = computeHeatBarState(0.85);
     expect(s.heatBracket).toBe('hot');
     expect(s.gradientCss).toBe(HEAT_HOT_GRADIENT);
-    expect(s.fillWidthPct).toBeCloseTo(15, 10);
+    // 0.85 × 10 = 8.5 → rounds to 9 under banker-free round-half-up.
+    expect(s.filledSegments).toBe(9);
     expect(s.labelText).toBe('HEAT');
     expect(s.isOverheated).toBe(false);
   });
@@ -179,30 +184,40 @@ describe('WeaponHeatBar — computeHeatBarState brackets', () => {
     expect(s.heatBracket).toBe('hot');
     expect(s.labelText).toBe('HEAT');
     expect(s.isOverheated).toBe(false);
+    expect(s.filledSegments).toBe(9);
   });
 
-  it('classifies heat = 0.95 as hot AND overheated (label + pulse)', () => {
+  it('classifies heat = 0.95 as hot AND overheated (label + pulse) with 10 segments', () => {
     const s = computeHeatBarState(0.95);
     expect(s.heatBracket).toBe('hot');
     expect(s.gradientCss).toBe(HEAT_HOT_GRADIENT);
-    expect(s.fillWidthPct).toBeCloseTo(5, 10);
+    expect(s.filledSegments).toBe(10);
     expect(s.labelText).toBe('OVERHEATED');
     expect(s.isOverheated).toBe(true);
   });
 
-  it('classifies heat = 1.0 as hot AND overheated with zero fill', () => {
+  it('classifies heat = 1.0 as hot AND overheated with all segments filled', () => {
     const s = computeHeatBarState(1);
     expect(s.heatBracket).toBe('hot');
-    expect(s.fillWidthPct).toBe(0);
+    expect(s.filledSegments).toBe(HEAT_SEGMENT_COUNT);
     expect(s.labelText).toBe('OVERHEATED');
     expect(s.isOverheated).toBe(true);
   });
 
   it('treats NaN / negative / > 1 inputs as clamped heat', () => {
-    expect(computeHeatBarState(Number.NaN).fillWidthPct).toBe(100);
-    expect(computeHeatBarState(-5).fillWidthPct).toBe(100);
-    expect(computeHeatBarState(17).fillWidthPct).toBe(0);
+    expect(computeHeatBarState(Number.NaN).filledSegments).toBe(0);
+    expect(computeHeatBarState(-5).filledSegments).toBe(0);
+    expect(computeHeatBarState(17).filledSegments).toBe(HEAT_SEGMENT_COUNT);
     expect(computeHeatBarState(17).isOverheated).toBe(true);
+  });
+
+  it('segment count is monotonic in heat across the 0..1 range', () => {
+    let prev = -1;
+    for (let i = 0; i <= 100; i += 1) {
+      const s = computeHeatBarState(i / 100);
+      expect(s.filledSegments).toBeGreaterThanOrEqual(prev);
+      prev = s.filledSegments;
+    }
   });
 });
 
@@ -214,19 +229,19 @@ describe('WeaponHeatBar — gradient recipes', () => {
   it('cool gradient composes from TEAL and TEAL_DARK tokens', () => {
     expect(HEAT_COOL_GRADIENT).toContain(TEAL);
     expect(HEAT_COOL_GRADIENT).toContain(TEAL_DARK);
-    expect(HEAT_COOL_GRADIENT).toMatch(/^linear-gradient\(90deg,/);
+    expect(HEAT_COOL_GRADIENT).toMatch(/^linear-gradient\(180deg,/);
   });
 
   it('warm gradient composes from GOLD and GOLD_DARK tokens', () => {
     expect(HEAT_WARM_GRADIENT).toContain(GOLD);
     expect(HEAT_WARM_GRADIENT).toContain(GOLD_DARK);
-    expect(HEAT_WARM_GRADIENT).toMatch(/^linear-gradient\(90deg,/);
+    expect(HEAT_WARM_GRADIENT).toMatch(/^linear-gradient\(180deg,/);
   });
 
   it('hot gradient composes from RED and RED_DARK tokens', () => {
     expect(HEAT_HOT_GRADIENT).toContain(RED);
     expect(HEAT_HOT_GRADIENT).toContain(RED_DARK);
-    expect(HEAT_HOT_GRADIENT).toMatch(/^linear-gradient\(90deg,/);
+    expect(HEAT_HOT_GRADIENT).toMatch(/^linear-gradient\(180deg,/);
   });
 });
 
@@ -235,20 +250,19 @@ describe('WeaponHeatBar — gradient recipes', () => {
 // ---------------------------------------------------------------------------
 
 describe('WeaponHeatBar — buildContainerStyle', () => {
-  it('positions the bar at bottom 6.5rem, horizontally centered', () => {
+  it('positions the bar at the top-left HUD slot (top 2rem, left 2rem)', () => {
     const style = buildContainerStyle();
-    expect(BAR_BOTTOM_REM).toBe(6.5);
+    expect(BAR_TOP_REM).toBe(2);
+    expect(BAR_LEFT_REM).toBe(2);
     expect(style.position).toBe('absolute');
-    expect(style.bottom).toBe('6.5rem');
-    expect(style.left).toBe('50%');
-    expect(style.transform).toBe('translateX(-50%)');
+    expect(style.top).toBe('2rem');
+    expect(style.left).toBe('2rem');
   });
 
-  it('uses FONT_UI from tokens and the 240px locked width', () => {
+  it('uses FONT_UI from tokens and the computed track width', () => {
     const style = buildContainerStyle();
     expect(style.fontFamily).toBe(FONT_UI);
-    expect(BAR_WIDTH_PX).toBe(240);
-    expect(style.width).toBe('240px');
+    expect(style.width).toBe(`${String(TRACK_WIDTH_PX)}px`);
   });
 
   it('is a non-interactive HUD readout (no pointer events, no selection)', () => {
@@ -257,11 +271,11 @@ describe('WeaponHeatBar — buildContainerStyle', () => {
     expect(style.userSelect).toBe('none');
   });
 
-  it('stacks the label above the track', () => {
+  it('stacks the label above the segment row, aligned to the left edge', () => {
     const style = buildContainerStyle();
     expect(style.display).toBe('flex');
     expect(style.flexDirection).toBe('column');
-    expect(style.alignItems).toBe('center');
+    expect(style.alignItems).toBe('flex-start');
   });
 });
 
@@ -290,46 +304,54 @@ describe('WeaponHeatBar — buildLabelStyle', () => {
 });
 
 describe('WeaponHeatBar — buildTrackStyle', () => {
-  it('renders a 240×12 px shell with BG_DEEP background and BORDER_SUB border', () => {
+  it('renders a horizontal flex row of segments (no background/border)', () => {
     const style = buildTrackStyle();
-    expect(style.width).toBe('240px');
-    expect(style.height).toBe(`${String(BAR_HEIGHT_PX)}px`);
-    expect(BAR_HEIGHT_PX).toBe(12);
+    expect(style.display).toBe('flex');
+    expect(style.flexDirection).toBe('row');
+    expect(style.alignItems).toBe('center');
+    expect(style.gap).toBe(`${String(SEGMENT_GAP_PX)}px`);
+    expect(style.background).toBeUndefined();
+    expect(style.border).toBeUndefined();
+  });
+
+  it('spans the full computed track width', () => {
+    const style = buildTrackStyle();
+    expect(style.width).toBe(`${String(TRACK_WIDTH_PX)}px`);
+    expect(style.height).toBe(`${String(SEGMENT_HEIGHT_PX)}px`);
+  });
+
+  it('has zero padding so segments sit flush with the row edge', () => {
+    const style = buildTrackStyle();
+    expect(style.padding).toBe(0);
+  });
+});
+
+describe('WeaponHeatBar — buildSegmentStyle', () => {
+  it('paints a filled segment with the bracket gradient and no border', () => {
+    const style = buildSegmentStyle({ filled: true, gradient: HEAT_COOL_GRADIENT });
+    expect(style.background).toBe(HEAT_COOL_GRADIENT);
+    expect(style.border).toBe('none');
+  });
+
+  it('paints an empty segment with BG_DEEP and a BORDER_SUB outline', () => {
+    const style = buildSegmentStyle({ filled: false, gradient: HEAT_COOL_GRADIENT });
     expect(style.background).toBe(BG_DEEP);
     expect(style.border).toBe(`1px solid ${BORDER_SUB}`);
   });
 
-  it('uses RADIUS_SM for the container border-radius, with zero padding', () => {
-    const style = buildTrackStyle();
-    expect(RADIUS_SM).toBe(4);
-    expect(style.borderRadius).toBe(`${String(RADIUS_SM)}px`);
-    expect(style.padding).toBe(0);
-    expect(style.overflow).toBe('hidden');
-  });
-});
-
-describe('WeaponHeatBar — buildFillStyle', () => {
-  it('applies the fill width from computed state as a percentage', () => {
-    const fill = buildFillStyle(computeHeatBarState(0.25));
-    // 0.25 heat → 75% drained fill.
-    expect(fill.width).toBe('75%');
+  it('uses the segment geometry tokens', () => {
+    const style = buildSegmentStyle({ filled: true, gradient: HEAT_HOT_GRADIENT });
+    expect(style.width).toBe(`${String(SEGMENT_WIDTH_PX)}px`);
+    expect(style.height).toBe(`${String(SEGMENT_HEIGHT_PX)}px`);
+    expect(style.borderRadius).toBe(`${String(SEGMENT_RADIUS_PX)}px`);
+    expect(style.boxSizing).toBe('border-box');
   });
 
-  it('applies the hot gradient for high heat', () => {
-    const fill = buildFillStyle(computeHeatBarState(0.85));
-    expect(fill.background).toBe(HEAT_HOT_GRADIENT);
-  });
-
-  it('transitions both width and background over DUR_NORMAL ease-out (smooth lerp)', () => {
-    const fill = buildFillStyle(computeHeatBarState(0.5));
-    const t = String(fill.transition);
-    expect(t).toContain(`width ${String(DUR_NORMAL)}ms ease-out`);
+  it('transitions background and border over DUR_NORMAL ease-out', () => {
+    const style = buildSegmentStyle({ filled: true, gradient: HEAT_COOL_GRADIENT });
+    const t = String(style.transition);
     expect(t).toContain(`background ${String(DUR_NORMAL)}ms ease-out`);
-  });
-
-  it('uses RADIUS_SM for the fill corners to match the track', () => {
-    const fill = buildFillStyle(computeHeatBarState(0.2));
-    expect(fill.borderRadius).toBe(`${String(RADIUS_SM)}px`);
+    expect(t).toContain(`border ${String(DUR_NORMAL)}ms ease-out`);
   });
 });
 
@@ -354,6 +376,22 @@ describe('WeaponHeatBar — weaponHeatBarKeyframes', () => {
     expect(css).toContain('infinite');
     expect(css).toContain('alternate');
     expect(css).toContain('ease-out');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Geometry — segment count, derived width
+// ---------------------------------------------------------------------------
+
+describe('WeaponHeatBar — segment geometry', () => {
+  it('renders exactly 10 segments', () => {
+    expect(HEAT_SEGMENT_COUNT).toBe(10);
+  });
+
+  it('derives TRACK_WIDTH_PX from segment geometry (no magic width)', () => {
+    const expected =
+      HEAT_SEGMENT_COUNT * SEGMENT_WIDTH_PX + (HEAT_SEGMENT_COUNT - 1) * SEGMENT_GAP_PX;
+    expect(TRACK_WIDTH_PX).toBe(expected);
   });
 });
 
@@ -400,24 +438,47 @@ describe('WeaponHeatBar — component phase gating', () => {
 // React component — visual state reflected in the DOM
 // ---------------------------------------------------------------------------
 
+function countOccurrences(haystack: string, needle: string): number {
+  if (needle.length === 0) return 0;
+  let count = 0;
+  let i = haystack.indexOf(needle);
+  while (i !== -1) {
+    count += 1;
+    i = haystack.indexOf(needle, i + needle.length);
+  }
+  return count;
+}
+
 describe('WeaponHeatBar — component output', () => {
+  it('renders HEAT_SEGMENT_COUNT segment divs regardless of heat', () => {
+    setMockState('playing', 0);
+    const html = renderToStaticMarkup(createElement(WeaponHeatBar));
+    const segs = countOccurrences(html, 'data-testid="weapon-heat-bar-segment"');
+    expect(segs).toBe(HEAT_SEGMENT_COUNT);
+  });
+
   it('exposes cool bracket at low heat and renders the HEAT label', () => {
     setMockState('playing', 0.3);
     const html = renderToStaticMarkup(createElement(WeaponHeatBar));
     expect(html).toContain('data-heat-bracket="cool"');
     expect(html).toContain('data-overheated="off"');
     expect(html).toContain('>HEAT<');
-    // Inverted fill: 0.3 heat → 70% width.
-    expect(html).toContain('width:70%');
+    // 0.3 × 10 = 3 filled segments.
+    expect(html).toContain('data-filled-segments="3"');
+    // Three segments should carry the 'on' flag, seven should be 'off'.
+    expect(countOccurrences(html, 'data-segment-filled="on"')).toBe(3);
+    expect(countOccurrences(html, 'data-segment-filled="off"')).toBe(7);
   });
 
-  it('exposes warm bracket at mid heat', () => {
+  it('exposes warm bracket at mid heat (0.6 → 6 filled)', () => {
     setMockState('playing', 0.6);
     const html = renderToStaticMarkup(createElement(WeaponHeatBar));
     expect(html).toContain('data-heat-bracket="warm"');
     expect(html).toContain('data-overheated="off"');
     expect(html).toContain('>HEAT<');
-    expect(html).toContain('width:40%');
+    expect(html).toContain('data-filled-segments="6"');
+    expect(countOccurrences(html, 'data-segment-filled="on"')).toBe(6);
+    expect(countOccurrences(html, 'data-segment-filled="off"')).toBe(4);
   });
 
   it('exposes hot bracket with HEAT label at heat = 0.85', () => {
@@ -426,7 +487,7 @@ describe('WeaponHeatBar — component output', () => {
     expect(html).toContain('data-heat-bracket="hot"');
     expect(html).toContain('data-overheated="off"');
     expect(html).toContain('>HEAT<');
-    expect(html).toContain('width:15%');
+    expect(html).toContain('data-filled-segments="9"');
   });
 
   it('switches to OVERHEATED label and on pulse class when heat > 0.9', () => {
@@ -455,12 +516,20 @@ describe('WeaponHeatBar — component output', () => {
     expect(html).toContain('pointer-events:none');
   });
 
-  it('renders the track and fill children with their dedicated test ids', () => {
+  it('renders the track plus label children with their dedicated test ids', () => {
     setMockState('playing', 0.5);
     const html = renderToStaticMarkup(createElement(WeaponHeatBar));
     expect(html).toContain('data-testid="weapon-heat-bar"');
     expect(html).toContain('data-testid="weapon-heat-bar-label"');
     expect(html).toContain('data-testid="weapon-heat-bar-track"');
-    expect(html).toContain('data-testid="weapon-heat-bar-fill"');
+    expect(html).toContain('data-testid="weapon-heat-bar-segment"');
+  });
+
+  it('at heat = 0 no segments render in the filled state', () => {
+    setMockState('playing', 0);
+    const html = renderToStaticMarkup(createElement(WeaponHeatBar));
+    expect(html).toContain('data-filled-segments="0"');
+    expect(countOccurrences(html, 'data-segment-filled="on"')).toBe(0);
+    expect(countOccurrences(html, 'data-segment-filled="off"')).toBe(HEAT_SEGMENT_COUNT);
   });
 });

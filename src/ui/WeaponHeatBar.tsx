@@ -1,30 +1,28 @@
 /**
- * WeaponHeatBar — player weapon overheat HUD readout.
+ * WeaponHeatBar — player weapon overheat HUD readout (segmented).
  *
- * Slice R13 of the Gunboat Raiders UI overhaul. Visualizes the player's
- * weapon heat (`player.weapons.heat` in `[0, 1]`) as a centered, inverted
- * progress bar that drains as heat builds. Color brackets shift between
- * teal / gold / red at `0.5` and `0.75`, and the label flips from `HEAT`
- * to `OVERHEATED` (in red, pulsing) when heat exceeds `0.9`.
+ * Post playtest 2026-04-11: renders as a row of N discrete vertical
+ * blocks (see `docs/art-direction/index.html` → `.ammo-slot` pattern)
+ * instead of a continuous fill. Blocks fill from left to right as the
+ * player's weapon heat (`player.weapons.heat` ∈ `[0, 1]`) accumulates.
+ * Color bracket still shifts between teal / gold / red at 0.5 and 0.75,
+ * and the label flips from `HEAT` to `OVERHEATED` (red, pulsing) when
+ * heat > 0.9.
  *
  * The component is a pure readout — `pointer-events: none`, `aria-hidden`,
  * no interactive state. All state derivation lives in
  * `./weaponHeatBar.helpers.ts` so the mapping is unit-testable without a
  * renderer. All colors, fonts, and motion values come from `./tokens`.
- *
- * This slice intentionally does NOT mount itself in the HUD — the R19
- * HUD composition cleanup owns phase gating and placement. The component
- * still self-gates on phase for safety and so standalone mounting works
- * correctly during tests.
  */
 
 import { useGamePhase, usePlayerWeaponHeat } from '../store/selectors';
 import {
   buildContainerStyle,
-  buildFillStyle,
   buildLabelStyle,
+  buildSegmentStyle,
   buildTrackStyle,
   computeHeatBarState,
+  HEAT_SEGMENT_COUNT,
   OVERHEAT_PULSE_CLASS,
   weaponHeatBarKeyframes,
 } from './weaponHeatBar.helpers';
@@ -34,9 +32,9 @@ export function WeaponHeatBar() {
   const heat = usePlayerWeaponHeat();
 
   // Self-gate on phase — the heat bar is a gameplay readout and has no
-  // meaning outside the active mission. R19 will also phase-gate the
-  // whole HUD, but keeping this guard here makes the component safe to
-  // mount anywhere in the tree.
+  // meaning outside the active mission. The HUD root also phase-gates,
+  // but keeping this guard here makes the component safe to mount
+  // anywhere in the tree (including in tests).
   if (phase !== 'playing' && phase !== 'wave-clear' && phase !== 'paused') {
     return null;
   }
@@ -46,7 +44,6 @@ export function WeaponHeatBar() {
   const containerStyle = buildContainerStyle();
   const labelStyle = buildLabelStyle(state.isOverheated);
   const trackStyle = buildTrackStyle();
-  const fillStyle = buildFillStyle(state);
 
   return (
     <div
@@ -54,6 +51,7 @@ export function WeaponHeatBar() {
       data-testid="weapon-heat-bar"
       data-heat-bracket={state.heatBracket}
       data-overheated={state.isOverheated ? 'on' : 'off'}
+      data-filled-segments={String(state.filledSegments)}
       aria-hidden="true"
     >
       <style>{weaponHeatBarKeyframes()}</style>
@@ -67,7 +65,18 @@ export function WeaponHeatBar() {
       </div>
 
       <div style={trackStyle} data-testid="weapon-heat-bar-track">
-        <div style={fillStyle} data-testid="weapon-heat-bar-fill" />
+        {Array.from({ length: HEAT_SEGMENT_COUNT }, (_, i) => {
+          const filled = i < state.filledSegments;
+          return (
+            <div
+              key={i}
+              style={buildSegmentStyle({ filled, gradient: state.gradientCss })}
+              data-testid="weapon-heat-bar-segment"
+              data-segment-index={String(i)}
+              data-segment-filled={filled ? 'on' : 'off'}
+            />
+          );
+        })}
       </div>
     </div>
   );

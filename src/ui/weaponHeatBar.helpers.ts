@@ -1,18 +1,26 @@
 /**
- * Pure helpers for `WeaponHeatBar.tsx` — R13 slice.
+ * Pure helpers for `WeaponHeatBar.tsx` — post playtest 2026-04-11.
  *
- * The WeaponHeatBar is a centered HUD readout that visualizes the player's
- * weapon overheat value (`player.weapons.heat` in `[0, 1]`). Its fill is
- * INVERTED — the bar drains as heat builds — and its color bracket changes
- * at `0.5` and `0.75`. When heat crosses `0.9` the label flips from `HEAT`
- * to `OVERHEATED` and pulses in red.
+ * The WeaponHeatBar is a SEGMENTED HUD readout that visualizes the
+ * player's weapon overheat value (`player.weapons.heat` in `[0, 1]`) as a
+ * row of discrete vertical blocks (the same visual language as the
+ * Harbour Dawn ammo-slot pill in `docs/art-direction/index.html`, reused
+ * for heat management). Blocks fill from left to right as heat builds.
+ *
+ * Color bracket still shifts between teal / gold / red at `0.5` and
+ * `0.75`, and the label flips from `HEAT` to `OVERHEATED` (in red,
+ * pulsing) when heat exceeds `0.9`.
+ *
+ * Layout (post playtest 2026-04-11): the bar is stacked at the top-left
+ * of the viewport, above the armor + hull bars. HUD.tsx does not own the
+ * stacking — each component self-positions at a predictable `top` offset.
  *
  * These helpers are kept in a separate module so that:
  * - The component file stays a single React export, keeping
  *   `react-refresh/only-export-components` happy for HMR.
- * - The heat-to-color mapping, the inverted fill math, and the style
- *   construction are all unit-testable in a headless node environment
- *   without touching React.
+ * - The heat-to-segment mapping, bracket logic, and style construction
+ *   are all unit-testable in a headless node environment without touching
+ *   React.
  * - All color / duration / typography inputs flow through `tokens.ts`,
  *   preventing magic numbers or hex literals from leaking into the
  *   component file.
@@ -50,6 +58,14 @@ export const HEAT_WARM_MAX = 0.75;
  */
 export const HEAT_OVERHEATED_THRESHOLD = 0.9;
 
+/**
+ * Number of segmented blocks rendered in the heat bar. Matches the
+ * ammo-pill density from the Harbour Dawn reference doc (6) scaled up to
+ * give heat management finer granularity — 10 reads as a clean "tenths"
+ * indicator while staying compact at the top-left of the HUD.
+ */
+export const HEAT_SEGMENT_COUNT = 10;
+
 // ---------------------------------------------------------------------------
 // State shape
 // ---------------------------------------------------------------------------
@@ -59,12 +75,18 @@ export type HeatBracket = 'cool' | 'warm' | 'hot';
 
 /** Full visual state derived from the current heat ratio. */
 export interface HeatBarVisualState {
-  /** Width of the drained fill, `0..100` (inverted — 100 at heat=0). */
-  fillWidthPct: number;
-  /** Linear-gradient CSS string applied as the fill background. */
-  gradientCss: string;
-  /** Active color bracket, exposed as a data-attribute for tests. */
+  /**
+   * Integer count of blocks that should render in the "filled" state,
+   * `0..HEAT_SEGMENT_COUNT`. Monotonic in heat — higher heat fills more.
+   */
+  filledSegments: number;
+  /** Active color bracket, used for styling filled segments and data-attrs. */
   heatBracket: HeatBracket;
+  /**
+   * Linear-gradient CSS string applied to each filled segment's
+   * background. Matches the bracket color at the current heat.
+   */
+  gradientCss: string;
   /** Label text (`HEAT` normally, `OVERHEATED` when heat > 0.9). */
   labelText: 'HEAT' | 'OVERHEATED';
   /** True when the pulse animation should be running on the label. */
@@ -76,11 +98,11 @@ export interface HeatBarVisualState {
 // ---------------------------------------------------------------------------
 
 /** Cool (green) gradient — low heat, everything is fine. */
-export const HEAT_COOL_GRADIENT = `linear-gradient(90deg, ${TEAL}, ${TEAL_DARK})`;
+export const HEAT_COOL_GRADIENT = `linear-gradient(180deg, ${TEAL}, ${TEAL_DARK})`;
 /** Warm (amber) gradient — mid heat, start managing your fire. */
-export const HEAT_WARM_GRADIENT = `linear-gradient(90deg, ${GOLD}, ${GOLD_DARK})`;
+export const HEAT_WARM_GRADIENT = `linear-gradient(180deg, ${GOLD}, ${GOLD_DARK})`;
 /** Hot (red) gradient — danger zone, stop firing or lock out. */
-export const HEAT_HOT_GRADIENT = `linear-gradient(90deg, ${RED}, ${RED_DARK})`;
+export const HEAT_HOT_GRADIENT = `linear-gradient(180deg, ${RED}, ${RED_DARK})`;
 
 // ---------------------------------------------------------------------------
 // Core state derivation
@@ -100,8 +122,7 @@ export function normalizeHeat(heat: number): number {
 
 /**
  * Pure function that maps a heat ratio into the exact visual state the
- * WeaponHeatBar will render. Single source of truth for the mapping; the
- * component itself does nothing more than destructure this output.
+ * WeaponHeatBar will render. Single source of truth for the mapping.
  *
  * Bracket boundaries are inclusive on the UPPER side:
  * - `heat <= 0.5`              → cool (teal)
@@ -109,6 +130,10 @@ export function normalizeHeat(heat: number): number {
  * - `heat >  0.75`             → hot  (red)
  *
  * Overheated label / pulse trigger at `heat > 0.9` strictly.
+ *
+ * Segment fill rounds to the nearest whole block, so a heat value of
+ * `0.55` with 10 segments fills 6 blocks, `0.05` fills 1. This keeps the
+ * visual monotonic and never shows a half-lit block mid-value.
  */
 export function computeHeatBarState(heat: number): HeatBarVisualState {
   const h = normalizeHeat(heat);
@@ -126,18 +151,17 @@ export function computeHeatBarState(heat: number): HeatBarVisualState {
     gradientCss = HEAT_HOT_GRADIENT;
   }
 
-  // Inverted: the bar DRAINS as heat builds. At heat=0 the fill is 100%,
-  // at heat=1 the fill is 0%. Round to 4 decimal places so IEEE-754 quirks
-  // like `(1 - 0.85) * 100 === 15.000000000000002` don't leak into DOM
-  // width strings or test assertions. 4dp is well below any visible step
-  // at 240px width (0.0001% = 0.00024px).
-  const fillWidthPct = Math.round((1 - h) * 10000) / 100;
+  // Round to the nearest block so the bar reads as integer "tenths".
+  // Clamp to [0, HEAT_SEGMENT_COUNT] defensively even though normalizeHeat
+  // already constrains the input.
+  const rounded = Math.round(h * HEAT_SEGMENT_COUNT);
+  const filledSegments = Math.max(0, Math.min(HEAT_SEGMENT_COUNT, rounded));
 
   const isOverheated = h > HEAT_OVERHEATED_THRESHOLD;
   const labelText: 'HEAT' | 'OVERHEATED' = isOverheated ? 'OVERHEATED' : 'HEAT';
 
   return {
-    fillWidthPct,
+    filledSegments,
     gradientCss,
     heatBracket,
     labelText,
@@ -149,18 +173,33 @@ export function computeHeatBarState(heat: number): HeatBarVisualState {
 // Layout constants — qualifiers for the Harbour Dawn spec
 // ---------------------------------------------------------------------------
 
-/** Container width in px, locked by the R13 spec. */
-export const BAR_WIDTH_PX = 240;
-/** Container height in px, locked by the R13 spec. */
-export const BAR_HEIGHT_PX = 12;
+/** Width of a single heat segment block, in px. Matches ammo-slot spec. */
+export const SEGMENT_WIDTH_PX = 14;
+/** Height of a single heat segment block, in px. Matches ammo-slot spec. */
+export const SEGMENT_HEIGHT_PX = 18;
+/** Gap between adjacent heat segment blocks, in px. */
+export const SEGMENT_GAP_PX = 4;
+/** Corner radius for each segment, in px (matches ammo-slot look). */
+export const SEGMENT_RADIUS_PX = 2;
+
+/**
+ * Full track width in px, computed from the segment geometry. Used by the
+ * container so the outer box sits flush against the segment row.
+ */
+export const TRACK_WIDTH_PX =
+  HEAT_SEGMENT_COUNT * SEGMENT_WIDTH_PX + (HEAT_SEGMENT_COUNT - 1) * SEGMENT_GAP_PX;
+
 /** Font size for the `HEAT` / `OVERHEATED` label. */
 export const LABEL_FONT_SIZE_PX = 10;
 /** Letter spacing for the uppercase label, in `em`. */
 export const LABEL_LETTER_SPACING_EM = 0.08;
-/** Gap between the label and the bar track, in px. */
+/** Gap between the label and the segment row, in px. */
 export const LABEL_GAP_PX = 4;
-/** Distance from the bottom of the viewport, per spec. */
-export const BAR_BOTTOM_REM = 6.5;
+
+/** Distance from the top of the viewport to the container, per spec. */
+export const BAR_TOP_REM = 2;
+/** Distance from the left of the viewport to the container, per spec. */
+export const BAR_LEFT_REM = 2;
 
 // ---------------------------------------------------------------------------
 // Pulse animation (scoped to this component)
@@ -199,24 +238,22 @@ export function weaponHeatBarKeyframes(): string {
 
 /**
  * Returns the outer container style. Absolutely positioned at
- * `bottom: 6.5rem` and horizontally centered via `left: 50% + translateX(-50%)`.
- * The container is 240×12 px with a column-flex layout so the label sits
- * above the bar track.
+ * `top: 2rem / left: 2rem` — the top-left slot of the HUD stack, above
+ * the armor + hull bars.
  */
 export function buildContainerStyle(): CSSProperties {
   return {
     position: 'absolute',
-    bottom: `${String(BAR_BOTTOM_REM)}rem`,
-    left: '50%',
-    transform: 'translateX(-50%)',
-    width: `${String(BAR_WIDTH_PX)}px`,
+    top: `${String(BAR_TOP_REM)}rem`,
+    left: `${String(BAR_LEFT_REM)}rem`,
+    width: `${String(TRACK_WIDTH_PX)}px`,
     fontFamily: FONT_UI,
     userSelect: 'none',
     pointerEvents: 'none',
-    // Column stack so the label sits above the bar track.
+    // Column stack so the label sits above the segment row.
     display: 'flex',
     flexDirection: 'column',
-    alignItems: 'center',
+    alignItems: 'flex-start',
   };
 }
 
@@ -234,42 +271,56 @@ export function buildLabelStyle(isOverheated: boolean): CSSProperties {
     letterSpacing: `${String(LABEL_LETTER_SPACING_EM)}em`,
     textTransform: 'uppercase',
     marginBottom: `${String(LABEL_GAP_PX)}px`,
-    // Color transition matches the bar width transition so a heat spike
+    // Color transition matches the segment transition so a heat spike
     // that crosses 0.9 reads as a single coordinated change.
     transition: `color ${String(DUR_NORMAL)}ms ${EASE_OUT}`,
   };
 }
 
 /**
- * Returns the track (outer shell) style. This is the 240×12 px "empty" bar
- * shape — solid deep background, subtle 1px border, small radius. Padding
- * is zero so the fill div reads as a flush progress bar.
+ * Returns the track (segment row) style. This is the horizontal flex
+ * container that holds the N discrete segment blocks. Uses no background
+ * or border of its own — the segments themselves carry all the visual
+ * weight, matching the ammo-pill reference in the design doc.
  */
 export function buildTrackStyle(): CSSProperties {
   return {
     position: 'relative',
-    width: `${String(BAR_WIDTH_PX)}px`,
-    height: `${String(BAR_HEIGHT_PX)}px`,
-    background: BG_DEEP,
-    border: `1px solid ${BORDER_SUB}`,
-    borderRadius: `${String(RADIUS_SM)}px`,
+    width: `${String(TRACK_WIDTH_PX)}px`,
+    height: `${String(SEGMENT_HEIGHT_PX)}px`,
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: `${String(SEGMENT_GAP_PX)}px`,
     padding: 0,
-    overflow: 'hidden',
   };
 }
 
 /**
- * Returns the fill style for a given visual state. The fill width AND the
- * background gradient both transition over `DUR_NORMAL` ease-out so heat
- * changes produce a smooth, coordinated animation across bracket crossings.
+ * Returns the style for an individual segment block. Filled segments get
+ * the bracket-coloured gradient; empty segments are drawn in BG_DEEP with
+ * a subtle BORDER_SUB outline (identical to `.ammo-spent`).
  */
-export function buildFillStyle(state: HeatBarVisualState): CSSProperties {
+export function buildSegmentStyle(args: { filled: boolean; gradient: string }): CSSProperties {
+  const { filled, gradient } = args;
   return {
-    width: `${String(state.fillWidthPct)}%`,
-    height: '100%',
-    background: state.gradientCss,
-    borderRadius: `${String(RADIUS_SM)}px`,
-    transition: `width ${String(DUR_NORMAL)}ms ${EASE_OUT}, background ${String(DUR_NORMAL)}ms ${EASE_OUT}`,
-    willChange: 'width',
+    width: `${String(SEGMENT_WIDTH_PX)}px`,
+    height: `${String(SEGMENT_HEIGHT_PX)}px`,
+    borderRadius: `${String(SEGMENT_RADIUS_PX)}px`,
+    background: filled ? gradient : BG_DEEP,
+    border: filled ? 'none' : `1px solid ${BORDER_SUB}`,
+    // Small box-sizing pin so the border doesn't grow the segment past
+    // the flex track width and kick the row to two lines.
+    boxSizing: 'border-box',
+    transition: `background ${String(DUR_NORMAL)}ms ${EASE_OUT}, border ${String(DUR_NORMAL)}ms ${EASE_OUT}`,
   };
 }
+
+/**
+ * Hands the RADIUS_SM token back for tests that want to assert the
+ * container still references the tokens module at module load. Kept
+ * because the old API exported RADIUS_SM indirectly via fill/track
+ * styles — consumers that imported it through this file should still
+ * have a stable path.
+ */
+export const HEAT_BAR_RADIUS = RADIUS_SM;

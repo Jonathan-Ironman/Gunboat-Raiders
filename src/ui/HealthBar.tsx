@@ -3,7 +3,21 @@
  *
  * Visual spec: Harbour Dawn (see `docs/art-direction/index.html`, the
  * `.health-wrap` / `.health-track` / `.health-fill` pattern) adapted for
- * Gunboat Raiders' dual-bar (armor + hull) model.
+ * Gunboat Raiders' dual-bar (armor + hull) model with per-bar color
+ * families:
+ *
+ * - Hull: green/teal → gold → red (HULL_*_GRADIENT recipes)
+ * - Armor: blue → purple → red (ARMOR_*_GRADIENT recipes)
+ *
+ * Both bars share the same three-state ramp: `full` above 60%, `damaged`
+ * between 30% and 60%, `critical` at or below 30%. Thresholds live in
+ * exported constants so unit tests and any future damage-vignette can
+ * reference the same numbers.
+ *
+ * Layout (post playtest 2026-04-11): HUD bars are stacked top-left with
+ * WeaponHeatBar on top, then armor, then hull. The HealthBar positions
+ * itself at a fixed `top` offset below the heat bar slot so HUD.tsx does
+ * not need to know about sibling heights.
  *
  * Design lock (R11): player armor slowly auto-regenerates at
  * `armorRegenRate` points/sec while the boat is alive. The hull does NOT
@@ -12,6 +26,9 @@
  * "armor is repairing itself". Hull never shimmers; only the critical
  * pulse + red outline from the original Slice 4 spec remain for hull.
  *
+ * Number readouts (`52 / 100`) were removed after the 2026-04-11 playtest
+ * — the bars alone are the single source of health information.
+ *
  * All colors, fonts, spacing, motion values MUST come from `./tokens`.
  * No hardcoded hex literals are permitted in this file.
  */
@@ -19,16 +36,21 @@
 import { useGameStore } from '../store/gameStore';
 import { usePlayerHealth } from '../store/selectors';
 import {
+  ARMOR_CRITICAL_GRADIENT,
+  ARMOR_DAMAGED_GRADIENT,
+  ARMOR_FULL_GRADIENT,
   BG_DEEP,
   BORDER_SUB,
   DUR_NORMAL,
   EASE_OUT,
   FONT_UI,
-  HEALTH_CRITICAL_GRADIENT,
-  HEALTH_DAMAGED_GRADIENT,
-  HEALTH_FULL_GRADIENT,
+  HULL_CRITICAL_GRADIENT,
   HULL_CRITICAL_THRESHOLD,
+  HULL_DAMAGED_GRADIENT,
+  HULL_FULL_GRADIENT,
   RED,
+  SP_1,
+  SP_2,
   TEXT_MUTED,
 } from './tokens';
 
@@ -36,17 +58,21 @@ import {
 // Pure state derivation helpers — unit-testable without a renderer.
 // ---------------------------------------------------------------------------
 
-/** Armor bar visual states. Teal when full or mostly full; amber below 50%. */
-export type ArmorState = 'full' | 'damaged';
+/** Armor bar visual states. Same three-band ramp as the hull. */
+export type ArmorState = 'full' | 'damaged' | 'critical';
 
 /** Hull bar visual states. Teal > 60%; amber 30–60%; critical red ≤ 30%. */
 export type HullState = 'full' | 'damaged' | 'critical';
 
-/** Width below which the armor fill darkens to amber. */
-export const ARMOR_DAMAGED_THRESHOLD = 0.5;
-
-/** Width above which the hull stays teal. */
-export const HULL_HEALTHY_THRESHOLD = 0.6;
+/** Width above which both armor and hull render in the `full` color. */
+export const BAR_HEALTHY_THRESHOLD = 0.6;
+/** Alias retained for call-sites / tests that spoke in hull-specific terms. */
+export const HULL_HEALTHY_THRESHOLD = BAR_HEALTHY_THRESHOLD;
+/**
+ * Width at or below which both armor and hull render in the `critical`
+ * color. Points to the same token as `HULL_CRITICAL_THRESHOLD`.
+ */
+export const BAR_CRITICAL_THRESHOLD = HULL_CRITICAL_THRESHOLD;
 
 /** Full shape of the health-bar visual state, derived from store fields. */
 export interface HealthBarVisualState {
@@ -67,6 +93,17 @@ export interface HealthBarVisualState {
 }
 
 /**
+ * Shared three-band ramp used by both armor and hull. Kept as a local
+ * helper instead of inlining twice so the state machine has a single
+ * source of truth for thresholds.
+ */
+function bandFor(pctRaw: number): 'full' | 'damaged' | 'critical' {
+  if (pctRaw <= BAR_CRITICAL_THRESHOLD) return 'critical';
+  if (pctRaw <= BAR_HEALTHY_THRESHOLD) return 'damaged';
+  return 'full';
+}
+
+/**
  * Pure function that maps a health snapshot + sinking flag into the exact
  * visual state the HealthBar will render. This is the single source of
  * truth for the state machine, and is exported so unit tests can exercise
@@ -84,26 +121,25 @@ export function computeHealthBarState(input: {
   const armorPctRaw = armorMax > 0 ? armor / armorMax : 0;
   const hullPctRaw = hullMax > 0 ? hull / hullMax : 0;
 
-  const armorState: ArmorState = armorPctRaw < ARMOR_DAMAGED_THRESHOLD ? 'damaged' : 'full';
+  const armorState: ArmorState = bandFor(armorPctRaw);
+  const hullState: HullState = bandFor(hullPctRaw);
 
-  let hullState: HullState;
-  if (hullPctRaw <= HULL_CRITICAL_THRESHOLD) {
-    hullState = 'critical';
-  } else if (hullPctRaw <= HULL_HEALTHY_THRESHOLD) {
-    hullState = 'damaged';
+  let armorFillGradient: string;
+  if (armorState === 'critical') {
+    armorFillGradient = ARMOR_CRITICAL_GRADIENT;
+  } else if (armorState === 'damaged') {
+    armorFillGradient = ARMOR_DAMAGED_GRADIENT;
   } else {
-    hullState = 'full';
+    armorFillGradient = ARMOR_FULL_GRADIENT;
   }
-
-  const armorFillGradient = armorState === 'full' ? HEALTH_FULL_GRADIENT : HEALTH_DAMAGED_GRADIENT;
 
   let hullFillGradient: string;
   if (hullState === 'critical') {
-    hullFillGradient = HEALTH_CRITICAL_GRADIENT;
+    hullFillGradient = HULL_CRITICAL_GRADIENT;
   } else if (hullState === 'damaged') {
-    hullFillGradient = HEALTH_DAMAGED_GRADIENT;
+    hullFillGradient = HULL_DAMAGED_GRADIENT;
   } else {
-    hullFillGradient = HEALTH_FULL_GRADIENT;
+    hullFillGradient = HULL_FULL_GRADIENT;
   }
 
   // Shimmer only runs while the player is actively regenerating armor.
@@ -175,15 +211,21 @@ const BAR_HEIGHT_PX = 14;
 const BAR_RADIUS_PX = 7;
 const FILL_RADIUS_PX = 6;
 const LABEL_FONT_SIZE_PX = 10;
-const READOUT_FONT_SIZE_PX = 10;
 const LABEL_LETTER_SPACING_EM = 0.08;
-const ROW_GAP_PX = 4;
-const STACK_GAP_PX = 10;
+const ROW_GAP_PX = SP_1;
+const STACK_GAP_PX = SP_2;
+/**
+ * Top offset of the HealthBar container. The WeaponHeatBar occupies the
+ * top-left slot at `top: 2rem`; the HealthBar stacks beneath it with a
+ * consistent gap. 5rem = 2rem (heat top) + ~26px heat bar + ~16px gap.
+ */
+const CONTAINER_TOP_REM = 5;
+const CONTAINER_LEFT_REM = 2;
 
 const containerStyle: React.CSSProperties = {
   position: 'absolute',
-  bottom: '2rem',
-  left: '2rem',
+  top: `${String(CONTAINER_TOP_REM)}rem`,
+  left: `${String(CONTAINER_LEFT_REM)}rem`,
   display: 'flex',
   flexDirection: 'column',
   gap: `${String(STACK_GAP_PX)}px`,
@@ -211,15 +253,6 @@ const trackBaseStyle: React.CSSProperties = {
   borderRadius: `${String(BAR_RADIUS_PX)}px`,
   border: `1px solid ${BORDER_SUB}`,
   overflow: 'hidden',
-};
-
-const readoutStyle: React.CSSProperties = {
-  color: TEXT_MUTED,
-  fontFamily: "'Courier New', monospace",
-  fontSize: `${String(READOUT_FONT_SIZE_PX)}px`,
-  fontWeight: 700,
-  marginTop: `3px`,
-  fontVariantNumeric: 'tabular-nums',
 };
 
 // Outline for the critical hull track. Uses token `RED` literally so we
@@ -320,9 +353,6 @@ export function HealthBar() {
             className={state.armorShimmerActive ? ARMOR_SHIMMER_CLASS : undefined}
           />
         </div>
-        <div style={readoutStyle} data-testid="health-bar-armor-readout">
-          {health.armor} / {health.armorMax}
-        </div>
       </div>
 
       {/* Hull */}
@@ -334,9 +364,6 @@ export function HealthBar() {
             data-testid="health-bar-hull-fill"
             className={state.hullPulseActive ? HULL_PULSE_CLASS : undefined}
           />
-        </div>
-        <div style={readoutStyle} data-testid="health-bar-hull-readout">
-          {health.hull} / {health.hullMax}
         </div>
       </div>
     </div>

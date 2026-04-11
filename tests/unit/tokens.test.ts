@@ -54,11 +54,20 @@ import {
   // Typography
   FONT_DISPLAY,
   FONT_UI,
-  // Health
+  // Health (legacy + new per-bar recipes)
   HEALTH_FULL_GRADIENT,
   HEALTH_DAMAGED_GRADIENT,
   HEALTH_CRITICAL_GRADIENT,
+  HULL_FULL_GRADIENT,
+  HULL_DAMAGED_GRADIENT,
+  HULL_CRITICAL_GRADIENT,
+  ARMOR_FULL_GRADIENT,
+  ARMOR_DAMAGED_GRADIENT,
+  ARMOR_CRITICAL_GRADIENT,
   HULL_CRITICAL_THRESHOLD,
+  OCEAN_DARK,
+  TWILIGHT,
+  TWILIGHT_DARK,
   // Button
   BTN_PRI_BG,
   BTN_PRI_SHADOW,
@@ -184,10 +193,43 @@ describe('tokens — typography', () => {
 });
 
 describe('tokens — health bar recipes', () => {
-  it('exports linear-gradient strings for each health state', () => {
+  it('exports linear-gradient strings for each legacy health state', () => {
     for (const g of [HEALTH_FULL_GRADIENT, HEALTH_DAMAGED_GRADIENT, HEALTH_CRITICAL_GRADIENT]) {
       expect(g).toContain('linear-gradient');
       expect(g).toContain('90deg');
+    }
+  });
+
+  it('exports linear-gradient strings for the hull family (teal→gold→red)', () => {
+    for (const g of [HULL_FULL_GRADIENT, HULL_DAMAGED_GRADIENT, HULL_CRITICAL_GRADIENT]) {
+      expect(g).toContain('linear-gradient');
+      expect(g).toContain('90deg');
+    }
+    // Hull full stays on the teal brand hue.
+    expect(HULL_FULL_GRADIENT).toContain('#2dd4aa');
+    // Hull critical is red.
+    expect(HULL_CRITICAL_GRADIENT).toContain('#ff6060');
+  });
+
+  it('exports linear-gradient strings for the armor family (blue→purple→red)', () => {
+    for (const g of [ARMOR_FULL_GRADIENT, ARMOR_DAMAGED_GRADIENT, ARMOR_CRITICAL_GRADIENT]) {
+      expect(g).toContain('linear-gradient');
+      expect(g).toContain('90deg');
+    }
+    // Armor full is built from the ocean-blue stops.
+    expect(ARMOR_FULL_GRADIENT).toContain(OCEAN);
+    expect(ARMOR_FULL_GRADIENT).toContain(OCEAN_DARK);
+    // Armor damaged is built from the twilight (purple) stops.
+    expect(ARMOR_DAMAGED_GRADIENT).toContain(TWILIGHT);
+    expect(ARMOR_DAMAGED_GRADIENT).toContain(TWILIGHT_DARK);
+    // Armor critical matches hull critical (shared danger red).
+    expect(ARMOR_CRITICAL_GRADIENT).toBe(HULL_CRITICAL_GRADIENT);
+  });
+
+  it('ocean + twilight accent stops are valid hex literals', () => {
+    const HEX_RE_LOCAL = /^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
+    for (const c of [OCEAN, OCEAN_DARK, TWILIGHT, TWILIGHT_DARK]) {
+      expect(c).toMatch(HEX_RE_LOCAL);
     }
   });
 

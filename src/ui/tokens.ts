@@ -59,8 +59,14 @@ export const TEAL_DARK: HexColor = '#1aaa84';
 export const RED: HexColor = '#ff8080';
 /** Dark red — gradient stop, pressed destructive state. */
 export const RED_DARK: HexColor = '#cc3333';
-/** Ocean blue — wave/water accents, informational highlights. */
+/** Ocean blue — wave/water accents, informational highlights. Armor base hue. */
 export const OCEAN: HexColor = '#4a8ac4';
+/** Deep ocean — darker blue stop for ocean gradients. */
+export const OCEAN_DARK: HexColor = '#2a5a94';
+/** Twilight — blue→purple midtone, used for the armor "damaged" ramp. */
+export const TWILIGHT: HexColor = '#8a5ac4';
+/** Twilight dark — darker purple stop paired with {@link TWILIGHT}. */
+export const TWILIGHT_DARK: HexColor = '#6a3a9a';
 
 // ---------------------------------------------------------------------------
 // Colors — Text
@@ -174,12 +180,36 @@ export const FONT_UI = "'Nunito', sans-serif";
 // Health bar gradient recipes
 // ---------------------------------------------------------------------------
 
-/** Full/armor state — teal gradient for the health fill. */
+/**
+ * Legacy health gradient recipes. Still referenced by the Harbour Dawn
+ * showcase / docs references and by the historical tests. New code should
+ * prefer the explicit `HULL_*` and `ARMOR_*` recipes below — the intent
+ * (which bar the color belongs to) is then encoded in the name.
+ */
+/** Full state — teal gradient. */
 export const HEALTH_FULL_GRADIENT = 'linear-gradient(90deg, #2dd4aa, #22c4a0)';
-/** Damaged state — amber gradient for mid hull. */
+/** Damaged state — amber gradient. */
 export const HEALTH_DAMAGED_GRADIENT = 'linear-gradient(90deg, #e8b020, #c8920a)';
-/** Critical state — red gradient for low hull. */
+/** Critical state — red gradient. */
 export const HEALTH_CRITICAL_GRADIENT = 'linear-gradient(90deg, #ff6060, #cc2828)';
+
+// --- Hull (green/teal family → gold → red) ---------------------------------
+
+/** Hull full — teal gradient (green family base). */
+export const HULL_FULL_GRADIENT = 'linear-gradient(90deg, #2dd4aa, #22c4a0)';
+/** Hull damaged — amber warning gradient. */
+export const HULL_DAMAGED_GRADIENT = 'linear-gradient(90deg, #e8b020, #c8920a)';
+/** Hull critical — red danger gradient. */
+export const HULL_CRITICAL_GRADIENT = 'linear-gradient(90deg, #ff6060, #cc2828)';
+
+// --- Armor (blue → purple → red) -------------------------------------------
+
+/** Armor full — ocean-blue gradient (blue family base). */
+export const ARMOR_FULL_GRADIENT = 'linear-gradient(90deg, #4a8ac4, #2a5a94)';
+/** Armor damaged — twilight (blue→purple) gradient. */
+export const ARMOR_DAMAGED_GRADIENT = 'linear-gradient(90deg, #8a5ac4, #6a3a9a)';
+/** Armor critical — red danger gradient (matches hull critical). */
+export const ARMOR_CRITICAL_GRADIENT = 'linear-gradient(90deg, #ff6060, #cc2828)';
 
 /**
  * Hull/hullMax ratio below which the HUD transitions to the critical

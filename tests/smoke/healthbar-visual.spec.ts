@@ -81,10 +81,18 @@ async function forcePlayerHealth(page: Page, snapshot: PlayerHealthSnapshot): Pr
 async function enterGameplay(page: Page): Promise<void> {
   await startGame(page);
 
-  // Game boots on 'mainMenu' (R2 renamed from the legacy 'title' phase).
-  const startButton = page.locator('[data-testid="start-button"]');
-  await expect(startButton).toBeVisible({ timeout: 20_000 });
-  await startButton.click();
+  // Game boots on 'mainMenu'. Prefer the "New Game" button — the main
+  // menu keeps the testid `main-menu-new-game-btn` even when the
+  // persistence layer disables continue.
+  const newGameBtn = page.locator('[data-testid="main-menu-new-game-btn"]');
+  await expect(newGameBtn).toBeVisible({ timeout: 20_000 });
+  await newGameBtn.click();
+
+  // The briefing modal sits between mainMenu and playing; click through.
+  const briefingStart = page.locator('[data-testid="briefing-start-btn"]');
+  if (await briefingStart.isVisible({ timeout: 5_000 }).catch(() => false)) {
+    await briefingStart.click();
+  }
 
   await waitForPhase(page, 'playing', 15_000);
   await expect(page.locator('[data-testid="health-bar"]')).toBeVisible({ timeout: 10_000 });
@@ -102,7 +110,10 @@ test.describe('HealthBar R11 visual', () => {
     await page.waitForTimeout(100);
 
     const bar = page.locator('[data-testid="health-bar"]');
-    await expect(bar).toHaveAttribute('data-armor-state', 'full');
+    // 2026-04-11 ramp: armor at 50% sits in the "damaged" band
+    // (critical ≤ 30% < damaged ≤ 60% < full). Shimmer stays on because
+    // armor is below max and the boat is alive.
+    await expect(bar).toHaveAttribute('data-armor-state', 'damaged');
     await expect(bar).toHaveAttribute('data-armor-shimmer', 'on');
     await expect(bar).toHaveAttribute('data-hull-state', 'full');
     await expect(bar).toHaveAttribute('data-hull-pulse', 'off');
@@ -111,10 +122,10 @@ test.describe('HealthBar R11 visual', () => {
     const armorFill = page.locator('[data-testid="health-bar-armor-fill"]');
     await expect(armorFill).toHaveClass(/gbr-armor-shimmer/);
 
-    // Readout shows the raw numbers.
-    await expect(page.locator('[data-testid="health-bar-armor-readout"]')).toContainText(
-      '50 / 100',
-    );
+    // Numeric readouts were removed on 2026-04-11 per playtest feedback —
+    // the bars alone are the single source of health information now.
+    await expect(page.locator('[data-testid="health-bar-armor-readout"]')).toHaveCount(0);
+    await expect(page.locator('[data-testid="health-bar-hull-readout"]')).toHaveCount(0);
 
     await testInfo.attach('armor-shimmer-50-100', {
       body: await bar.screenshot(),
@@ -155,7 +166,9 @@ test.describe('HealthBar R11 visual', () => {
     // Browsers normalize `#ff8080` to `rgb(255, 128, 128)`.
     expect(hullTrackOutline).toContain('255');
 
-    await expect(page.locator('[data-testid="health-bar-hull-readout"]')).toContainText('30 / 100');
+    // Readouts were removed on 2026-04-11. Keep the assertion here so any
+    // regression that reintroduces them is caught.
+    await expect(page.locator('[data-testid="health-bar-hull-readout"]')).toHaveCount(0);
 
     await testInfo.attach('hull-critical-30-100', {
       body: await bar.screenshot(),
