@@ -4,10 +4,13 @@
  * Ticks cooldowns, listens for mouse click to fire, spawns projectiles
  * through the pool manager.
  *
- * Firing works whenever the game phase is 'playing'. The pointer-lock gate
- * has been intentionally removed: pointer lock can be lost at any time
- * (Escape, alt-tab, browser focus change) and silently dropping clicks
- * when lock is absent makes firing feel broken.
+ * Firing requires BOTH `phase === 'playing'` AND `getIsPointerLocked() === true`.
+ * The pointer-lock gate prevents stray shots during the async window between
+ * `resumeGame()` / `startLevel()` (which set phase synchronously) and the
+ * confirming `pointerlockchange` event (which fires asynchronously). Without
+ * this gate the very click that acquires lock — before lock is confirmed —
+ * would fire a cannon shot. The gate also clears the pending-fire queue on
+ * lock loss so buffered shots cannot drain into an unlocked state.
  *
  * ## Pending-fire queue (fixes the "some quadrants won't fire" bug)
  *
@@ -59,6 +62,7 @@ import {
 } from './WeaponSystem';
 import { consumeTestFireRequest } from './weaponTestBridge';
 import { getAimOffset } from './aimOffsetRefs';
+import { getIsPointerLocked } from './pointerLockRefs';
 import { emitVfxEvent } from '@/effects/vfxEvents';
 
 /**
@@ -81,12 +85,15 @@ export function WeaponSystemR3F() {
   // because `onMouseDown` also queues one immediate intent.
   const mouseHeldRef = useRef(false);
 
-  // Listen for left-click on document. Queue a fire whenever the game is
-  // in the 'playing' phase — no pointer-lock requirement. Pointer lock is
-  // acquired by CameraSystemR3F for mouse-look, but losing it must not
-  // silently disable firing.
+  // Listen for left-click on document. Queue a fire only when:
+  //   1) The game is in the 'playing' phase.
+  //   2) Pointer lock is confirmed (getIsPointerLocked() === true).
+  // Requiring lock prevents a stray shot from the click that initially
+  // acquires pointer lock — that click arrives before the browser fires
+  // `pointerlockchange`, so `getIsPointerLocked()` is still false and
+  // the fire intent is correctly suppressed.
   const onMouseDown = useCallback((e: MouseEvent) => {
-    if (e.button === 0 && useGameStore.getState().phase === 'playing') {
+    if (e.button === 0 && useGameStore.getState().phase === 'playing' && getIsPointerLocked()) {
       mouseHeldRef.current = true;
       if (pendingFiresRef.current < PENDING_FIRE_CAP) {
         pendingFiresRef.current += 1;
@@ -129,6 +136,17 @@ export function WeaponSystemR3F() {
     if (store.phase === 'paused') return;
     const { player } = store;
     if (!player) return;
+
+    // Pointer-lock drain gate: if lock is lost mid-play (Escape, alt-tab,
+    // dev-tools focus) discard any queued intents and the held flag so
+    // shots cannot drain once lock is re-acquired after a long pause. The
+    // `pointerlockchange` handler in CameraSystemR3F calls `pauseGame()`
+    // which sets phase → 'paused', but that Zustand write is not
+    // synchronous within this frame so we check the flag here too.
+    if (!getIsPointerLocked()) {
+      pendingFiresRef.current = 0;
+      mouseHeldRef.current = false;
+    }
 
     // Tick cooldowns.
     const updatedCooldowns = tickCooldowns(

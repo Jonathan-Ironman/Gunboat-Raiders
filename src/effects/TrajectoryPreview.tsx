@@ -23,6 +23,7 @@ import {
 import { useGameStore, type FiringQuadrant, type WeaponMount } from '@/store/gameStore';
 import { getPlayerBodyState } from '@/systems/physicsRefs';
 import { getAimOffset } from '@/systems/aimOffsetRefs';
+import { getIsPointerLocked } from '@/systems/pointerLockRefs';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -186,6 +187,15 @@ export function TrajectoryPreview() {
 
   useFrame(() => {
     const mesh = meshRef.current;
+
+    // Hide the ribbon during the async window before pointer lock is
+    // confirmed — same gate as WeaponSystemR3F so the aim arc never
+    // appears for a shot that cannot be fired.
+    if (!getIsPointerLocked()) {
+      mesh.geometry.setDrawRange(0, 0);
+      return;
+    }
+
     const bodyState = getPlayerBodyState();
     if (!bodyState) {
       mesh.geometry.setDrawRange(0, 0);

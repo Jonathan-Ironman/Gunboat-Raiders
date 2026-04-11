@@ -24,6 +24,7 @@ import { getPlayerBodyState } from './physicsRefs';
 import { computeQuadrant } from './CameraSystem';
 import { useGameStore, type FiringQuadrant } from '@/store/gameStore';
 import { setAimOffset, MAX_PITCH_OFFSET_UP, MAX_PITCH_OFFSET_DOWN } from './aimOffsetRefs';
+import { setIsPointerLocked } from './pointerLockRefs';
 
 /** Camera orbit configuration */
 const CAMERA_RADIUS = 15;
@@ -171,6 +172,9 @@ export function CameraSystemR3F() {
     const wasLocked = isPointerLockedRef.current;
     const nowLocked = document.pointerLockElement === gl.domElement;
     isPointerLockedRef.current = nowLocked;
+    // Mirror to the shared module-scope flag so WeaponSystemR3F and
+    // TrajectoryPreview can read it without duplicating event listeners.
+    setIsPointerLocked(nowLocked);
 
     // R4 — Pause-on-pointer-lock-loss.
     //

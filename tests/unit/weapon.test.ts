@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import {
   tickCooldowns,
   canFire,
@@ -10,6 +10,11 @@ import {
   nextLockout,
   type HeatState,
 } from '@/systems/WeaponSystem';
+import {
+  getIsPointerLocked,
+  setIsPointerLocked,
+  resetPointerLockRefs,
+} from '@/systems/pointerLockRefs';
 import type { WeaponState } from '@/systems/WeaponSystem';
 import type { WeaponMount } from '@/store/gameStore';
 import { BOAT_STATS } from '@/utils/boatStats';
@@ -800,5 +805,59 @@ describe('WeaponSystem — overheat model', () => {
     const fresh = applyShotHeat({ heat: 0, lockedOut: false });
     expect(fresh.heat).toBeCloseTo(HEAT_PER_SHOT);
     expect(fresh.lockedOut).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Pointer-lock fire gate (WeaponSystemR3F gating policy)
+// ---------------------------------------------------------------------------
+// These tests verify the boolean contract that guards onMouseDown in
+// WeaponSystemR3F: a fire intent must be suppressed unless BOTH
+// `phase === 'playing'` AND `getIsPointerLocked() === true`.
+//
+// The test models the gate as a pure predicate so it can run headless —
+// the same condition is used verbatim in the R3F component:
+//
+//   if (e.button === 0 && phase === 'playing' && getIsPointerLocked()) { ... }
+//
+// ---------------------------------------------------------------------------
+
+describe('WeaponSystemR3F — pointer-lock fire gate', () => {
+  beforeEach(() => {
+    resetPointerLockRefs();
+  });
+
+  /** Mirror of the gating predicate in WeaponSystemR3F.onMouseDown. */
+  function mayFire(phase: string): boolean {
+    return phase === 'playing' && getIsPointerLocked();
+  }
+
+  it('suppresses fire when phase is playing but pointer lock is not acquired', () => {
+    // Lock NOT yet confirmed (async gap between resumeGame() and pointerlockchange)
+    setIsPointerLocked(false);
+    expect(mayFire('playing')).toBe(false);
+  });
+
+  it('allows fire when phase is playing AND pointer lock is confirmed', () => {
+    setIsPointerLocked(true);
+    expect(mayFire('playing')).toBe(true);
+  });
+
+  it('suppresses fire outside playing phase even when locked', () => {
+    setIsPointerLocked(true);
+    expect(mayFire('paused')).toBe(false);
+    expect(mayFire('main-menu')).toBe(false);
+    expect(mayFire('briefing')).toBe(false);
+    expect(mayFire('game-over')).toBe(false);
+  });
+
+  it('suppresses fire after lock is lost (lock cleared before phase update)', () => {
+    // Simulate: was locked + playing, then lock lost (pointerlockchange fires
+    // before pauseGame() updates phase). The gate must suppress fire in this
+    // exact window where phase is still 'playing' but lock is gone.
+    setIsPointerLocked(true);
+    expect(mayFire('playing')).toBe(true); // sanity: was allowed
+    setIsPointerLocked(false);
+    expect(mayFire('playing')).toBe(false); // lock lost → fire suppressed
   });
 });
