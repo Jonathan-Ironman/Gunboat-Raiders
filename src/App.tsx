@@ -84,13 +84,25 @@ function GameEntities() {
 
 /**
  * Swap between the cinematic `ShowcaseScene` (main menu backdrop) and
- * the regular `GameEntities` tree (everything else). Kept as its own
- * component so the phase subscription stays a sibling of `<Physics>`
- * — re-renders here do not reach the `Physics` provider itself.
+ * the regular `GameEntities` tree. Kept as its own component so the
+ * phase subscription stays a sibling of `<Physics>` — re-renders here
+ * do not reach the `Physics` provider itself.
+ *
+ * R10 gating rules:
+ *   - `'mainMenu'` → `ShowcaseScene` runs behind the main menu overlay.
+ *   - `'briefing'` → neither tree mounts. The briefing modal is opaque
+ *     so there's nothing to render underneath; mounting `GameEntities`
+ *     here would spawn the player's RigidBody before `startLevel(0)`
+ *     has put the player entity into the store, burning CPU on a ghost
+ *     physics body that then gets unmounted + remounted on Start.
+ *   - Any other phase (`playing` / `wave-clear` / `paused` / `game-over`)
+ *     → `GameEntities` mounts with the full gameplay tree.
  */
 function SceneRoot() {
   const phase = useGameStore((s) => s.phase);
-  return phase === 'mainMenu' ? <ShowcaseScene /> : <GameEntities />;
+  if (phase === 'mainMenu') return <ShowcaseScene />;
+  if (phase === 'briefing') return null;
+  return <GameEntities />;
 }
 
 export function App() {
