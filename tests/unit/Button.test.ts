@@ -225,10 +225,10 @@ describe('buttonStylesheet — hover + active rules', () => {
     expect(css).toContain('f7c850');
   });
 
-  it('contains the primary active rule with translateY press-down', () => {
+  it('contains the primary active rule (no translateY — color/shadow shift only)', () => {
     const css = buttonStylesheet();
     expect(css).toContain('.gbr-btn--primary:not(:disabled):active');
-    expect(css).toContain('translateY(2px)');
+    expect(css).not.toContain('translateY');
   });
 
   it('contains the secondary hover rule targeting .gbr-btn--secondary', () => {

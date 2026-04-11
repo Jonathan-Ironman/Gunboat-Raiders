@@ -114,7 +114,6 @@ import {
   BG_DEEP,
   BTN_PRI_BG,
   BTN_PRI_COLOR,
-  BTN_PRI_SHADOW,
   FONT_DISPLAY,
   FONT_UI,
   GOLD,
@@ -276,7 +275,9 @@ describe('mainMenuScene.helpers — style recipes use tokens', () => {
   it('primary button variant uses the BTN_PRI_* token family', () => {
     expect(mainMenuButtonPrimaryStyle.background).toBe(BTN_PRI_BG);
     expect(mainMenuButtonPrimaryStyle.color).toBe(BTN_PRI_COLOR);
-    expect(mainMenuButtonPrimaryStyle.boxShadow).toBe(BTN_PRI_SHADOW);
+    // Shadow uses gold edge + shared dark drop-shadow (not a per-variant gold glow)
+    expect(String(mainMenuButtonPrimaryStyle.boxShadow ?? '')).toContain('#9a6808');
+    expect(String(mainMenuButtonPrimaryStyle.boxShadow ?? '')).toContain('rgba(7, 17, 32, 0.35)');
   });
 
   it('secondary button variant uses SURFACE_EL background + shared emboss shadow', () => {

@@ -34,7 +34,6 @@ import {
   BORDER,
   BTN_PRI_BG,
   BTN_PRI_COLOR,
-  BTN_PRI_SHADOW,
   FONT_DISPLAY,
   RADIUS_MD,
   SURFACE_EL,
@@ -109,12 +108,12 @@ describe('BUTTON_RECIPE.primary', () => {
     expect(BUTTON_RECIPE.primary.color).toBe(BTN_PRI_COLOR);
   });
 
-  it('locks the gold CTA shadow byte-for-byte against the historical BTN_PRI_SHADOW', () => {
-    expect(BUTTON_RECIPE.primary.boxShadow).toBe(BTN_PRI_SHADOW);
+  it('uses the shared dark drop-shadow (not a per-variant colored glow)', () => {
+    expect(String(BUTTON_RECIPE.primary.boxShadow ?? '')).toContain(__test_edges.sharedDropShadow);
   });
 
-  it('uses the exact 3D emboss shadow shape (0 4px 0 <edge>, 0 6px 18px <glow>)', () => {
-    const expected = __test_embossShadow(__test_edges.primary, __test_edges.primaryGlow);
+  it('uses the exact 3D emboss shadow shape (0 4px 0 <edge>, 0 6px 18px <shared-glow>)', () => {
+    const expected = __test_embossShadow(__test_edges.primary, __test_edges.sharedDropShadow);
     expect(BUTTON_RECIPE.primary.boxShadow).toBe(expected);
   });
 });
@@ -129,8 +128,8 @@ describe('BUTTON_RECIPE.secondary', () => {
     expect(BUTTON_RECIPE.secondary.color).toBe(TEXT_PRI);
   });
 
-  it('uses the same emboss shadow shape as primary, different edge/glow colors', () => {
-    const expected = __test_embossShadow(__test_edges.secondary, __test_edges.secondaryGlow);
+  it('uses the same emboss shadow shape as primary with the shared drop-shadow', () => {
+    const expected = __test_embossShadow(__test_edges.secondary, __test_edges.sharedDropShadow);
     expect(BUTTON_RECIPE.secondary.boxShadow).toBe(expected);
   });
 
@@ -149,8 +148,8 @@ describe('BUTTON_RECIPE.destructive', () => {
     expect(BUTTON_RECIPE.destructive.color).toBe(TEXT_PRI);
   });
 
-  it('uses the same emboss shadow shape as primary/secondary, red edge/glow colors', () => {
-    const expected = __test_embossShadow(__test_edges.destructive, __test_edges.destructiveGlow);
+  it('uses the same emboss shadow shape as primary/secondary with the shared drop-shadow', () => {
+    const expected = __test_embossShadow(__test_edges.destructive, __test_edges.sharedDropShadow);
     expect(BUTTON_RECIPE.destructive.boxShadow).toBe(expected);
   });
 });
@@ -220,6 +219,21 @@ describe('variant uniformity — the cross-modal contract', () => {
       expect(BUTTON_RECIPE[variantName].boxShadow).toBeDefined();
     });
   }
+
+  /**
+   * Core uniformity check: every variant's boxShadow must contain the
+   * exact same shared drop-shadow string. The emboss edge (4px solid
+   * bottom line) may differ per variant — that is intentional — but
+   * the outer soft glow must be identical across all three so they
+   * have the same perceived depth regardless of background color.
+   */
+  for (const variantName of ['primary', 'secondary', 'destructive'] as const) {
+    it(`${variantName} boxShadow contains the shared drop-shadow (not a per-variant glow)`, () => {
+      expect(String(BUTTON_RECIPE[variantName].boxShadow ?? '')).toContain(
+        __test_edges.sharedDropShadow,
+      );
+    });
+  }
 });
 
 // ---------------------------------------------------------------------------
@@ -231,7 +245,9 @@ describe('merged recipe spreads', () => {
     const merged = { ...BUTTON_RECIPE.base, ...BUTTON_RECIPE.primary };
     expect(merged.background).toBe(BTN_PRI_BG);
     expect(merged.color).toBe(BTN_PRI_COLOR);
-    expect(merged.boxShadow).toBe(BTN_PRI_SHADOW);
+    // Shadow uses gold edge + shared drop-shadow (no per-variant colored glow)
+    expect(String(merged.boxShadow ?? '')).toContain(__test_edges.primary);
+    expect(String(merged.boxShadow ?? '')).toContain(__test_edges.sharedDropShadow);
     expect(merged.display).toBe('block');
     expect(merged.width).toBe('100%');
     expect(merged.fontFamily).toBe(FONT_DISPLAY);

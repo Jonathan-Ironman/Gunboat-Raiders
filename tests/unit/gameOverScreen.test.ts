@@ -95,7 +95,6 @@ vi.mock('@/store/gameStore', () => ({
 import {
   BTN_PRI_BG,
   BTN_PRI_COLOR,
-  BTN_PRI_SHADOW,
   FONT_DISPLAY,
   FONT_UI,
   RED,
@@ -309,7 +308,9 @@ describe('gameOverScreen.helpers — style recipes use tokens', () => {
   it('primary button variant uses the BTN_PRI_* token family', () => {
     expect(gameOverButtonPrimaryStyle.background).toBe(BTN_PRI_BG);
     expect(gameOverButtonPrimaryStyle.color).toBe(BTN_PRI_COLOR);
-    expect(gameOverButtonPrimaryStyle.boxShadow).toBe(BTN_PRI_SHADOW);
+    // Shadow uses gold edge + shared dark drop-shadow (not a per-variant gold glow)
+    expect(String(gameOverButtonPrimaryStyle.boxShadow ?? '')).toContain('#9a6808');
+    expect(String(gameOverButtonPrimaryStyle.boxShadow ?? '')).toContain('rgba(7, 17, 32, 0.35)');
   });
 
   it('secondary button variant uses SURFACE_EL background + shared emboss shadow', () => {

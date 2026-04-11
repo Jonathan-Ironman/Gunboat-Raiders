@@ -88,18 +88,11 @@ function embossShadow(edgeColor: string, glowColor: string): string {
 
 /**
  * Dark gold hard-edge color for the primary button's bottom emboss.
- * Matches the historical `BTN_PRI_SHADOW` value so the visual
- * silhouette of the primary button is preserved byte-for-byte by this
- * refactor.
+ * This is the structural 4px bottom line that gives the button its
+ * "sitting on the page" 3D lift. Variant-specific so it reads as
+ * a darker tone of the button face.
  */
 const PRIMARY_EDGE = '#9a6808';
-
-/**
- * Warm gold glow tint used behind the primary button. Also lifted
- * verbatim from the historical `BTN_PRI_SHADOW` so the gold CTA keeps
- * its exact appearance.
- */
-const PRIMARY_GLOW = 'rgba(210, 140, 20, 0.3)';
 
 /**
  * Deep-blue hard-edge for the secondary button's bottom emboss.
@@ -109,13 +102,6 @@ const PRIMARY_GLOW = 'rgba(210, 140, 20, 0.3)';
 const SECONDARY_EDGE = '#0a1a2d';
 
 /**
- * Neutral drop shadow for the secondary button's outer halo. Less
- * saturated than the primary glow because secondary buttons should
- * never out-shout the gold primary CTA.
- */
-const SECONDARY_GLOW = 'rgba(0, 0, 0, 0.45)';
-
-/**
  * Dark red hard-edge for the destructive button's bottom emboss.
  * Uses a darker tone than `RED_DARK` so the 4px edge reads as "carved
  * into the button" rather than a second gradient stop.
@@ -123,11 +109,15 @@ const SECONDARY_GLOW = 'rgba(0, 0, 0, 0.45)';
 const DESTRUCTIVE_EDGE = '#7a1a1a';
 
 /**
- * Red glow tint for the destructive button's outer halo. Same alpha
- * as the primary glow so the two CTA variants have equivalent
- * perceived weight.
+ * Shared drop-shadow used by ALL button variants.
+ *
+ * The per-variant colored glows (gold, red) were visually inconsistent:
+ * the gold glow washed out the depth illusion while the neutral black
+ * created clear depth. Unifying to a single dark drop-shadow ensures
+ * every button has identical perceived depth — only the background
+ * color differs between variants.
  */
-const DESTRUCTIVE_GLOW = 'rgba(204, 51, 51, 0.35)';
+const SHARED_DROP_SHADOW = 'rgba(7, 17, 32, 0.35)';
 
 // ---------------------------------------------------------------------------
 // Recipe shape
@@ -185,7 +175,7 @@ const base: CSSProperties = {
   transition: `transform ${String(DUR_FAST)}ms ${EASE_OUT}, background ${String(DUR_FAST)}ms ${EASE_OUT}, box-shadow ${String(DUR_FAST)}ms ${EASE_OUT}, opacity ${String(DUR_FAST)}ms ${EASE_OUT}`,
   // Default shadow — secondary shape. Variants override this; this
   // entry exists so a variant-less spread still has a valid shadow.
-  boxShadow: embossShadow(SECONDARY_EDGE, SECONDARY_GLOW),
+  boxShadow: embossShadow(SECONDARY_EDGE, SHARED_DROP_SHADOW),
 };
 
 /**
@@ -197,7 +187,7 @@ const base: CSSProperties = {
 const primary: CSSProperties = {
   background: BTN_PRI_BG,
   color: BTN_PRI_COLOR,
-  boxShadow: embossShadow(PRIMARY_EDGE, PRIMARY_GLOW),
+  boxShadow: embossShadow(PRIMARY_EDGE, SHARED_DROP_SHADOW),
 };
 
 /**
@@ -215,7 +205,7 @@ const primary: CSSProperties = {
 const secondary: CSSProperties = {
   background: SURFACE_EL,
   color: TEXT_PRI,
-  boxShadow: embossShadow(SECONDARY_EDGE, SECONDARY_GLOW),
+  boxShadow: embossShadow(SECONDARY_EDGE, SHARED_DROP_SHADOW),
 };
 
 /**
@@ -229,7 +219,7 @@ const secondary: CSSProperties = {
 const destructive: CSSProperties = {
   background: `linear-gradient(135deg, ${RED}, ${RED_DARK})`,
   color: TEXT_PRI,
-  boxShadow: embossShadow(DESTRUCTIVE_EDGE, DESTRUCTIVE_GLOW),
+  boxShadow: embossShadow(DESTRUCTIVE_EDGE, SHARED_DROP_SHADOW),
 };
 
 /**
@@ -242,7 +232,7 @@ const destructive: CSSProperties = {
 const disabled: CSSProperties = {
   background: SURFACE_EL,
   color: TEXT_PRI,
-  boxShadow: embossShadow(SECONDARY_EDGE, SECONDARY_GLOW),
+  boxShadow: embossShadow(SECONDARY_EDGE, SHARED_DROP_SHADOW),
   opacity: 0.4,
   cursor: 'not-allowed',
 };
@@ -266,13 +256,6 @@ export const BUTTON_RECIPE: ButtonRecipe = {
 // ---------------------------------------------------------------------------
 
 /**
- * Brightened gold emboss shadow for the primary button hover state.
- * Lifts the outer glow intensity so the button "lights up" in its
- * gold family when the cursor lands on it.
- */
-const PRIMARY_HOVER_GLOW = 'rgba(242, 182, 64, 0.60)';
-
-/**
  * Warm light overlay for the secondary button hover state. The fill
  * shifts to a slightly lighter deep-harbour blue so the button does
  * not feel dead — subtler than primary/destructive because secondary
@@ -287,34 +270,12 @@ const SECONDARY_HOVER_BG = '#254b72';
 const SECONDARY_HOVER_EDGE = '#0d2540';
 
 /**
- * Elevated secondary glow tint on hover — same family as the resting
- * glow but pushed further so the hover ring is clearly visible against
- * the panel background.
- */
-const SECONDARY_HOVER_GLOW = 'rgba(0, 0, 0, 0.60)';
-
-/**
- * Bright red glow for the destructive hover state. This is the visual
- * the PauseMenu EXIT button already used via inline `useState` —
- * extracted here so the CSS class approach can replicate it natively.
- */
-const DESTRUCTIVE_HOVER_GLOW = 'rgba(255, 80, 80, 0.55)';
-
-/**
- * Active (pressed) translateY offset — drops the button 2px to mimic
- * the emboss depressing under the click. Combined with a tighter
- * bottom-shadow to visually "remove" the lift.
- */
-const ACTIVE_TRANSLATE_Y = '2px';
-
-/**
  * The CSS `box-shadow` for the active (pressed) state — bottom edge
  * collapses from 4px to 2px so the button looks like it sank into the
- * page. Uses the same three-value form as `embossShadow` so the
- * transition between states is smooth.
+ * page. No transform movement; only the shadow shrinks slightly.
  */
-function activeEmbossShadow(edgeColor: string, glowColor: string): string {
-  return `0 2px 0 ${edgeColor}, 0 3px 10px ${glowColor}`;
+function activeEmbossShadow(edgeColor: string): string {
+  return `0 2px 0 ${edgeColor}, 0 3px 10px ${SHARED_DROP_SHADOW}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -343,34 +304,33 @@ export function buttonStylesheet(): string {
 /* Primary (gold) hover + active */
 .gbr-btn--primary:not(:disabled):hover {
   background: linear-gradient(135deg, #f7c850, #e0a020);
-  box-shadow: ${embossShadow(PRIMARY_EDGE, PRIMARY_HOVER_GLOW)};
-  transform: translateY(-1px);
+  filter: brightness(1.1);
+  box-shadow: ${embossShadow(PRIMARY_EDGE, SHARED_DROP_SHADOW)};
 }
 .gbr-btn--primary:not(:disabled):active {
-  transform: translateY(${ACTIVE_TRANSLATE_Y});
-  box-shadow: ${activeEmbossShadow(PRIMARY_EDGE, PRIMARY_GLOW)};
+  filter: brightness(0.95);
+  box-shadow: ${activeEmbossShadow(PRIMARY_EDGE)};
 }
 
 /* Secondary (neutral) hover + active */
 .gbr-btn--secondary:not(:disabled):hover {
   background: ${SECONDARY_HOVER_BG};
-  box-shadow: ${embossShadow(SECONDARY_HOVER_EDGE, SECONDARY_HOVER_GLOW)};
-  transform: translateY(-1px);
+  box-shadow: ${embossShadow(SECONDARY_HOVER_EDGE, SHARED_DROP_SHADOW)};
 }
 .gbr-btn--secondary:not(:disabled):active {
-  transform: translateY(${ACTIVE_TRANSLATE_Y});
-  box-shadow: ${activeEmbossShadow(SECONDARY_EDGE, SECONDARY_GLOW)};
+  filter: brightness(0.9);
+  box-shadow: ${activeEmbossShadow(SECONDARY_EDGE)};
 }
 
 /* Destructive (red) hover + active */
 .gbr-btn--destructive:not(:disabled):hover {
   background: linear-gradient(135deg, #ff9090, #e03030);
-  box-shadow: ${embossShadow(DESTRUCTIVE_EDGE, DESTRUCTIVE_HOVER_GLOW)};
-  transform: translateY(-1px);
+  filter: brightness(1.1);
+  box-shadow: ${embossShadow(DESTRUCTIVE_EDGE, SHARED_DROP_SHADOW)};
 }
 .gbr-btn--destructive:not(:disabled):active {
-  transform: translateY(${ACTIVE_TRANSLATE_Y});
-  box-shadow: ${activeEmbossShadow(DESTRUCTIVE_EDGE, DESTRUCTIVE_GLOW)};
+  filter: brightness(0.9);
+  box-shadow: ${activeEmbossShadow(DESTRUCTIVE_EDGE)};
 }
 
 /* Disabled — no hover effects, pointer blocked at the button level */
@@ -393,14 +353,13 @@ export function buttonStylesheet(): string {
  */
 export const __test_embossShadow = embossShadow;
 
-/** Internal edge colors re-exported for tests. */
+/** Internal edge colors and shared drop-shadow, re-exported for tests. */
 export const __test_edges = {
   primary: PRIMARY_EDGE,
-  primaryGlow: PRIMARY_GLOW,
   secondary: SECONDARY_EDGE,
-  secondaryGlow: SECONDARY_GLOW,
   destructive: DESTRUCTIVE_EDGE,
-  destructiveGlow: DESTRUCTIVE_GLOW,
+  /** The single shared drop-shadow applied to all three variants. */
+  sharedDropShadow: SHARED_DROP_SHADOW,
 } as const;
 
 // ---------------------------------------------------------------------------
