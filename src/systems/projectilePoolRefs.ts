@@ -6,6 +6,7 @@
  */
 
 import type { RapierRigidBody } from '@react-three/rapier';
+import type { InstancedMesh } from 'three';
 
 export interface ProjectilePoolManager {
   activate(
@@ -133,4 +134,57 @@ export function drainPendingEnemyProjectileDeactivations(): number[] {
 
 export function clearAllPendingEnemyProjectileDeactivations(): void {
   pendingEnemyDeactivations.clear();
+}
+
+// ---------------------------------------------------------------------------
+// Instanced-mesh refs — used by dev/test code to read the VISIBLE transforms
+// written to each projectile's instance matrix, independent of the physics
+// body state. These let deterministic tests prove the despawn is actually
+// reflected on the GPU-facing mesh (not just on the rigid body), which
+// guards against the InstancedRigidBodies sleep-skip bug fixed in 2026-04-11.
+// ---------------------------------------------------------------------------
+
+let playerProjectileInstancedMeshRef: InstancedMesh | null = null;
+let enemyProjectileInstancedMeshRef: InstancedMesh | null = null;
+
+export function setPlayerProjectileInstancedMesh(mesh: InstancedMesh | null): void {
+  playerProjectileInstancedMeshRef = mesh;
+}
+
+export function getPlayerProjectileInstancedMesh(): InstancedMesh | null {
+  return playerProjectileInstancedMeshRef;
+}
+
+export function setEnemyProjectileInstancedMesh(mesh: InstancedMesh | null): void {
+  enemyProjectileInstancedMeshRef = mesh;
+}
+
+export function getEnemyProjectileInstancedMesh(): InstancedMesh | null {
+  return enemyProjectileInstancedMeshRef;
+}
+
+/**
+ * Return the translation component of a pool slot's current instance matrix.
+ * Used by tests to verify that the visible cannonball has actually moved
+ * off-screen after deactivation (body at y = -1000 but mesh stuck at impact
+ * means the instance matrix Y is still near the impact Y — the failing case).
+ */
+export function getProjectileInstanceTranslation(
+  pool: 'player' | 'enemy',
+  index: number,
+): { x: number; y: number; z: number } | null {
+  const mesh =
+    pool === 'player' ? playerProjectileInstancedMeshRef : enemyProjectileInstancedMeshRef;
+  if (!mesh) return null;
+  if (index < 0 || index >= mesh.count) return null;
+  // InstancedMesh stores matrices as row-major Float32Array of 16-component
+  // blocks; Three.js Matrix4 is column-major. The translation is at indices
+  // 12, 13, 14 of the 16-wide block (column-major layout).
+  const base = index * 16;
+  const arr = mesh.instanceMatrix.array;
+  return {
+    x: arr[base + 12] ?? 0,
+    y: arr[base + 13] ?? 0,
+    z: arr[base + 14] ?? 0,
+  };
 }

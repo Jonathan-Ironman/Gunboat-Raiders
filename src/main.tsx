@@ -14,6 +14,11 @@ import {
   getEnemyBodyState,
   getAllProjectileBodyStates,
 } from './systems/physicsRefs';
+import {
+  getProjectileInstanceTranslation,
+  queueProjectileDeactivation,
+  queueEnemyProjectileDeactivation,
+} from './systems/projectilePoolRefs';
 import './index.css';
 
 // ---- Test / development globals --------------------------------------------
@@ -37,6 +42,16 @@ if (import.meta.env.DEV || import.meta.env.VITE_E2E === '1') {
       __GET_ALL_ENEMY_BODY_STATES__: typeof getAllEnemyBodyStates;
       __GET_ENEMY_BODY_STATE__: typeof getEnemyBodyState;
       __GET_ALL_PROJECTILE_BODY_STATES__: typeof getAllProjectileBodyStates;
+      __GET_PROJECTILE_INSTANCE_TRANSLATION__: typeof getProjectileInstanceTranslation;
+      /**
+       * Test-only: queue a projectile pool slot for deactivation, exactly
+       * mirroring the collision-impact code path. ProjectileSystemR3F drains
+       * the queue at the start of the next frame and calls
+       * poolManager.deactivate(index), which runs deactivateSlot(). Used by
+       * the impact-despawn regression test so it doesn't have to engineer a
+       * real Rapier collision.
+       */
+      __TEST_QUEUE_PROJECTILE_DEACTIVATION__: (pool: 'player' | 'enemy', index: number) => void;
     };
   const w = window as TestWindow;
 
@@ -69,6 +84,14 @@ if (import.meta.env.DEV || import.meta.env.VITE_E2E === '1') {
   w.__GET_ALL_ENEMY_BODY_STATES__ = getAllEnemyBodyStates;
   w.__GET_ENEMY_BODY_STATE__ = getEnemyBodyState;
   w.__GET_ALL_PROJECTILE_BODY_STATES__ = getAllProjectileBodyStates;
+  w.__GET_PROJECTILE_INSTANCE_TRANSLATION__ = getProjectileInstanceTranslation;
+  w.__TEST_QUEUE_PROJECTILE_DEACTIVATION__ = (pool, index): void => {
+    if (pool === 'player') {
+      queueProjectileDeactivation(index);
+    } else {
+      queueEnemyProjectileDeactivation(index);
+    }
+  };
 }
 // -----------------------------------------------------------------------------
 

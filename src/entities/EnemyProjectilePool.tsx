@@ -29,6 +29,7 @@ import {
 } from '@react-three/rapier';
 import type { RapierRigidBody } from '@react-three/rapier';
 import { SphereGeometry, MeshStandardMaterial, Color } from 'three';
+import type { InstancedMesh } from 'three';
 import { useGameStore } from '@/store/gameStore';
 import { COLLISION_GROUPS } from '@/utils/collisionGroups';
 import {
@@ -39,6 +40,7 @@ import {
   queueEnemyProjectileDeactivation,
   isEnemyProjectileDeactivationPending,
   clearAllPendingEnemyProjectileDeactivations,
+  setEnemyProjectileInstancedMesh,
 } from '@/systems/projectilePoolRefs';
 import { findEnemyIdByBody, isPlayerBody, getProjectileBodyState } from '@/systems/physicsRefs';
 import { emitVfxEvent } from '@/effects/vfxEvents';
@@ -69,13 +71,24 @@ const ENEMY_PROJECTILE_GROUPS = interactionGroups(COLLISION_GROUPS.ENEMY_PROJECT
 
 export function EnemyProjectilePool() {
   const rigidBodiesRef = useRef<RapierRigidBody[]>(null);
+  const instancedMeshRef = useRef<InstancedMesh>(null);
   const activeIndicesRef = useRef(new Set<number>());
   /** Maps Zustand storeId → pool slot index for O(1) lifetime-expiry lookup. */
   const storeIdToIndexRef = useRef(new Map<string, number>());
 
   /**
-   * Core deactivation — moves body to sleep position, zeroes velocity, sleeps
-   * it, and clears slot metadata. Must be called outside the physics step.
+   * Core deactivation — moves body to sleep position and zeroes
+   * velocity/gravity. Must be called outside the physics step.
+   *
+   * CRITICAL: we deliberately do NOT call `body.sleep()` here. See the
+   * identical block comment in `ProjectilePool.tsx` for the full rationale.
+   * Short version: react-three-rapier's mesh-update loop (esm.js ~line 936)
+   * treats each InstancedRigidBodies child's `state.object` as the wrapping
+   * <object3D>, not the InstancedMesh, so sleeping an instance skips the
+   * instanceMatrix sync and the cannonball visually sticks at the impact
+   * point. Leaving the body awake lets r3r copy the new translation onto
+   * the instance matrix on the next frame; Rapier's auto-sleep then parks
+   * the body once linvel/angvel/gravity are all zero.
    */
   const deactivateSlot = useCallback((index: number): void => {
     const bodies = rigidBodiesRef.current;
@@ -99,11 +112,14 @@ export function EnemyProjectilePool() {
     clearProjectileSlotMetadata(metaKey);
 
     try {
+      // wakeUp=true so sleeping bodies (from the mount-time initial sleep)
+      // re-enter the mesh-update loop for at least one frame.
+      body.wakeUp();
       body.setTranslation({ x: 0, y: SLEEP_POSITION_Y, z: 0 }, true);
       body.setLinvel({ x: 0, y: 0, z: 0 }, true);
       body.setAngvel({ x: 0, y: 0, z: 0 }, true);
       body.setGravityScale(0, true);
-      body.sleep();
+      // No body.sleep() here — see the block comment above.
     } catch {
       // Rapier may be mid-step on edge cases; slot is already marked inactive.
     }
@@ -271,6 +287,15 @@ export function EnemyProjectilePool() {
     };
   }, [activate, deactivate, getBodies, getIndexByStoreId]);
 
+  // Register the InstancedMesh ref for dev/test inspection of GPU-facing
+  // instance matrices. See the equivalent hook in ProjectilePool.tsx.
+  useEffect(() => {
+    setEnemyProjectileInstancedMesh(instancedMeshRef.current);
+    return () => {
+      setEnemyProjectileInstancedMesh(null);
+    };
+  }, []);
+
   // Put all bodies to sleep on mount
   useEffect(() => {
     const bodies = rigidBodiesRef.current;
@@ -320,7 +345,11 @@ export function EnemyProjectilePool() {
         />,
       ]}
     >
-      <instancedMesh args={[geometry, material, POOL_SIZE]} count={POOL_SIZE} />
+      <instancedMesh
+        ref={instancedMeshRef}
+        args={[geometry, material, POOL_SIZE]}
+        count={POOL_SIZE}
+      />
     </InstancedRigidBodies>
   );
 }

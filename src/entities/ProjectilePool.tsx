@@ -43,6 +43,7 @@ import {
 } from '@react-three/rapier';
 import type { RapierRigidBody } from '@react-three/rapier';
 import { SphereGeometry, MeshStandardMaterial, Color } from 'three';
+import type { InstancedMesh } from 'three';
 import { useGameStore } from '@/store/gameStore';
 import { COLLISION_GROUPS } from '@/utils/collisionGroups';
 import {
@@ -54,6 +55,7 @@ import {
   queueProjectileDeactivation,
   isProjectileDeactivationPending,
   clearAllPendingProjectileDeactivations,
+  setPlayerProjectileInstancedMesh,
 } from '@/systems/projectilePoolRefs';
 import { findEnemyIdByBody, isPlayerBody, getProjectileBodyState } from '@/systems/physicsRefs';
 import { emitVfxEvent } from '@/effects/vfxEvents';
@@ -83,14 +85,36 @@ const PROJECTILE_MAX_LIFETIME = 8;
 
 export function ProjectilePool() {
   const rigidBodiesRef = useRef<RapierRigidBody[]>(null);
+  const instancedMeshRef = useRef<InstancedMesh>(null);
   const activeIndicesRef = useRef(new Set<number>());
   /** Maps Zustand storeId → pool slot index for O(1) lifetime-expiry lookup. */
   const storeIdToIndexRef = useRef(new Map<string, number>());
 
   /**
    * Core deactivation logic — moves the body to the sleep position, zeroes
-   * velocity, sleeps it, and clears slot metadata. Safe to call from useFrame
+   * velocity/gravity, and clears slot metadata. Safe to call from useFrame
    * (which runs outside the physics step) but NOT from a collision callback.
+   *
+   * CRITICAL: we deliberately do NOT call `body.sleep()` here. The Physics
+   * component's mesh-update loop (react-three-rapier esm.js around line 936)
+   * skips any rigid body whose `state.object` is not an InstancedMesh AND
+   * which is sleeping:
+   *
+   *     if (rigidBody.isSleeping() && !("isInstancedMesh" in state.object))
+   *       return;
+   *
+   * For InstancedRigidBodies, each instance's RigidBody wrapper sets
+   * `state.object` to its inner `<object3D>`, NOT the shared InstancedMesh
+   * child. So the guard never takes the "instanced-mesh exception" branch,
+   * and sleeping any instance immediately after moving it causes the
+   * instanceMatrix sync to be skipped — the cannonball visually sticks at
+   * the old collision point even though the physics body is at y=-1000.
+   *
+   * Leaving the body awake lets r3r copy the new translation onto the
+   * instance matrix on the very next frame. Rapier's built-in auto-sleep
+   * then parks the body a few frames later (linvel, angvel, gravity are all
+   * zero, so the island solver has nothing to integrate), at which point
+   * the mesh is already rendered far below the world.
    */
   const deactivateSlot = useCallback((index: number): void => {
     const bodies = rigidBodiesRef.current;
@@ -113,11 +137,14 @@ export function ProjectilePool() {
     clearProjectileSlotMetadata(index);
 
     try {
+      // wakeUp=true so sleeping bodies (from the mount-time initial sleep)
+      // are re-entered into the mesh-update loop for at least one frame.
+      body.wakeUp();
       body.setTranslation({ x: 0, y: SLEEP_POSITION_Y, z: 0 }, true);
       body.setLinvel({ x: 0, y: 0, z: 0 }, true);
       body.setAngvel({ x: 0, y: 0, z: 0 }, true);
       body.setGravityScale(0, true);
-      body.sleep();
+      // No body.sleep() here — see the block comment above.
     } catch {
       // Rapier may still be mid-step on some edge cases. The slot is already
       // marked inactive, so subsequent activations will reclaim it.
@@ -318,6 +345,16 @@ export function ProjectilePool() {
     };
   }, [activate, deactivate, getBodies, getIndexByStoreId]);
 
+  // Register the InstancedMesh ref so tests can read instance-matrix
+  // translations directly from the GPU-facing buffer, independent of any
+  // rigid-body cached state.
+  useEffect(() => {
+    setPlayerProjectileInstancedMesh(instancedMeshRef.current);
+    return () => {
+      setPlayerProjectileInstancedMesh(null);
+    };
+  }, []);
+
   // Put all bodies to sleep on mount
   useEffect(() => {
     const bodies = rigidBodiesRef.current;
@@ -375,7 +412,11 @@ export function ProjectilePool() {
         />,
       ]}
     >
-      <instancedMesh args={[geometry, material, POOL_SIZE]} count={POOL_SIZE} />
+      <instancedMesh
+        ref={instancedMeshRef}
+        args={[geometry, material, POOL_SIZE]}
+        count={POOL_SIZE}
+      />
     </InstancedRigidBodies>
   );
 }
