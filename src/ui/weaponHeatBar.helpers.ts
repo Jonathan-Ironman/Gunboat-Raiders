@@ -11,9 +11,9 @@
  * `0.75`, and the label flips from `HEAT` to `OVERHEATED` (in red,
  * pulsing) when heat exceeds `0.9`.
  *
- * Layout (post playtest 2026-04-11): the bar is stacked at the top-left
+ * Layout (post playtest 2026-04-11): the bar is stacked at the bottom-left
  * of the viewport, above the armor + hull bars. HUD.tsx does not own the
- * stacking — each component self-positions at a predictable `top` offset.
+ * stacking — each component self-positions at a predictable `bottom` offset.
  *
  * These helpers are kept in a separate module so that:
  * - The component file stays a single React export, keeping
@@ -196,8 +196,15 @@ export const LABEL_LETTER_SPACING_EM = 0.08;
 /** Gap between the label and the segment row, in px. */
 export const LABEL_GAP_PX = 4;
 
-/** Distance from the top of the viewport to the container, per spec. */
-export const BAR_TOP_REM = 2;
+/**
+ * Distance from the bottom of the viewport to the container.
+ * Computed so the heat bar clears the health stack below it:
+ *   - Health stack bottom anchor: 2rem
+ *   - Health stack height: 2 × (10px label + 4px gap + 14px bar) + 8px flex-gap = 64px
+ *   - Visual gap between heat and health: ~20px
+ *   - Total: 2rem + 84px
+ */
+export const BAR_BOTTOM_CSS = 'calc(2rem + 84px)';
 /** Distance from the left of the viewport to the container, per spec. */
 export const BAR_LEFT_REM = 2;
 
@@ -238,13 +245,13 @@ export function weaponHeatBarKeyframes(): string {
 
 /**
  * Returns the outer container style. Absolutely positioned at
- * `top: 2rem / left: 2rem` — the top-left slot of the HUD stack, above
- * the armor + hull bars.
+ * `bottom: calc(2rem + 84px) / left: 2rem` — anchored to the bottom-left
+ * of the viewport, above the armor + hull health bars.
  */
 export function buildContainerStyle(): CSSProperties {
   return {
     position: 'absolute',
-    top: `${String(BAR_TOP_REM)}rem`,
+    bottom: BAR_BOTTOM_CSS,
     left: `${String(BAR_LEFT_REM)}rem`,
     width: `${String(TRACK_WIDTH_PX)}px`,
     fontFamily: FONT_UI,

@@ -20,8 +20,8 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 
 import {
+  BAR_BOTTOM_CSS,
   BAR_LEFT_REM,
-  BAR_TOP_REM,
   buildContainerStyle,
   buildLabelStyle,
   buildSegmentStyle,
@@ -250,12 +250,13 @@ describe('WeaponHeatBar — gradient recipes', () => {
 // ---------------------------------------------------------------------------
 
 describe('WeaponHeatBar — buildContainerStyle', () => {
-  it('positions the bar at the top-left HUD slot (top 2rem, left 2rem)', () => {
+  it('positions the bar at the bottom-left HUD slot (bottom calc(2rem + 84px), left 2rem)', () => {
     const style = buildContainerStyle();
-    expect(BAR_TOP_REM).toBe(2);
+    expect(BAR_BOTTOM_CSS).toBe('calc(2rem + 84px)');
     expect(BAR_LEFT_REM).toBe(2);
     expect(style.position).toBe('absolute');
-    expect(style.top).toBe('2rem');
+    expect(style.bottom).toBe('calc(2rem + 84px)');
+    expect(style.top).toBeUndefined();
     expect(style.left).toBe('2rem');
   });
 

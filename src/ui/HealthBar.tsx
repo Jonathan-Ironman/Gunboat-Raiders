@@ -14,10 +14,10 @@
  * exported constants so unit tests and any future damage-vignette can
  * reference the same numbers.
  *
- * Layout (post playtest 2026-04-11): HUD bars are stacked top-left with
- * WeaponHeatBar on top, then armor, then hull. The HealthBar positions
- * itself at a fixed `top` offset below the heat bar slot so HUD.tsx does
- * not need to know about sibling heights.
+ * Layout (post playtest 2026-04-11): HUD bars are stacked bottom-left with
+ * hull at the bottom, then armor, then heat bar above. The HealthBar
+ * anchors itself at a fixed `bottom` offset so HUD.tsx does not need to
+ * know about sibling heights.
  *
  * Design lock (R11): player armor slowly auto-regenerates at
  * `armorRegenRate` points/sec while the boat is alive. The hull does NOT
@@ -215,16 +215,16 @@ const LABEL_LETTER_SPACING_EM = 0.08;
 const ROW_GAP_PX = SP_1;
 const STACK_GAP_PX = SP_2;
 /**
- * Top offset of the HealthBar container. The WeaponHeatBar occupies the
- * top-left slot at `top: 2rem`; the HealthBar stacks beneath it with a
- * consistent gap. 5rem = 2rem (heat top) + ~26px heat bar + ~16px gap.
+ * Bottom offset of the HealthBar container. The stack is anchored to the
+ * bottom-left of the viewport at `bottom: 2rem`; the heat bar sits above
+ * this stack with a gap (see `BAR_BOTTOM_CSS` in weaponHeatBar.helpers.ts).
  */
-const CONTAINER_TOP_REM = 5;
+const CONTAINER_BOTTOM_REM = 2;
 const CONTAINER_LEFT_REM = 2;
 
 const containerStyle: React.CSSProperties = {
   position: 'absolute',
-  top: `${String(CONTAINER_TOP_REM)}rem`,
+  bottom: `${String(CONTAINER_BOTTOM_REM)}rem`,
   left: `${String(CONTAINER_LEFT_REM)}rem`,
   display: 'flex',
   flexDirection: 'column',
