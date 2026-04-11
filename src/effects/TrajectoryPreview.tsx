@@ -1,8 +1,13 @@
 /**
- * Trajectory preview — shows a visual arc of the projected cannonball path.
+ * Trajectory preview — shows a visual ribbon arc of the projected cannonball path.
  *
- * Simulates projectile path using basic Euler integration with gravity,
- * rendered as a THREE.Line via primitive for per-frame geometry updates.
+ * Simulates projectile path using basic Euler integration with gravity.
+ * Rendered as a camera-facing flat ribbon (custom BufferGeometry) whose width
+ * scales with the number of cannon mounts in the active quadrant, matching
+ * the Assassin's Creed IV Black Flag aim-ribbon aesthetic.
+ *
+ * Ribbon geometry is updated in-place each frame (attribute writes only, no
+ * allocation) for zero-GC per-frame cost.
  */
 
 import { useRef, useMemo } from 'react';
@@ -10,29 +15,89 @@ import { useFrame } from '@react-three/fiber';
 import {
   BufferGeometry,
   Float32BufferAttribute,
-  Line as ThreeLine,
-  LineBasicMaterial,
+  Uint16BufferAttribute,
+  Mesh,
+  MeshBasicMaterial,
   Vector3,
 } from 'three';
 import { useGameStore, type FiringQuadrant, type WeaponMount } from '@/store/gameStore';
 import { getPlayerBodyState } from '@/systems/physicsRefs';
 import { getAimOffset } from '@/systems/aimOffsetRefs';
 
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
 const TRAJECTORY_STEPS = 60;
 const TRAJECTORY_DT = 0.05; // seconds per step
 const GRAVITY_Y = -9.81;
 
-// Reusable objects for per-frame computation
+// Width per cannon mount — so 4 broadside mounts → ~4× wider than 1 fore mount.
+// Base half-width per mount, in world units.
+const HALF_WIDTH_PER_MOUNT = 0.2;
+
+// Minimum half-width even with a single mount (visual floor)
+const MIN_HALF_WIDTH = 0.2;
+
+// Gold accent colour matching the game's aim / UI theme (0xFFD700)
+const RIBBON_COLOR = 0xffd700;
+const RIBBON_OPACITY = 0.4;
+
+// ---------------------------------------------------------------------------
+// Pre-allocated scratch objects (avoid per-frame allocation)
+// ---------------------------------------------------------------------------
+
 const _pos = new Vector3();
 const _vel = new Vector3();
+const _tangent = new Vector3();
+const _right = new Vector3();
+const _up = new Vector3(0, 1, 0);
+
+// ---------------------------------------------------------------------------
+// Geometry helpers
+// ---------------------------------------------------------------------------
 
 /**
- * Compute the mean mount position and direction for a given quadrant.
+ * Build the index buffer for a ribbon strip with `steps + 1` cross-sections,
+ * each cross-section having 2 vertices (left, right).
+ *
+ * Vertex layout for cross-section i:
+ *   left  vertex = i * 2
+ *   right vertex = i * 2 + 1
  */
+function buildRibbonIndices(steps: number): Uint16Array {
+  const triCount = steps * 2; // 2 triangles per quad
+  const indices = new Uint16Array(triCount * 3);
+  let idx = 0;
+  for (let i = 0; i < steps; i++) {
+    const tl = i * 2;
+    const tr = i * 2 + 1;
+    const bl = (i + 1) * 2;
+    const br = (i + 1) * 2 + 1;
+    // First triangle
+    indices[idx++] = tl;
+    indices[idx++] = bl;
+    indices[idx++] = tr;
+    // Second triangle
+    indices[idx++] = tr;
+    indices[idx++] = bl;
+    indices[idx++] = br;
+  }
+  return indices;
+}
+
+// ---------------------------------------------------------------------------
+// Mount data helpers (identical logic to original implementation)
+// ---------------------------------------------------------------------------
+
 function getMeanMountData(
   mounts: readonly WeaponMount[],
   quadrant: FiringQuadrant,
-): { offset: [number, number, number]; direction: [number, number, number] } | null {
+): {
+  offset: [number, number, number];
+  direction: [number, number, number];
+  mountCount: number;
+} | null {
   const quadrantMounts = mounts.filter((m) => m.quadrant === quadrant);
   if (quadrantMounts.length === 0) return null;
 
@@ -56,12 +121,10 @@ function getMeanMountData(
   return {
     offset: [ox / count, oy / count, oz / count],
     direction: [dx / count, dy / count, dz / count],
+    mountCount: count,
   };
 }
 
-/**
- * Rotate a vector by a quaternion.
- */
 function rotateVec(
   v: [number, number, number],
   qx: number,
@@ -81,39 +144,64 @@ function rotateVec(
   ];
 }
 
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
 export function TrajectoryPreview() {
-  // Create the line object once with pre-allocated geometry
-  const lineObj = useMemo(() => {
-    const positions = new Float32Array((TRAJECTORY_STEPS + 1) * 3);
+  // Max vertices = (TRAJECTORY_STEPS + 1) cross-sections × 2 verts each
+  const maxVerts = (TRAJECTORY_STEPS + 1) * 2;
+
+  const meshObj = useMemo(() => {
+    const positions = new Float32Array(maxVerts * 3);
     const geometry = new BufferGeometry();
     geometry.setAttribute('position', new Float32BufferAttribute(positions, 3));
-    geometry.setDrawRange(0, TRAJECTORY_STEPS + 1);
 
-    const material = new LineBasicMaterial({
-      color: 0xffffff,
+    // Build indices for the maximum possible ribbon (all steps drawn)
+    const indices = buildRibbonIndices(TRAJECTORY_STEPS);
+    geometry.setIndex(new Uint16BufferAttribute(indices, 1));
+
+    // Draw nothing until the first frame populates positions
+    geometry.setDrawRange(0, 0);
+
+    const material = new MeshBasicMaterial({
+      color: RIBBON_COLOR,
       transparent: true,
-      opacity: 0.4,
+      opacity: RIBBON_OPACITY,
+      depthWrite: false,
+      side: 2, // THREE.DoubleSide — visible from both sides of the ribbon
     });
 
-    return new ThreeLine(geometry, material);
-  }, []);
+    const mesh = new Mesh(geometry, material);
+    // Ensure ribbon renders above water without z-fighting
+    mesh.renderOrder = 1;
 
-  // Ref to track the primitive for cleanup isn't needed; useMemo handles it.
-  const lineObjRef = useRef(lineObj);
-  lineObjRef.current = lineObj;
+    return mesh;
+  }, [maxVerts]);
+
+  const meshRef = useRef(meshObj);
+  meshRef.current = meshObj;
 
   useFrame(() => {
-    const line = lineObjRef.current;
-    // Read from cached body state (safe during useFrame)
+    const mesh = meshRef.current;
     const bodyState = getPlayerBodyState();
-    if (!bodyState) return;
+    if (!bodyState) {
+      mesh.geometry.setDrawRange(0, 0);
+      return;
+    }
 
     const store = useGameStore.getState();
     const { player, activeQuadrant } = store;
-    if (!player) return;
+    if (!player) {
+      mesh.geometry.setDrawRange(0, 0);
+      return;
+    }
 
     const mountData = getMeanMountData(player.weapons.mounts, activeQuadrant);
-    if (!mountData) return;
+    if (!mountData) {
+      mesh.geometry.setDrawRange(0, 0);
+      return;
+    }
 
     const bPos = bodyState.position;
     const bRot = bodyState.rotation;
@@ -124,11 +212,8 @@ export function TrajectoryPreview() {
     const startY = bPos.y + worldOffset[1];
     const startZ = bPos.z + worldOffset[2];
 
-    // Transform direction to world space, apply the same fine-aim yaw +
-    // pitch offsets as the weapon pipeline, then add the base elevation.
-    // These MUST match computeFireData's math exactly — otherwise the
-    // preview arc and the real projectile path would diverge, which
-    // silently breaks the player's ability to learn to aim.
+    // Transform direction to world space and apply aim offsets
+    // (must exactly match computeFireData to avoid arc divergence)
     const worldDir = rotateVec(mountData.direction, bRot.x, bRot.y, bRot.z, bRot.w);
     const hLen = Math.sqrt(worldDir[0] * worldDir[0] + worldDir[2] * worldDir[2]);
 
@@ -143,8 +228,6 @@ export function TrajectoryPreview() {
     if (hLen > 0.0001) {
       const hx = worldDir[0] / hLen;
       const hz = worldDir[2] / hLen;
-      // Rotate (hx, hz) around +Y by yawOffset — right-hand rule, same
-      // matrix as computeFireData.
       const rx = hx * cosYaw + hz * sinYaw;
       const rz = -hx * sinYaw + hz * cosYaw;
       dirX = rx * cosElev;
@@ -156,35 +239,67 @@ export function TrajectoryPreview() {
       dirZ = 0;
     }
 
-    // Initial velocity
+    // Half-width scales with mount count, floored at MIN_HALF_WIDTH
+    const halfWidth = Math.max(MIN_HALF_WIDTH, mountData.mountCount * HALF_WIDTH_PER_MOUNT);
+
+    // Initial velocity for Euler integration
     const muzzleVelocity = player.weapons.muzzleVelocity;
     _pos.set(startX, startY, startZ);
     _vel.set(dirX * muzzleVelocity, dirY * muzzleVelocity, dirZ * muzzleVelocity);
 
-    const posAttr = line.geometry.getAttribute('position');
+    const posAttr = mesh.geometry.getAttribute('position');
 
-    let drawCount = TRAJECTORY_STEPS + 1;
-    posAttr.setXYZ(0, _pos.x, _pos.y, _pos.z);
+    // ------------------------------------------------------------------
+    // Step 0: write the first cross-section
+    // ------------------------------------------------------------------
+    // Tangent at step 0 = normalised initial velocity
+    _tangent.set(_vel.x, _vel.y, _vel.z).normalize();
+    // Ribbon "right" vector: tangent cross up, projected onto horizontal plane
+    _right.crossVectors(_up, _tangent).normalize();
+    if (_right.lengthSq() < 0.0001) {
+      _right.set(1, 0, 0);
+    }
 
-    // Euler integration to simulate trajectory
+    posAttr.setXYZ(0, _pos.x - _right.x * halfWidth, _pos.y, _pos.z - _right.z * halfWidth);
+    posAttr.setXYZ(1, _pos.x + _right.x * halfWidth, _pos.y, _pos.z + _right.z * halfWidth);
+
+    let activeSteps = TRAJECTORY_STEPS;
+
+    // ------------------------------------------------------------------
+    // Steps 1..TRAJECTORY_STEPS
+    // ------------------------------------------------------------------
     for (let i = 1; i <= TRAJECTORY_STEPS; i++) {
       _vel.y += GRAVITY_Y * TRAJECTORY_DT;
       _pos.x += _vel.x * TRAJECTORY_DT;
       _pos.y += _vel.y * TRAJECTORY_DT;
       _pos.z += _vel.z * TRAJECTORY_DT;
 
-      posAttr.setXYZ(i, _pos.x, _pos.y, _pos.z);
+      // Tangent = normalised velocity at this step
+      _tangent.set(_vel.x, _vel.y, _vel.z).normalize();
+      _right.crossVectors(_up, _tangent).normalize();
+      if (_right.lengthSq() < 0.0001) {
+        _right.set(1, 0, 0);
+      }
+
+      posAttr.setXYZ(i * 2, _pos.x - _right.x * halfWidth, _pos.y, _pos.z - _right.z * halfWidth);
+      posAttr.setXYZ(
+        i * 2 + 1,
+        _pos.x + _right.x * halfWidth,
+        _pos.y,
+        _pos.z + _right.z * halfWidth,
+      );
 
       // Stop at water level
       if (_pos.y < 0) {
-        drawCount = i + 1;
+        activeSteps = i;
         break;
       }
     }
 
-    line.geometry.setDrawRange(0, drawCount);
+    // Each quad between cross-sections i and i+1 = 6 indices (2 triangles)
+    mesh.geometry.setDrawRange(0, activeSteps * 6);
     posAttr.needsUpdate = true;
   });
 
-  return <primitive object={lineObj} />;
+  return <primitive object={meshObj} />;
 }
