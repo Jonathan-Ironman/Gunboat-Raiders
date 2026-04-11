@@ -42,6 +42,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { useGamePhase, useHasSave, useScore, useWaveNumber } from '../store/selectors';
 import { Button } from './Button';
+import { useFullscreen } from './useFullscreen';
 import { ConfirmDialog } from './ConfirmDialog';
 import {
   formatRunSummary,
@@ -94,6 +95,7 @@ export function PauseMenu() {
   const wave = useWaveNumber();
   const score = useScore();
   const hasSave = useHasSave();
+  const { isFullscreen, toggleFullscreen } = useFullscreen();
 
   const [view, setView] = useState<PauseView>('menu');
   const [showExitConfirm, setShowExitConfirm] = useState(false);
@@ -168,6 +170,13 @@ export function PauseMenu() {
               data-testid="pause-continue-btn"
             >
               Continue
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={toggleFullscreen}
+              data-testid="pause-menu-fullscreen-btn"
+            >
+              {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
             </Button>
             <Button
               variant="secondary"

@@ -48,6 +48,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { useGamePhase, useHasSave } from '../store/selectors';
 import { Button } from './Button';
+import { useFullscreen } from './useFullscreen';
 import { ConfirmDialog } from './ConfirmDialog';
 import {
   MAIN_MENU_FOOTER_CREDIT,
@@ -76,6 +77,7 @@ type MainMenuView = 'menu' | 'settings';
 export function MainMenuScene() {
   const phase = useGamePhase();
   const hasSave = useHasSave();
+  const { isFullscreen, toggleFullscreen } = useFullscreen();
 
   const [view, setView] = useState<MainMenuView>('menu');
   const [showOverwriteConfirm, setShowOverwriteConfirm] = useState(false);
@@ -212,6 +214,14 @@ export function MainMenuScene() {
             data-testid="main-menu-settings-btn"
           >
             Settings
+          </Button>
+
+          <Button
+            variant="secondary"
+            onClick={toggleFullscreen}
+            data-testid="main-menu-fullscreen-btn"
+          >
+            {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
           </Button>
         </div>
 
