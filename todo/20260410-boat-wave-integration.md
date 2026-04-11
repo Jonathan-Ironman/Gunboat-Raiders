@@ -52,3 +52,21 @@ But the user's subjective impression is that it's not yet right.
 - Consider tuning sample points to be more accurate to boat shape (front-heavy, back-heavy for different feel)
 - The water shader uses Gerstner waves; verify the CPU `getWaveHeight` exactly matches the GPU displacement at the same (x, z, time)
 - Reference: real boats have distinct planing vs displacement modes — we're in the ballpark but could polish the transition
+
+## Update — 2026-04-12 playtest
+
+**Top symptom Jonathan flagged for tomorrow's session:**
+
+> "De hoogte van de golven. Het schip verdwijnt vaak onder de golven."
+> ("The wave height. The ship often disappears under the waves.")
+
+Concrete behaviour: while sailing, the boat regularly drops below the wave surface — not just dipping, but fully submerging the deck so the camera ends up inside / behind a wave crest. Reads as a wave-amplitude vs buoyancy-restoring-force imbalance. Either the waves are too tall for the buoyancy to keep up, or the buoyancy max submersion floor is letting the hull go too deep before the restoring force fires.
+
+Quick directions to investigate before doing anything dramatic:
+
+- `BUOYANCY_MAX_SUBMERSION` is currently 3.0 (was bumped from 1.2 in the previous fix). That allows a 3-unit depth before clamping — possibly too generous for the current wave amplitude.
+- Wave amplitude in `gerstnerWaves.ts` may have grown without a corresponding buoyancy retune.
+- The CPU sample of `getWaveHeight` may be drifting from the GPU displacement at the same `(x, z, time)` — if the CPU sample reads a lower height than the GPU shows, the boat physically sits at the wrong y while the visible water rises higher.
+- Verify HULL_SAMPLE_POINTS still match the player boat hull dimensions after the recent boat tuning.
+
+**This is one of the two top blockers for the 2026-04-13 session.** It is a competition-critical visual — the judge is a Three.js water expert.

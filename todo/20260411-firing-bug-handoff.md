@@ -124,12 +124,23 @@ Frustrated. He has said multiple times: "Ik voel me een beetje een broken record
 - More test-driven scenario reproduction of what he **actually** sees
 - Agents that respect his observations and stop reinterpreting them into different bugs
 
-## Status: COMPLETED 2026-04-11
+## Status: REOPENED 2026-04-12
 
-The firing bug was resolved in commit `b613415` (`feat(combat): unblock firing, split enemy pool, clean HUD`). Root causes addressed:
+**The 2026-04-11 "completed" status was wrong.** Jonathan playtested again on 2026-04-12 (after a separate pointer-lock startup gating fix in commit `12464ca`) and reports the SAME symptom is still present, in his own words:
 
-- **Pointer-lock gate removed from WeaponSystem** — replaced with a phase check; clicks no longer dropped silently after Escape/alt-tab
-- **CameraSystem pointer-lock gate dropped from azimuth** — mouse-position fallback keeps `activeQuadrant` fresh regardless of lock state; this fixed "aim lines disappear" and "only fires toward center"
-- **Enemy pool split** — `EnemyProjectilePool.tsx` created with correct `ENEMY_PROJECTILE` collision groups (separate issue but fixed together)
+> "Sommige kwadranten, als we op een bepaalde positie zijn, dan werkt het schieten niet."
+> ("Some quadrants, when at a certain position, firing does not work.")
 
-The Playwright smoke tests added as part of the investigation (`firing-orientation.spec.ts`, `firing-position-drift.spec.ts`) remain in the codebase as regression guards (commit `7190794`).
+That matches the original symptom verbatim — position-dependent quadrant failure. The earlier `b613415` commit ("unblock firing, split enemy pool, clean HUD") fixed the pointer-lock-gating dimension of the bug but did NOT actually fix the position-based quadrant restriction that Jonathan keeps describing.
+
+What changed between 2026-04-11 and 2026-04-12 that may have masked the bug temporarily:
+
+- Variable aim within quadrant landed (commit `5ea02fa`) — the new aim offset system changed how the quadrant + aim direction are computed, may have shifted the surface area of the bug
+- Cannon mount positions tweaked (`bb6582a`, `853667a`, plus several others) — same notes
+- The pointer-lock startup gating fix in `12464ca` (today) added a `getIsPointerLocked()` check to `WeaponSystemR3F.onMouseDown` and a hide-the-ribbon guard in `TrajectoryPreview` — neither of those touches the quadrant computation
+
+The original handoff above is still the canonical description of the symptom. The "what this is NOT" rule-out list above remains valid — the bug is NOT cooldown, NOT pool exhaustion, NOT a port/starboard swap, NOT quadrant-boundary oscillation, NOT a chase-cam issue, NOT an arena bounds check.
+
+**The next session must start here.** Read the full description above. Run the original reproduction (sail forward from origin, observe aim line disappearance in the forward quadrant). The reproduction-test-first discipline still applies — write the failing test BEFORE attempting any fix.
+
+The Playwright smoke tests `firing-orientation.spec.ts` and `firing-position-drift.spec.ts` exist but apparently do not capture the actual bug Jonathan sees (otherwise they would be red right now). They need to be re-examined alongside the new reproduction.
