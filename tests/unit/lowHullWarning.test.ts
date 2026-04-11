@@ -37,10 +37,10 @@ import { HULL_CRITICAL_THRESHOLD, RED_DARK } from '@/ui/tokens';
 // ---------------------------------------------------------------------------
 
 type MockHealth = { hull: number; hullMax: number; armor: number; armorMax: number };
-type MockPhase = 'title' | 'playing' | 'wave-clear' | 'game-over';
+type MockPhase = 'mainMenu' | 'briefing' | 'playing' | 'wave-clear' | 'paused' | 'game-over';
 
 const mockState: { phase: MockPhase; health: MockHealth | null } = {
-  phase: 'title',
+  phase: 'mainMenu',
   health: null,
 };
 
@@ -64,7 +64,7 @@ function setMockState(phase: MockPhase, health: MockHealth | null): void {
 }
 
 function resetMockState(): void {
-  setMockState('title', null);
+  setMockState('mainMenu', null);
 }
 
 // ---------------------------------------------------------------------------
@@ -252,8 +252,8 @@ describe('LowHullWarning — lowHullKeyframes', () => {
 // ---------------------------------------------------------------------------
 
 describe('LowHullWarning — component rendering', () => {
-  it('renders null on the title screen (phase != playing/wave-clear)', () => {
-    // Phase starts as 'title' after resetGame — no render expected even if
+  it('renders null on the main menu (phase != playing/wave-clear)', () => {
+    // Phase starts as 'mainMenu' after resetGame — no render expected even if
     // hull happened to be low.
     const html = renderToStaticMarkup(createElement(LowHullWarning));
     expect(html).toBe('');

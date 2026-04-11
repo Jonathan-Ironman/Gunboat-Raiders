@@ -55,7 +55,7 @@ describe('selectors — active quadrant', () => {
 });
 
 describe('selectors — game phase', () => {
-  it("returns 'title' initially", () => {
-    expect(getStore().phase).toBe('title');
+  it("returns 'mainMenu' initially", () => {
+    expect(getStore().phase).toBe('mainMenu');
   });
 });

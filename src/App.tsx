@@ -57,7 +57,7 @@ function EnemyFleet() {
 /** Game entities that only render when not on title screen. */
 function GameEntities() {
   const phase = useGameStore((s) => s.phase);
-  if (phase === 'title') return null;
+  if (phase === 'mainMenu') return null;
 
   return (
     <>

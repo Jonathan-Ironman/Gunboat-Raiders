@@ -134,7 +134,7 @@ describe('store — wave actions', () => {
     expect(useGameStore.getState().wave).toBe(2);
   });
 
-  it('resetGame resets wave to 0, score to 0, phase to "title"', () => {
+  it('resetGame resets wave to 0, score to 0, phase to "mainMenu"', () => {
     const store = useGameStore.getState();
     store.spawnPlayer();
     store.addScore(1000);
@@ -146,6 +146,6 @@ describe('store — wave actions', () => {
     const state = useGameStore.getState();
     expect(state.wave).toBe(0);
     expect(state.score).toBe(0);
-    expect(state.phase).toBe('title');
+    expect(state.phase).toBe('mainMenu');
   });
 });

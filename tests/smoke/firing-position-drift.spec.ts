@@ -55,7 +55,7 @@ type Quadrant = 'fore' | 'aft' | 'port' | 'starboard';
 
 async function startPlaying(page: Page): Promise<void> {
   await startGame(page);
-  await waitForPhase(page, 'title', 20_000);
+  await waitForPhase(page, 'mainMenu', 20_000);
 
   const startButton = page.locator('[data-testid="start-button"]');
   await expect(startButton).toBeVisible({ timeout: 15_000 });

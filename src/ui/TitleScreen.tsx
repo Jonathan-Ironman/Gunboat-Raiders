@@ -55,13 +55,13 @@ const buttonStyle: React.CSSProperties = {
 
 function handleStart() {
   // Use startGame() for an atomic transition: single set() call avoids an
-  // intermediate phase='title' render that would unmount game entities.
+  // intermediate phase='mainMenu' render that would unmount game entities.
   useGameStore.getState().startGame();
 }
 
 export function TitleScreen() {
   const phase = useGamePhase();
-  if (phase !== 'title') return null;
+  if (phase !== 'mainMenu') return null;
 
   return (
     <div style={overlayStyle} data-testid="title-screen">

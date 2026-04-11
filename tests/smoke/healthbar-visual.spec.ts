@@ -81,8 +81,7 @@ async function forcePlayerHealth(page: Page, snapshot: PlayerHealthSnapshot): Pr
 async function enterGameplay(page: Page): Promise<void> {
   await startGame(page);
 
-  // The game boots on 'title' today (an upstream R10 slice will change this
-  // to 'mainMenu'; tolerate either).
+  // Game boots on 'mainMenu' (R2 renamed from the legacy 'title' phase).
   const startButton = page.locator('[data-testid="start-button"]');
   await expect(startButton).toBeVisible({ timeout: 20_000 });
   await startButton.click();

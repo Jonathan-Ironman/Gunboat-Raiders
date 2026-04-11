@@ -46,7 +46,7 @@ function filterKnownErrors(errors: string[]): string[] {
  */
 async function startPlaying(page: Page): Promise<void> {
   await startGame(page);
-  await waitForPhase(page, 'title', 20_000);
+  await waitForPhase(page, 'mainMenu', 20_000);
 
   const startButton = page.locator('[data-testid="start-button"]');
   await expect(startButton).toBeVisible({ timeout: 15_000 });
@@ -100,8 +100,8 @@ test.describe('Gameplay scenarios', () => {
   test('1 — game start flow', async ({ page }) => {
     await startGame(page);
 
-    // Phase should be 'title' on initial load
-    await waitForPhase(page, 'title', 20_000);
+    // Phase should be 'mainMenu' on initial load
+    await waitForPhase(page, 'mainMenu', 20_000);
 
     // Click START GAME
     const startButton = page.locator('[data-testid="start-button"]');

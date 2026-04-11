@@ -394,7 +394,7 @@ describe('Scenario: game restart resets state', () => {
     expect(state.score).toBe(0);
     expect(state.wave).toBe(0);
     expect(state.player).toBeNull();
-    expect(state.phase).toBe('title');
+    expect(state.phase).toBe('mainMenu');
     expect(state.enemiesRemaining).toBe(0);
     expect(state.enemiesSunkTotal).toBe(0);
   });

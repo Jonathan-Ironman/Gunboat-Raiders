@@ -73,7 +73,7 @@ function buildSpawnEntries(config: WaveConfig, waveSeed: number): SpawnEntry[] {
 
 /**
  * Wave system component — must be placed inside <Physics>.
- * Drives the game loop: title -> playing -> wave-clear -> playing -> ...
+ * Drives the game loop: mainMenu -> playing -> wave-clear -> playing -> ...
  */
 export function WaveSystemR3F() {
   const waveState = useRef<WaveState>(createInitialWaveState());
@@ -83,8 +83,13 @@ export function WaveSystemR3F() {
     const { phase, wave } = store;
     const ws = waveState.current;
 
-    // ---- TITLE / GAME-OVER: idle ----
-    if (phase === 'title' || phase === 'game-over') {
+    // ---- MAIN-MENU / BRIEFING / PAUSED / GAME-OVER: idle ----
+    if (
+      phase === 'mainMenu' ||
+      phase === 'briefing' ||
+      phase === 'paused' ||
+      phase === 'game-over'
+    ) {
       // Reset wave state so it's clean for next game
       if (ws.config !== null) {
         waveState.current = createInitialWaveState();

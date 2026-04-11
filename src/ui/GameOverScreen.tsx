@@ -71,7 +71,7 @@ function formatScore(value: number): string {
 
 function handlePlayAgain() {
   // Use startGame() for an atomic transition: single set() call avoids an
-  // intermediate phase='title' render that would unmount game entities.
+  // intermediate phase='mainMenu' render that would unmount game entities.
   useGameStore.getState().startGame();
 }
 

@@ -10,9 +10,9 @@ beforeEach(() => {
 });
 
 describe('gameStore — initial state', () => {
-  it('has phase="title", wave=0, score=0', () => {
+  it('has phase="mainMenu", wave=0, score=0', () => {
     const state = getStore();
-    expect(state.phase).toBe('title');
+    expect(state.phase).toBe('mainMenu');
     expect(state.wave).toBe(0);
     expect(state.score).toBe(0);
   });
@@ -202,7 +202,7 @@ describe('gameStore — resetGame', () => {
     getStore().resetGame();
 
     const state = getStore();
-    expect(state.phase).toBe('title');
+    expect(state.phase).toBe('mainMenu');
     expect(state.wave).toBe(0);
     expect(state.score).toBe(0);
     expect(state.player).toBeNull();
