@@ -126,9 +126,12 @@ test.describe('Pause flow', () => {
     });
     await waitForPhase(page, 'paused', 5_000);
 
-    // The placeholder overlay must be mounted and clickable.
-    const overlay = page.locator('[data-testid="pause-overlay-placeholder"]');
-    await expect(overlay).toBeVisible({ timeout: 5_000 });
+    // R5: the PauseMenu must be mounted with the Continue button
+    // reachable — this is what replaced the R4 placeholder.
+    const pauseMenu = page.locator('[data-testid="pause-menu"]');
+    await expect(pauseMenu).toBeVisible({ timeout: 5_000 });
+    const continueButton = page.locator('[data-testid="pause-continue-btn"]');
+    await expect(continueButton).toBeVisible({ timeout: 5_000 });
 
     // Capture a paused-state screenshot for the visual record. This is
     // the first user-facing evidence that R4 landed, so it's worth
@@ -182,13 +185,13 @@ test.describe('Pause flow', () => {
       0,
     );
 
-    // ---- Act: click placeholder to resume ----
+    // ---- Act: click the CONTINUE button to resume ----
     //
     // We cannot fully reproduce pointer lock in headless — the
     // `requestPointerLock()` call inside the click handler will silently
     // fail, but the `resumeGame()` call after it still runs (we verified
     // this by reading source of the handler). That's what we assert.
-    await overlay.click();
+    await continueButton.click();
     await waitForPhase(page, 'playing', 5_000);
 
     // ---- Assert: simulation is running again ----

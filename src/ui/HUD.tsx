@@ -2,7 +2,7 @@ import { useGamePhase } from '../store/selectors';
 import { HealthBar } from './HealthBar';
 import { WaveCounter } from './WaveCounter';
 import { ScoreDisplay } from './ScoreDisplay';
-import { PauseOverlayPlaceholder } from './PauseOverlayPlaceholder';
+import { PauseMenu } from './PauseMenu';
 
 const hudStyle: React.CSSProperties = {
   position: 'absolute',
@@ -15,10 +15,11 @@ const hudStyle: React.CSSProperties = {
 export function HUD() {
   const phase = useGamePhase();
 
-  // R4: `'paused'` is now included in the gate so the PauseOverlayPlaceholder
-  // can render. The individual HUD children (HealthBar etc.) keep rendering
-  // underneath the semi-transparent pause overlay, which is the intended
-  // Harbour Dawn look per the UI spec.
+  // R5: `'paused'` remains in the gate so the real `PauseMenu`
+  // (replacing the R4 placeholder) can render. The individual HUD
+  // children (HealthBar etc.) keep rendering underneath the
+  // semi-transparent pause overlay, which is the intended Harbour
+  // Dawn look per the UI spec.
   if (phase !== 'playing' && phase !== 'wave-clear' && phase !== 'paused') return null;
 
   return (
@@ -26,7 +27,7 @@ export function HUD() {
       <HealthBar />
       <WaveCounter />
       <ScoreDisplay />
-      <PauseOverlayPlaceholder />
+      <PauseMenu />
     </div>
   );
 }
