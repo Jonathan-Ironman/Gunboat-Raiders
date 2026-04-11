@@ -38,13 +38,11 @@ import { useCallback, useEffect } from 'react';
 
 import { useGameStore } from '../store/gameStore';
 import { useEnemiesSunkTotal, useGamePhase, useScore, useWaveNumber } from '../store/selectors';
+import { Button } from './Button';
 import {
   formatFinalScore,
   formatGameOverDisclaimer,
   gameOverBackdropStyle,
-  gameOverButtonBaseStyle,
-  gameOverButtonPrimaryStyle,
-  gameOverButtonSecondaryStyle,
   gameOverButtonStackStyle,
   gameOverDisclaimerStyle,
   gameOverKeyframes,
@@ -126,15 +124,6 @@ export function GameOverScreen() {
   // Phase gate — `null` outside game-over keeps the main tree tidy.
   if (phase !== 'game-over') return null;
 
-  const playAgainButtonStyle = {
-    ...gameOverButtonBaseStyle,
-    ...gameOverButtonPrimaryStyle,
-  };
-  const mainMenuButtonStyle = {
-    ...gameOverButtonBaseStyle,
-    ...gameOverButtonSecondaryStyle,
-  };
-
   return (
     <>
       <style>{gameOverKeyframes()}</style>
@@ -170,22 +159,12 @@ export function GameOverScreen() {
           </p>
 
           <div style={gameOverButtonStackStyle} data-testid="game-over-button-stack">
-            <button
-              type="button"
-              style={playAgainButtonStyle}
-              onClick={handlePlayAgain}
-              data-testid="play-again-button"
-            >
+            <Button variant="primary" onClick={handlePlayAgain} data-testid="play-again-button">
               Play Again
-            </button>
-            <button
-              type="button"
-              style={mainMenuButtonStyle}
-              onClick={handleMainMenu}
-              data-testid="main-menu-button"
-            >
+            </Button>
+            <Button variant="secondary" onClick={handleMainMenu} data-testid="main-menu-button">
               Main Menu
-            </button>
+            </Button>
           </div>
         </div>
       </div>

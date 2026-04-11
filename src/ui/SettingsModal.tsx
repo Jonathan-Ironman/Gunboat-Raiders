@@ -26,10 +26,11 @@
  * All visuals flow through `settingsModal.helpers.ts` → `tokens.ts`.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 import { useGameStore } from '../store/gameStore';
 import { useSettings } from '../store/selectors';
+import { Button } from './Button';
 import { KEYBINDINGS } from './keybindings';
 import {
   isSettingsCloseKey,
@@ -48,7 +49,6 @@ import {
   settingsKeyframes,
   settingsPanelStyle,
   settingsPerformanceStyle,
-  settingsSecondaryButtonStyle,
   settingsTabBodyStyle,
   settingsTitleStyle,
   sliderValueFromVolume,
@@ -216,14 +216,14 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
           {activeTab === 'performance' ? <PerformanceTab /> : null}
 
           <div style={settingsFooterStyle}>
-            <button
-              type="button"
-              style={settingsSecondaryButtonStyle}
+            <Button
+              variant="secondary"
               onClick={onClose}
+              style={{ width: 'auto', padding: '12px 32px' } as React.CSSProperties}
               data-testid="settings-back-button"
             >
               Back
-            </button>
+            </Button>
           </div>
         </div>
       </div>

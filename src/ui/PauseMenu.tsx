@@ -41,17 +41,13 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { useGameStore } from '../store/gameStore';
 import { useGamePhase, useHasSave, useScore, useWaveNumber } from '../store/selectors';
+import { Button } from './Button';
 import { ConfirmDialog } from './ConfirmDialog';
 import {
   formatRunSummary,
   getExitDialogMessage,
   isPauseEscapeKey,
   pauseBackdropStyle,
-  pauseButtonBaseStyle,
-  pauseButtonDestructiveHoverStyle,
-  pauseButtonDestructiveStyle,
-  pauseButtonPrimaryStyle,
-  pauseButtonSecondaryStyle,
   pauseButtonStackStyle,
   pauseKeyframes,
   pausePanelStyle,
@@ -102,12 +98,6 @@ export function PauseMenu() {
   const [view, setView] = useState<PauseView>('menu');
   const [showExitConfirm, setShowExitConfirm] = useState(false);
 
-  // Hovered-destructive visual flag — lets the EXIT button swap its
-  // base style for the red hover variant without resorting to CSS
-  // pseudo-selectors (inline styles only, per Harbour Dawn
-  // tokens-first rule).
-  const [exitHovered, setExitHovered] = useState(false);
-
   // When the pause phase exits (e.g. resumeGame, returnToMainMenu),
   // reset the child-modal flags so re-entering the pause menu starts
   // on a clean slate. Avoids a stale `showExitConfirm` from a
@@ -116,7 +106,6 @@ export function PauseMenu() {
     if (phase !== 'paused') {
       setView('menu');
       setShowExitConfirm(false);
-      setExitHovered(false);
     }
   }, [phase]);
 
@@ -160,19 +149,6 @@ export function PauseMenu() {
   // Phase gate — PauseMenu is a no-op outside `paused`.
   if (phase !== 'paused') return null;
 
-  const continueButtonStyle = {
-    ...pauseButtonBaseStyle,
-    ...pauseButtonPrimaryStyle,
-  };
-  const settingsButtonStyle = {
-    ...pauseButtonBaseStyle,
-    ...pauseButtonSecondaryStyle,
-  };
-  const exitButtonStyle = {
-    ...pauseButtonBaseStyle,
-    ...(exitHovered ? pauseButtonDestructiveHoverStyle : pauseButtonDestructiveStyle),
-  };
-
   return (
     <>
       <style>{pauseKeyframes()}</style>
@@ -186,36 +162,23 @@ export function PauseMenu() {
         <div style={pausePanelStyle} data-testid="pause-menu-panel">
           <h1 style={pauseTitleStyle}>PAUSED</h1>
           <div style={pauseButtonStackStyle}>
-            <button
-              type="button"
-              style={continueButtonStyle}
+            <Button
+              variant="primary"
               onClick={handleContinueClick}
               data-testid="pause-continue-btn"
             >
               Continue
-            </button>
-            <button
-              type="button"
-              style={settingsButtonStyle}
+            </Button>
+            <Button
+              variant="secondary"
               onClick={handleSettingsClick}
               data-testid="pause-settings-btn"
             >
               Settings
-            </button>
-            <button
-              type="button"
-              style={exitButtonStyle}
-              onClick={handleExitClick}
-              onMouseEnter={() => {
-                setExitHovered(true);
-              }}
-              onMouseLeave={() => {
-                setExitHovered(false);
-              }}
-              data-testid="pause-exit-btn"
-            >
+            </Button>
+            <Button variant="destructive" onClick={handleExitClick} data-testid="pause-exit-btn">
               Exit
-            </button>
+            </Button>
           </div>
           <p style={pauseSummaryStyle} data-testid="pause-run-summary">
             {formatRunSummary(wave, score)}

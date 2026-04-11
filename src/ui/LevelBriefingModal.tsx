@@ -21,11 +21,12 @@
  * All visuals flow through `levelBriefingModal.helpers.ts` → `tokens.ts`.
  */
 
-import { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect } from 'react';
 
 import { LEVELS, type LevelConfig } from '../config/levels';
 import { useGameStore } from '../store/gameStore';
 import { useBriefingLevelIndex, useGamePhase } from '../store/selectors';
+import { Button } from './Button';
 import {
   briefingBackdropStyle,
   briefingBodyStyle,
@@ -34,8 +35,6 @@ import {
   briefingKickerStyle,
   briefingMissionBodyStyle,
   briefingPanelStyle,
-  briefingPrimaryButtonStyle,
-  briefingSecondaryButtonStyle,
   briefingSectionLabelStyle,
   briefingSectionStyle,
   briefingSeparatorStyle,
@@ -152,22 +151,22 @@ export function LevelBriefingModal() {
           </section>
 
           <div style={briefingButtonRowStyle}>
-            <button
-              type="button"
-              style={briefingSecondaryButtonStyle}
+            <Button
+              variant="secondary"
               onClick={handleBack}
+              style={{ width: 'auto', padding: '12px 24px' } as React.CSSProperties}
               data-testid="briefing-back-btn"
             >
               Back to Menu
-            </button>
-            <button
-              type="button"
-              style={briefingPrimaryButtonStyle}
+            </Button>
+            <Button
+              variant="primary"
               onClick={handleStart}
+              style={{ width: 'auto', padding: '12px 32px' } as React.CSSProperties}
               data-testid="briefing-start-btn"
             >
               Start
-            </button>
+            </Button>
           </div>
         </div>
       </div>

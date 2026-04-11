@@ -47,6 +47,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { useGameStore } from '../store/gameStore';
 import { useGamePhase, useHasSave } from '../store/selectors';
+import { Button } from './Button';
 import { ConfirmDialog } from './ConfirmDialog';
 import {
   MAIN_MENU_FOOTER_CREDIT,
@@ -55,10 +56,6 @@ import {
   MAIN_MENU_VERSION,
   isMainMenuActivateKey,
   mainMenuBackdropStyle,
-  mainMenuButtonBaseStyle,
-  mainMenuButtonDisabledStyle,
-  mainMenuButtonPrimaryStyle,
-  mainMenuButtonSecondaryStyle,
   mainMenuButtonStackStyle,
   mainMenuFooterStyle,
   mainMenuFooterTextStyle,
@@ -167,25 +164,6 @@ export function MainMenuScene() {
   // Phase gate — `null` outside mainMenu keeps the main tree tidy.
   if (phase !== 'mainMenu') return null;
 
-  // ----- Composed styles (primary/secondary/disabled variants) -----
-
-  const continueButtonStyle = hasSave
-    ? { ...mainMenuButtonBaseStyle, ...mainMenuButtonPrimaryStyle }
-    : { ...mainMenuButtonBaseStyle, ...mainMenuButtonDisabledStyle };
-
-  const newGameButtonStyle = hasSave
-    ? { ...mainMenuButtonBaseStyle, ...mainMenuButtonSecondaryStyle }
-    : { ...mainMenuButtonBaseStyle, ...mainMenuButtonPrimaryStyle };
-
-  const settingsButtonStyle = {
-    ...mainMenuButtonBaseStyle,
-    ...mainMenuButtonSecondaryStyle,
-  };
-
-  // Continue is only interactive when a save actually exists. Using
-  // an explicit no-op rather than `undefined` keeps the disabled
-  // branch's click handler type-stable.
-  const continueClickHandler = hasSave ? handleContinue : undefined;
   const newGameClickHandler = hasSave ? handleNewGameWithSave : handleNewGameNoSave;
 
   return (
@@ -208,36 +186,33 @@ export function MainMenuScene() {
         </div>
 
         <div style={mainMenuButtonStackStyle} data-testid="main-menu-button-stack">
-          <button
-            type="button"
-            style={continueButtonStyle}
-            onClick={continueClickHandler}
+          <Button
+            variant={hasSave ? 'primary' : 'secondary'}
+            onClick={hasSave ? handleContinue : undefined}
             disabled={!hasSave}
             aria-disabled={!hasSave}
             data-testid="main-menu-continue-btn"
             data-primary={hasSave ? 'true' : 'false'}
           >
             Continue Game
-          </button>
+          </Button>
 
-          <button
-            type="button"
-            style={newGameButtonStyle}
+          <Button
+            variant={hasSave ? 'secondary' : 'primary'}
             onClick={newGameClickHandler}
             data-testid="main-menu-new-game-btn"
             data-primary={hasSave ? 'false' : 'true'}
           >
             New Game
-          </button>
+          </Button>
 
-          <button
-            type="button"
-            style={settingsButtonStyle}
+          <Button
+            variant="secondary"
             onClick={handleSettingsClick}
             data-testid="main-menu-settings-btn"
           >
             Settings
-          </button>
+          </Button>
         </div>
 
         <div style={mainMenuFooterStyle} data-testid="main-menu-footer">

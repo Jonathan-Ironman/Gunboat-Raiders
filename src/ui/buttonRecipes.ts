@@ -48,6 +48,7 @@ import {
   DUR_FAST,
   EASE_OUT,
   FONT_DISPLAY,
+  GOLD,
   RADIUS_MD,
   RED,
   RED_DARK,
@@ -259,6 +260,125 @@ export const BUTTON_RECIPE: ButtonRecipe = {
   destructive,
   disabled,
 };
+
+// ---------------------------------------------------------------------------
+// Hover + active shadow stacks per variant
+// ---------------------------------------------------------------------------
+
+/**
+ * Brightened gold emboss shadow for the primary button hover state.
+ * Lifts the outer glow intensity so the button "lights up" in its
+ * gold family when the cursor lands on it.
+ */
+const PRIMARY_HOVER_GLOW = 'rgba(242, 182, 64, 0.60)';
+
+/**
+ * Warm light overlay for the secondary button hover state. The fill
+ * shifts to a slightly lighter deep-harbour blue so the button does
+ * not feel dead — subtler than primary/destructive because secondary
+ * actions should never compete with the gold CTA.
+ */
+const SECONDARY_HOVER_BG = '#254b72';
+
+/**
+ * Brightened secondary emboss edge for hover — one step lighter than
+ * the resting edge so the lift reads a touch taller on mouse-over.
+ */
+const SECONDARY_HOVER_EDGE = '#0d2540';
+
+/**
+ * Elevated secondary glow tint on hover — same family as the resting
+ * glow but pushed further so the hover ring is clearly visible against
+ * the panel background.
+ */
+const SECONDARY_HOVER_GLOW = 'rgba(0, 0, 0, 0.60)';
+
+/**
+ * Bright red glow for the destructive hover state. This is the visual
+ * the PauseMenu EXIT button already used via inline `useState` —
+ * extracted here so the CSS class approach can replicate it natively.
+ */
+const DESTRUCTIVE_HOVER_GLOW = 'rgba(255, 80, 80, 0.55)';
+
+/**
+ * Active (pressed) translateY offset — drops the button 2px to mimic
+ * the emboss depressing under the click. Combined with a tighter
+ * bottom-shadow to visually "remove" the lift.
+ */
+const ACTIVE_TRANSLATE_Y = '2px';
+
+/**
+ * The CSS `box-shadow` for the active (pressed) state — bottom edge
+ * collapses from 4px to 2px so the button looks like it sank into the
+ * page. Uses the same three-value form as `embossShadow` so the
+ * transition between states is smooth.
+ */
+function activeEmbossShadow(edgeColor: string, glowColor: string): string {
+  return `0 2px 0 ${edgeColor}, 0 3px 10px ${glowColor}`;
+}
+
+// ---------------------------------------------------------------------------
+// Hover/active CSS stylesheet
+// ---------------------------------------------------------------------------
+
+/**
+ * Scoped CSS stylesheet for button hover and active pseudo-states.
+ * Injected once per `Button` component render (identical to the pattern
+ * used by `Slider` with its `.gbr-settings-slider` rules). The `.gbr-btn`
+ * class namespace guarantees these rules cannot leak to any other
+ * element on the page.
+ *
+ * @returns A CSS string suitable for embedding in a `<style>` tag.
+ */
+export function buttonStylesheet(): string {
+  return `
+.gbr-btn {
+  -webkit-tap-highlight-color: transparent;
+}
+.gbr-btn:focus-visible {
+  outline: 2px solid ${GOLD};
+  outline-offset: 2px;
+}
+
+/* Primary (gold) hover + active */
+.gbr-btn--primary:not(:disabled):hover {
+  background: linear-gradient(135deg, #f7c850, #e0a020);
+  box-shadow: ${embossShadow(PRIMARY_EDGE, PRIMARY_HOVER_GLOW)};
+  transform: translateY(-1px);
+}
+.gbr-btn--primary:not(:disabled):active {
+  transform: translateY(${ACTIVE_TRANSLATE_Y});
+  box-shadow: ${activeEmbossShadow(PRIMARY_EDGE, PRIMARY_GLOW)};
+}
+
+/* Secondary (neutral) hover + active */
+.gbr-btn--secondary:not(:disabled):hover {
+  background: ${SECONDARY_HOVER_BG};
+  box-shadow: ${embossShadow(SECONDARY_HOVER_EDGE, SECONDARY_HOVER_GLOW)};
+  transform: translateY(-1px);
+}
+.gbr-btn--secondary:not(:disabled):active {
+  transform: translateY(${ACTIVE_TRANSLATE_Y});
+  box-shadow: ${activeEmbossShadow(SECONDARY_EDGE, SECONDARY_GLOW)};
+}
+
+/* Destructive (red) hover + active */
+.gbr-btn--destructive:not(:disabled):hover {
+  background: linear-gradient(135deg, #ff9090, #e03030);
+  box-shadow: ${embossShadow(DESTRUCTIVE_EDGE, DESTRUCTIVE_HOVER_GLOW)};
+  transform: translateY(-1px);
+}
+.gbr-btn--destructive:not(:disabled):active {
+  transform: translateY(${ACTIVE_TRANSLATE_Y});
+  box-shadow: ${activeEmbossShadow(DESTRUCTIVE_EDGE, DESTRUCTIVE_GLOW)};
+}
+
+/* Disabled — no hover effects, pointer blocked at the button level */
+.gbr-btn:disabled {
+  pointer-events: none;
+}
+`;
+}
 
 // ---------------------------------------------------------------------------
 // Test-only internals (exported so `buttonRecipes.test.ts` can assert

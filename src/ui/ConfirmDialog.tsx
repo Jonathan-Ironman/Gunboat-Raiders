@@ -26,17 +26,14 @@
  * All visuals flow through `pauseMenu.helpers.ts` → `tokens.ts`.
  */
 
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 
+import { Button } from './Button';
 import {
   confirmBackdropStyle,
-  confirmButtonBaseStyle,
   confirmButtonRowStyle,
-  confirmCancelStyle,
-  confirmDestructiveStyle,
   confirmMessageStyle,
   confirmPanelStyle,
-  confirmPrimaryStyle,
   confirmTitleStyle,
   isConfirmEnterKey,
   isConfirmEscapeKey,
@@ -121,14 +118,10 @@ export function ConfirmDialog({
     event.stopPropagation();
   };
 
-  const confirmButtonStyle = {
-    ...confirmButtonBaseStyle,
-    ...(destructive ? confirmDestructiveStyle : confirmPrimaryStyle),
-  };
-  const cancelButtonStyle = {
-    ...confirmButtonBaseStyle,
-    ...confirmCancelStyle,
-  };
+  // Layout overrides: the confirm-dialog button row sizes buttons by
+  // flex ratio (equal halves), so each button must opt out of the
+  // recipe's default `width: '100%'` and accept `flex: 1` instead.
+  const dialogButtonLayoutStyle: React.CSSProperties = { width: 'auto', flex: 1 };
 
   return (
     <>
@@ -154,24 +147,24 @@ export function ConfirmDialog({
             {message}
           </p>
           <div style={confirmButtonRowStyle}>
-            <button
+            <Button
               ref={cancelButtonRef}
-              type="button"
-              style={cancelButtonStyle}
+              variant="secondary"
               onClick={onCancel}
+              style={dialogButtonLayoutStyle}
               data-testid="confirm-dialog-cancel"
             >
               {cancelLabel}
-            </button>
-            <button
-              type="button"
-              style={confirmButtonStyle}
+            </Button>
+            <Button
+              variant={destructive ? 'destructive' : 'primary'}
               onClick={onConfirm}
+              style={dialogButtonLayoutStyle}
               data-testid="confirm-dialog-confirm"
               data-destructive={destructive ? 'true' : 'false'}
             >
               {confirmLabel}
-            </button>
+            </Button>
           </div>
         </div>
       </div>
