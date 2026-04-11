@@ -31,6 +31,15 @@
  * "click while aiming at A, rotate to B before cooldown elapses" fires
  * the queued shot from B — matching player intent ("fire at wherever
  * I am aiming now").
+ *
+ * ## Hold-to-fire
+ *
+ * Holding the left mouse button sets `mouseHeldRef = true`. Each frame, if
+ * the active quadrant is ready AND heat allows AND the pending queue has
+ * room, one intent is enqueued. The same drain logic then consumes it, so
+ * held fire fires at exactly the cooldown-limited rate, respects the
+ * yellow/red bracket slowdown, and halts while locked out. Tap-to-fire
+ * is preserved because `onMouseDown` also enqueues one immediate intent.
  */
 
 import { useEffect, useCallback, useRef } from 'react';
@@ -64,24 +73,51 @@ export function WeaponSystemR3F() {
   // each successful fire decrements it by one.
   const pendingFiresRef = useRef(0);
 
+  // True while the player is holding the left mouse button. While held the
+  // frame tick tops up `pendingFiresRef` each frame (subject to cap + both
+  // gates), which produces continuous fire at the cooldown-limited rate
+  // without duplicating any of the gating logic. Tap-to-fire still works
+  // because `onMouseDown` also queues one immediate intent.
+  const mouseHeldRef = useRef(false);
+
   // Listen for left-click on document. Queue a fire whenever the game is
   // in the 'playing' phase — no pointer-lock requirement. Pointer lock is
   // acquired by CameraSystemR3F for mouse-look, but losing it must not
   // silently disable firing.
   const onMouseDown = useCallback((e: MouseEvent) => {
     if (e.button === 0 && useGameStore.getState().phase === 'playing') {
+      mouseHeldRef.current = true;
       if (pendingFiresRef.current < PENDING_FIRE_CAP) {
         pendingFiresRef.current += 1;
       }
     }
   }, []);
 
+  // Release the held flag on any mouseup for button 0. We also clear it on
+  // mouseleave / blur so a dropped focus (alt-tab, dev-tools) can't leave
+  // the weapon stuck firing.
+  const onMouseUp = useCallback((e: MouseEvent) => {
+    if (e.button === 0) {
+      mouseHeldRef.current = false;
+    }
+  }, []);
+
+  const onMouseLeaveOrBlur = useCallback(() => {
+    mouseHeldRef.current = false;
+  }, []);
+
   useEffect(() => {
     document.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('mouseup', onMouseUp);
+    window.addEventListener('blur', onMouseLeaveOrBlur);
+    document.addEventListener('mouseleave', onMouseLeaveOrBlur);
     return () => {
       document.removeEventListener('mousedown', onMouseDown);
+      document.removeEventListener('mouseup', onMouseUp);
+      window.removeEventListener('blur', onMouseLeaveOrBlur);
+      document.removeEventListener('mouseleave', onMouseLeaveOrBlur);
     };
-  }, [onMouseDown]);
+  }, [onMouseDown, onMouseUp, onMouseLeaveOrBlur]);
 
   useFrame((_state, delta) => {
     const store = useGameStore.getState();
@@ -113,6 +149,22 @@ export function WeaponSystemR3F() {
     // Each test request is equivalent to one mouse click.
     if (consumeTestFireRequest() && pendingFiresRef.current < PENDING_FIRE_CAP) {
       pendingFiresRef.current += 1;
+    }
+
+    // Hold-to-fire: while the left mouse button is held, top up the pending
+    // queue each frame so the drain logic below fires at the
+    // cooldown-limited rate. We enqueue at most one intent per frame and
+    // only when the active quadrant is ready AND heat allows AND the cap
+    // has room — so held fire naturally respects the same two gates as
+    // tap fire and never bypasses PENDING_FIRE_CAP.
+    if (mouseHeldRef.current && pendingFiresRef.current < PENDING_FIRE_CAP) {
+      const heldQuadrantReady = canFire(
+        { cooldown: player.weapons.cooldown, cooldownRemaining: updatedCooldowns },
+        store.activeQuadrant,
+      );
+      if (heldQuadrantReady && isFireAllowedByHeat(heatState)) {
+        pendingFiresRef.current += 1;
+      }
     }
 
     // Helper: commit cooldowns + heat to the store, re-reading `player` so

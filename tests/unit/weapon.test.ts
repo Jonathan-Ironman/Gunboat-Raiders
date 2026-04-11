@@ -248,6 +248,154 @@ describe('WeaponSystem — consistent fire rate (Test: consistent fire rate)', (
  * (per-frame tick, cooldown bracket application, pending-fire gating) is
  * verified end-to-end by the Playwright smoke spec.
  */
+// ---------------------------------------------------------------------------
+// Hold-to-fire (integration-shaped, pure-logic simulation of the R3F loop)
+// ---------------------------------------------------------------------------
+
+/**
+ * These tests model the frame-by-frame behaviour of `WeaponSystemR3F` when
+ * the left mouse button is held down:
+ *
+ *   1) Tick cooldown by delta.
+ *   2) Decay heat by delta.
+ *   3) If held AND quadrant ready AND !lockedOut AND pending < cap,
+ *      enqueue one intent.
+ *   4) Drain one pending intent per frame: if pending > 0 AND ready AND
+ *      !lockedOut, spend it → add shot heat × mounts, reset cooldown to
+ *      BASE × heat-bracket multiplier.
+ *
+ * We drive the pure helpers `tickCooldowns`, `decayHeat`, `canFire`,
+ * `applyShotHeat`, `heatBracketCooldownMultiplier`, and `isFireAllowedByHeat`
+ * directly — no React, no renderer — so the test is deterministic and fast.
+ */
+describe('WeaponSystem — hold-to-fire', () => {
+  const FPS = 1000;
+  const FRAME_DELTA = 1 / FPS;
+  const BASE_COOLDOWN = 0.15;
+  const PENDING_FIRE_CAP = 4;
+
+  /**
+   * Runs `durationSec` of simulated frames. On each frame, if `held` is
+   * true the hold-to-fire top-up pushes an intent when the quadrant is
+   * ready AND heat allows. One intent is drained per frame when possible.
+   *
+   * Returns the number of shots (fire events, not per-mount projectiles)
+   * emitted while the loop was held, plus the number emitted after release.
+   */
+  function simulate(params: {
+    durationHeldSec: number;
+    durationReleasedSec: number;
+    mountsPerFire: number;
+  }): { shotsWhileHeld: number; shotsAfterRelease: number } {
+    let cooldownRemaining = 0;
+    let pending = 0;
+    let heat: HeatState = { heat: 0, lockedOut: false };
+    let shotsWhileHeld = 0;
+    let shotsAfterRelease = 0;
+
+    const totalHeldFrames = Math.round(params.durationHeldSec * FPS);
+    const totalReleasedFrames = Math.round(params.durationReleasedSec * FPS);
+
+    const frameStep = (held: boolean): boolean => {
+      // 1) Tick cooldown.
+      cooldownRemaining = Math.max(0, cooldownRemaining - FRAME_DELTA);
+      // 2) Decay heat.
+      heat = decayHeat(heat, FRAME_DELTA);
+      // 3) Hold-to-fire top-up.
+      if (held && pending < PENDING_FIRE_CAP) {
+        const ready = cooldownRemaining <= 0;
+        if (ready && isFireAllowedByHeat(heat)) {
+          pending += 1;
+        }
+      }
+      // 4) Drain one intent if possible.
+      if (pending === 0) return false;
+      const ready = cooldownRemaining <= 0;
+      if (!ready || !isFireAllowedByHeat(heat)) return false;
+      pending -= 1;
+      // Capture bracket multiplier from PRE-shot heat (matches R3F wrapper).
+      const mult = heatBracketCooldownMultiplier(heat.heat);
+      for (let m = 0; m < params.mountsPerFire; m++) {
+        heat = applyShotHeat(heat);
+      }
+      cooldownRemaining = BASE_COOLDOWN * mult;
+      return true;
+    };
+
+    for (let f = 0; f < totalHeldFrames; f++) {
+      if (frameStep(true)) shotsWhileHeld++;
+    }
+    for (let f = 0; f < totalReleasedFrames; f++) {
+      if (frameStep(false)) shotsAfterRelease++;
+    }
+
+    return { shotsWhileHeld, shotsAfterRelease };
+  }
+
+  it('held for 2 s fires ~13 shots at 150 ms cooldown, stops instantly on release', () => {
+    // 2 s / 0.15 s per shot = 13.33 shots expected.
+    //
+    // With a 1 mount/fire payload the net heat over 2 s is
+    //   13 × HEAT_PER_SHOT − 2 × HEAT_DECAY_PER_SECOND
+    //     ≈ 13 × 0.00487 − 0.16 ≈ −0.10 → clamped at 0.
+    // So the bracket stays green (multiplier 1.0) and cadence is constant.
+    const result = simulate({
+      durationHeldSec: 2,
+      durationReleasedSec: 1,
+      mountsPerFire: 1,
+    });
+
+    // Discretization bound: floor(2/0.15) = 13 or 14 depending on the first
+    // frame's cooldown state. Both are acceptable.
+    expect(result.shotsWhileHeld).toBeGreaterThanOrEqual(12);
+    expect(result.shotsWhileHeld).toBeLessThanOrEqual(14);
+
+    // After release, the queue has already drained (we drain one per frame
+    // and enqueue at most one per frame while held) so no further shots
+    // should be emitted.
+    expect(result.shotsAfterRelease).toBe(0);
+  });
+
+  it('held fire respects overheat lockout (stops firing while locked)', () => {
+    // With 4 mounts/fire (full broadside), 20 s of held fire should hit
+    // lockout and stop. The loop then runs for 5 s of release and must
+    // emit zero shots.
+    const result = simulate({
+      durationHeldSec: 21,
+      durationReleasedSec: 0.5,
+      mountsPerFire: 4,
+    });
+
+    // Expected cadence: 1 fire per 150 ms for the first ~20 s, then the
+    // yellow bracket kicks in, then red, then lockout. Total fires over
+    // the full 21 s is bounded well below 21/0.15 = 140. Just assert it
+    // is > 0 and < 140 — the exact number is tested implicitly by the
+    // overheat model test above.
+    expect(result.shotsWhileHeld).toBeGreaterThan(0);
+    expect(result.shotsWhileHeld).toBeLessThan(140);
+
+    // After release, no lingering queued shots. The cap is 4; even if
+    // some were queued at the moment of release, they would be blocked
+    // by the lockout gate and never fire.
+    expect(result.shotsAfterRelease).toBe(0);
+  });
+
+  it('released mid-cooldown does not emit queued held-fire shots as a burst', () => {
+    // Hold for 0.05 s (less than one cooldown cycle). Exactly one shot
+    // should fire (the initial frame when cooldown is 0), the held-fire
+    // top-up should not re-enqueue because cooldown is non-zero, and
+    // release should produce zero additional shots.
+    const result = simulate({
+      durationHeldSec: 0.05,
+      durationReleasedSec: 1,
+      mountsPerFire: 1,
+    });
+
+    expect(result.shotsWhileHeld).toBe(1);
+    expect(result.shotsAfterRelease).toBe(0);
+  });
+});
+
 describe('WeaponSystem — overheat model', () => {
   const FRESH: HeatState = { heat: 0, lockedOut: false };
   /**
