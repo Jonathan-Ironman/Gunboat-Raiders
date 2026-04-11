@@ -58,7 +58,10 @@ import {
 import { findEnemyIdByBody, isPlayerBody, getProjectileBodyState } from '@/systems/physicsRefs';
 import { emitVfxEvent } from '@/effects/vfxEvents';
 
-const POOL_SIZE = 50;
+// Pool sized for 150ms cooldown broadside play:
+// 6.67 fires/s × 4 mounts/broadside × ~2 s average flight ≈ 53 concurrent peak.
+// 80 slots gives ~50% headroom above the realistic peak.
+const POOL_SIZE = 80;
 const SLEEP_POSITION_Y = -1000;
 
 /**
@@ -81,6 +84,8 @@ const PROJECTILE_MAX_LIFETIME = 8;
 export function ProjectilePool() {
   const rigidBodiesRef = useRef<RapierRigidBody[]>(null);
   const activeIndicesRef = useRef(new Set<number>());
+  /** Maps Zustand storeId → pool slot index for O(1) lifetime-expiry lookup. */
+  const storeIdToIndexRef = useRef(new Map<string, number>());
 
   /**
    * Core deactivation logic — moves the body to the sleep position, zeroes
@@ -100,6 +105,11 @@ export function ProjectilePool() {
       return;
     }
     activeIndicesRef.current.delete(index);
+    // Remove from storeId→index map using the metadata that's still present.
+    const meta = getProjectileSlotMetadata(index);
+    if (meta) {
+      storeIdToIndexRef.current.delete(meta.storeId);
+    }
     clearProjectileSlotMetadata(index);
 
     try {
@@ -227,7 +237,12 @@ export function ProjectilePool() {
           break;
         }
       }
-      if (index === -1) return -1; // Pool exhausted
+      if (index === -1) {
+        if (import.meta.env.DEV) {
+          console.warn('[ProjectilePool] pool exhausted — all slots active');
+        }
+        return -1;
+      }
 
       const body = bodies[index];
       if (!body) return -1;
@@ -263,6 +278,7 @@ export function ProjectilePool() {
         splashRadius,
         storeId,
       });
+      storeIdToIndexRef.current.set(storeId, index);
 
       return index;
     },
@@ -282,19 +298,25 @@ export function ProjectilePool() {
     [deactivateSlot],
   );
 
+  const getIndexByStoreId = useCallback((storeId: string): number => {
+    return storeIdToIndexRef.current.get(storeId) ?? -1;
+  }, []);
+
   const getBodies = useCallback((): (RapierRigidBody | null)[] => {
     return rigidBodiesRef.current ?? [];
   }, []);
 
   // Register pool manager globally
   useEffect(() => {
-    setProjectilePoolManager({ activate, deactivate, getBodies });
+    setProjectilePoolManager({ activate, deactivate, getBodies, getIndexByStoreId });
+    const storeIdToIndex = storeIdToIndexRef.current;
     return () => {
       setProjectilePoolManager(null);
       clearAllProjectileSlotMetadata();
       clearAllPendingProjectileDeactivations();
+      storeIdToIndex.clear();
     };
-  }, [activate, deactivate, getBodies]);
+  }, [activate, deactivate, getBodies, getIndexByStoreId]);
 
   // Put all bodies to sleep on mount
   useEffect(() => {

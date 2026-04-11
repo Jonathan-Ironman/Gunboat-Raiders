@@ -70,6 +70,8 @@ const ENEMY_PROJECTILE_GROUPS = interactionGroups(COLLISION_GROUPS.ENEMY_PROJECT
 export function EnemyProjectilePool() {
   const rigidBodiesRef = useRef<RapierRigidBody[]>(null);
   const activeIndicesRef = useRef(new Set<number>());
+  /** Maps Zustand storeId → pool slot index for O(1) lifetime-expiry lookup. */
+  const storeIdToIndexRef = useRef(new Map<string, number>());
 
   /**
    * Core deactivation — moves body to sleep position, zeroes velocity, sleeps
@@ -89,6 +91,11 @@ export function EnemyProjectilePool() {
       return;
     }
     activeIndicesRef.current.delete(index);
+    // Remove from storeId→index map using the metadata that's still present.
+    const meta = getProjectileSlotMetadata(metaKey);
+    if (meta) {
+      storeIdToIndexRef.current.delete(meta.storeId);
+    }
     clearProjectileSlotMetadata(metaKey);
 
     try {
@@ -224,6 +231,7 @@ export function EnemyProjectilePool() {
         splashRadius,
         storeId,
       });
+      storeIdToIndexRef.current.set(storeId, index);
 
       return index;
     },
@@ -241,12 +249,17 @@ export function EnemyProjectilePool() {
     [deactivateSlot],
   );
 
+  const getIndexByStoreId = useCallback((storeId: string): number => {
+    return storeIdToIndexRef.current.get(storeId) ?? -1;
+  }, []);
+
   const getBodies = useCallback((): (RapierRigidBody | null)[] => {
     return rigidBodiesRef.current ?? [];
   }, []);
 
   useEffect(() => {
-    setEnemyProjectilePoolManager({ activate, deactivate, getBodies });
+    setEnemyProjectilePoolManager({ activate, deactivate, getBodies, getIndexByStoreId });
+    const storeIdToIndex = storeIdToIndexRef.current;
     return () => {
       setEnemyProjectilePoolManager(null);
       // Clear metadata entries for our slot range
@@ -254,8 +267,9 @@ export function EnemyProjectilePool() {
         clearProjectileSlotMetadata(i + ENEMY_SLOT_OFFSET);
       }
       clearAllPendingEnemyProjectileDeactivations();
+      storeIdToIndex.clear();
     };
-  }, [activate, deactivate, getBodies]);
+  }, [activate, deactivate, getBodies, getIndexByStoreId]);
 
   // Put all bodies to sleep on mount
   useEffect(() => {

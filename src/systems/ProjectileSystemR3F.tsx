@@ -94,17 +94,17 @@ export function ProjectileSystemR3F() {
     if (expired.length === 0) return;
 
     for (const id of expired) {
-      store.removeProjectile(id);
+      // Use the authoritative storeId→index map to find the pool slot; a
+      // position-based heuristic would leak slots for airborne misses.
+      const poolIndex = poolManager?.getIndexByStoreId(id) ?? -1;
 
-      // Deactivate pool slot — find by index
-      if (poolManager) {
-        for (const [i, state] of projectileStates) {
-          // Deactivate bodies that have fallen below sea level significantly
-          if (state.position.y < -50) {
-            poolManager.deactivate(i);
-            splashedSlots.delete(i);
-          }
-        }
+      if (poolManager && poolIndex !== -1) {
+        // deactivate() removes the store entry and frees the pool slot in one call.
+        poolManager.deactivate(poolIndex);
+        splashedSlots.delete(poolIndex);
+      } else {
+        // Pool slot already freed (e.g. by collision) — just drop the store entry.
+        store.removeProjectile(id);
       }
     }
   });

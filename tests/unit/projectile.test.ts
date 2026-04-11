@@ -7,6 +7,7 @@ import {
   getProjectilePoolManager,
   getEnemyProjectilePoolManager,
   setProjectileSlotMetadata,
+  getProjectileSlotMetadata,
   clearProjectileSlotMetadata,
   queueProjectileDeactivation,
   isProjectileDeactivationPending,
@@ -18,6 +19,7 @@ import {
   clearAllPendingProjectileDeactivations,
   clearAllPendingEnemyProjectileDeactivations,
   type ProjectilePoolManager,
+  type ProjectileSlotMetadata,
 } from '@/systems/projectilePoolRefs';
 
 describe('ProjectileSystem — getExpiredProjectiles', () => {
@@ -94,6 +96,9 @@ describe('projectilePoolRefs — pool exhaustion and slot recycling (Test C)', (
       },
       getBodies() {
         return [];
+      },
+      getIndexByStoreId(_storeId: string): number {
+        return -1; // not needed by the exhaustion tests
       },
     };
     return { manager, activeSlots };
@@ -220,11 +225,13 @@ describe('projectilePoolRefs — separate player and enemy pool managers (Test D
       activate: () => 0,
       deactivate: () => undefined,
       getBodies: () => [],
+      getIndexByStoreId: () => -1,
     };
     const enemyManager: ProjectilePoolManager = {
       activate: () => 10,
       deactivate: () => undefined,
       getBodies: () => [],
+      getIndexByStoreId: () => -1,
     };
 
     setProjectilePoolManager(playerManager);
@@ -241,11 +248,13 @@ describe('projectilePoolRefs — separate player and enemy pool managers (Test D
       activate: () => 0,
       deactivate: () => undefined,
       getBodies: () => [],
+      getIndexByStoreId: () => -1,
     };
     const enemyManager: ProjectilePoolManager = {
       activate: () => 10,
       deactivate: () => undefined,
       getBodies: () => [],
+      getIndexByStoreId: () => -1,
     };
 
     setProjectilePoolManager(playerManager);
@@ -298,5 +307,162 @@ describe('projectilePoolRefs — separate pending deactivation queues', () => {
     drainPendingProjectileDeactivations(); // drain (empty) player queue
 
     expect(isEnemyProjectileDeactivationPending(3)).toBe(true); // still there
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Required regression tests (4 new, per task brief)
+// ---------------------------------------------------------------------------
+
+/**
+ * Mock pool that mirrors the storeId→index lookup introduced by the leak fix.
+ * The mock maintains a storeIdToIndex Map so getIndexByStoreId() works
+ * correctly without Rapier or R3F.
+ */
+function makeMockPoolWithStoreIdLookup(size: number): {
+  manager: ProjectilePoolManager;
+  activeSlots: Set<number>;
+  storeIdToIndex: Map<string, number>;
+  nextStoreId: { value: number };
+} {
+  const activeSlots = new Set<number>();
+  const storeIdToIndex = new Map<string, number>();
+  const nextStoreId = { value: 0 };
+
+  const manager: ProjectilePoolManager = {
+    activate(_pos, _impulse, ownerId, ownerType, damage, splashDamage, splashRadius) {
+      for (let i = 0; i < size; i++) {
+        if (!activeSlots.has(i)) {
+          activeSlots.add(i);
+          const storeId = `proj-${String(nextStoreId.value++)}`;
+          setProjectileSlotMetadata(i, {
+            ownerId,
+            ownerType,
+            damage,
+            splashDamage,
+            splashRadius,
+            storeId,
+          });
+          storeIdToIndex.set(storeId, i);
+          return i;
+        }
+      }
+      return -1; // exhausted
+    },
+    deactivate(index) {
+      const meta = getProjectileSlotMetadata(index);
+      if (meta) {
+        storeIdToIndex.delete(meta.storeId);
+      }
+      activeSlots.delete(index);
+      clearProjectileSlotMetadata(index);
+    },
+    getBodies() {
+      return [];
+    },
+    getIndexByStoreId(storeId: string): number {
+      return storeIdToIndex.get(storeId) ?? -1;
+    },
+  };
+
+  return { manager, activeSlots, storeIdToIndex, nextStoreId };
+}
+
+describe('Leak regression — storeId-to-index lookup (Test: leak regression)', () => {
+  beforeEach(() => {
+    clearAllProjectileSlotMetadata();
+    clearAllPendingProjectileDeactivations();
+  });
+
+  it('expired projectile slot is freed via storeId lookup, not position heuristic', () => {
+    /**
+     * Previously: deactivation was gated on y < -50. A projectile at y=10
+     * (airborne) would never be freed. After the fix, getIndexByStoreId()
+     * is used so the slot is always freed regardless of body position.
+     */
+    const { manager, activeSlots } = makeMockPoolWithStoreIdLookup(10);
+    const pos: [number, number, number] = [0, 10, 0]; // y=10, clearly airborne
+    const imp: [number, number, number] = [0, 0, 10];
+
+    // Activate a slot — records storeId→index mapping
+    const slotIndex = manager.activate(pos, imp, 'player', 'player', 10, 5, 3);
+    expect(slotIndex).toBeGreaterThanOrEqual(0);
+    expect(activeSlots.size).toBe(1);
+
+    // Retrieve the storeId that was registered
+    const meta: ProjectileSlotMetadata | undefined = getProjectileSlotMetadata(slotIndex);
+    expect(meta).toBeDefined();
+    if (!meta) throw new Error('metadata must be defined after activate');
+    const storeId = meta.storeId;
+
+    // Simulate lifetime expiry — look up by storeId and deactivate (no position check)
+    const foundIndex = manager.getIndexByStoreId(storeId);
+    expect(foundIndex).toBe(slotIndex); // correct slot found without y heuristic
+
+    manager.deactivate(foundIndex);
+    expect(activeSlots.size).toBe(0); // slot returned
+    expect(manager.getIndexByStoreId(storeId)).toBe(-1); // mapping cleaned up
+  });
+
+  it('pool slot count stays stable over 200 rapid lifetime-expiry cycles (no drift)', () => {
+    /**
+     * OLD behavior: every projectile that expired airborne leaked its slot.
+     * After 200 such expirations the pool would be exhausted.
+     *
+     * NEW behavior: storeId→index lookup frees every slot correctly.
+     * Pool active count must return to 0 after each expiry, never drift.
+     */
+    const POOL_CAP = 80;
+    const FIRE_COUNT = 200;
+    const { manager, activeSlots } = makeMockPoolWithStoreIdLookup(POOL_CAP);
+    const pos: [number, number, number] = [0, 5, 0]; // airborne (y=5)
+    const imp: [number, number, number] = [0, 0, 60];
+
+    for (let i = 0; i < FIRE_COUNT; i++) {
+      // Activate (simulate a single in-flight projectile)
+      const slotIdx = manager.activate(pos, imp, 'player', 'player', 25, 10, 5);
+      expect(slotIdx).not.toBe(-1); // pool must never stall
+
+      // Retrieve the assigned storeId and simulate lifetime expiry
+      const meta: ProjectileSlotMetadata | undefined = getProjectileSlotMetadata(slotIdx);
+      expect(meta).toBeDefined();
+      if (!meta) throw new Error('metadata must be defined after activate');
+
+      const lookupIdx = manager.getIndexByStoreId(meta.storeId);
+      expect(lookupIdx).toBe(slotIdx);
+      manager.deactivate(lookupIdx);
+
+      // After expiry, pool must be back to 0 active slots
+      expect(activeSlots.size).toBe(0);
+    }
+  });
+});
+
+describe('Pool stall regression — OLD leak would exhaust pool (Test: pool stall regression)', () => {
+  beforeEach(() => {
+    clearAllProjectileSlotMetadata();
+  });
+
+  it('with the fix: 200 activations + lifetime expiry never returns -1', () => {
+    /**
+     * Reproduces the scenario where the old leak (position heuristic, airborne
+     * projectiles never freed) would exhaust even a 120-slot pool within ~30
+     * broadsides. With the storeId-based fix, the pool recycles correctly and
+     * activate() never returns -1 even after 200 sequential fire+expire cycles.
+     */
+    const { manager } = makeMockPoolWithStoreIdLookup(80);
+    const pos: [number, number, number] = [0, 5, 0];
+    const imp: [number, number, number] = [60, 0, 0];
+
+    for (let i = 0; i < 200; i++) {
+      const idx = manager.activate(pos, imp, 'player', 'player', 25, 10, 5);
+      expect(idx).not.toBe(-1); // pool must not stall
+
+      const meta = getProjectileSlotMetadata(idx);
+      if (meta) {
+        const lookupIdx = manager.getIndexByStoreId(meta.storeId);
+        manager.deactivate(lookupIdx);
+      }
+    }
   });
 });

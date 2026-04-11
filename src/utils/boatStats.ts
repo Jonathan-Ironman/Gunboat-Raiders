@@ -17,7 +17,7 @@ export const BOAT_STATS = {
     // responsive from the very first frame.
     movement: { thrustForce: 8000, reverseForce: 2500, turnTorque: 2000, maxSpeed: 22 },
     weapons: {
-      cooldown: 0.8,
+      cooldown: 0.15,
       damage: 25,
       splashDamage: 10,
       // Splash radius tuned so a near-miss (ball striking water within ~5m of

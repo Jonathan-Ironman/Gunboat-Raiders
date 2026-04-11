@@ -19,6 +19,11 @@ export interface ProjectilePoolManager {
   ): number;
   deactivate(index: number): void;
   getBodies(): (RapierRigidBody | null)[];
+  /**
+   * Look up the pool slot index by the Zustand store id registered at activation.
+   * Returns -1 if the storeId is not currently active in this pool.
+   */
+  getIndexByStoreId(storeId: string): number;
 }
 
 /**
