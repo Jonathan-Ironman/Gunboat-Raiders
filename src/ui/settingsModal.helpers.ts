@@ -15,6 +15,7 @@
 
 import type { CSSProperties } from 'react';
 
+import { BUTTON_RECIPE } from './buttonRecipes';
 import {
   BG_DEEP,
   BORDER,
@@ -195,25 +196,21 @@ export const settingsFooterStyle: CSSProperties = {
 };
 
 /**
- * Secondary button recipe — used for the BACK action. Matches the
- * Harbour Dawn secondary-button token pattern (surface background,
- * solid border, muted-to-primary text on hover) without crossing into
- * the primary-CTA gold gradient.
+ * Secondary button recipe — used for the BACK action. Delegates to
+ * the shared `BUTTON_RECIPE.secondary` so the button silhouette
+ * matches every other secondary button in the game (main menu
+ * Settings, pause Settings, briefing Back to Menu, game over Main
+ * Menu). The modal only overrides `width` back to `auto` so the
+ * button sizes to its label instead of filling the footer row.
  */
 export const settingsSecondaryButtonStyle: CSSProperties = {
+  ...BUTTON_RECIPE.base,
+  ...BUTTON_RECIPE.secondary,
+  width: 'auto',
+  // Wider horizontal padding than the default so the short BACK
+  // label still produces a comfortably-proportioned button in the
+  // footer row.
   padding: `${String(SP_3)}px ${String(SP_8)}px`,
-  background: SURFACE_EL,
-  border: `1px solid ${BORDER}`,
-  borderRadius: `${String(RADIUS_MD)}px`,
-  color: TEXT_PRI,
-  fontFamily: FONT_DISPLAY,
-  fontWeight: 700,
-  fontSize: '14px',
-  letterSpacing: '0.08em',
-  textTransform: 'uppercase',
-  cursor: 'pointer',
-  boxShadow: SHADOW_MD,
-  transition: `transform ${String(DUR_FAST)}ms ${EASE_OUT}, background ${String(DUR_FAST)}ms ${EASE_OUT}`,
 };
 
 // ---------------------------------------------------------------------------

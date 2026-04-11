@@ -112,14 +112,12 @@ vi.mock('@/store/gameStore', () => ({
 import {
   BG,
   BG_DEEP,
-  BORDER,
   BTN_PRI_BG,
   BTN_PRI_COLOR,
   BTN_PRI_SHADOW,
   FONT_DISPLAY,
   FONT_UI,
   GOLD,
-  SHADOW_MD,
   SURFACE_EL,
   TEXT_DIM,
   TEXT_PRI,
@@ -281,11 +279,15 @@ describe('mainMenuScene.helpers — style recipes use tokens', () => {
     expect(mainMenuButtonPrimaryStyle.boxShadow).toBe(BTN_PRI_SHADOW);
   });
 
-  it('secondary button variant uses SURFACE_EL background + BORDER', () => {
+  it('secondary button variant uses SURFACE_EL background + shared emboss shadow', () => {
+    // After the cross-modal button refactor (2026-04-11) the secondary
+    // variant reuses BUTTON_RECIPE.secondary, which means no explicit
+    // border (emboss shadow provides the lift) and the shared 3D
+    // emboss stack instead of the old flat SHADOW_MD drop.
     expect(mainMenuButtonSecondaryStyle.background).toBe(SURFACE_EL);
     expect(mainMenuButtonSecondaryStyle.color).toBe(TEXT_PRI);
-    expect(String(mainMenuButtonSecondaryStyle.border)).toContain(BORDER);
-    expect(mainMenuButtonSecondaryStyle.boxShadow).toBe(SHADOW_MD);
+    expect(mainMenuButtonSecondaryStyle.border).toBeUndefined();
+    expect(String(mainMenuButtonSecondaryStyle.boxShadow ?? '')).toMatch(/0 4px 0/);
   });
 
   it('disabled button style sets not-allowed cursor and opacity 0.4', () => {

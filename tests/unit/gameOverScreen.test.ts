@@ -93,14 +93,12 @@ vi.mock('@/store/gameStore', () => ({
 
 // Imports AFTER the mock so they pick up the mocked modules.
 import {
-  BORDER,
   BTN_PRI_BG,
   BTN_PRI_COLOR,
   BTN_PRI_SHADOW,
   FONT_DISPLAY,
   FONT_UI,
   RED,
-  SHADOW_MD,
   SURFACE_EL,
   TEXT_DIM,
   TEXT_PRI,
@@ -314,11 +312,16 @@ describe('gameOverScreen.helpers — style recipes use tokens', () => {
     expect(gameOverButtonPrimaryStyle.boxShadow).toBe(BTN_PRI_SHADOW);
   });
 
-  it('secondary button variant uses SURFACE_EL background + BORDER', () => {
+  it('secondary button variant uses SURFACE_EL background + shared emboss shadow', () => {
+    // After the cross-modal button refactor (2026-04-11) the MAIN
+    // MENU button delegates to BUTTON_RECIPE.secondary — no explicit
+    // border, and the shared 3D emboss stack instead of the old
+    // flat SHADOW_MD drop. Structure is now identical to every other
+    // secondary button in the game.
     expect(gameOverButtonSecondaryStyle.background).toBe(SURFACE_EL);
     expect(gameOverButtonSecondaryStyle.color).toBe(TEXT_PRI);
-    expect(String(gameOverButtonSecondaryStyle.border)).toContain(BORDER);
-    expect(gameOverButtonSecondaryStyle.boxShadow).toBe(SHADOW_MD);
+    expect(gameOverButtonSecondaryStyle.border).toBeUndefined();
+    expect(String(gameOverButtonSecondaryStyle.boxShadow ?? '')).toMatch(/0 4px 0/);
   });
 
   it('keyframes define a namespaced fade-in animation', () => {

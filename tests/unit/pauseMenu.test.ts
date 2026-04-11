@@ -99,7 +99,6 @@ import {
   RED,
   RED_DARK,
   SHADOW_LG,
-  SHADOW_MD,
   SURFACE,
   SURFACE_EL,
   TEXT_MUTED,
@@ -260,18 +259,28 @@ describe('pauseMenu.helpers — pause overlay style recipes', () => {
     expect(pauseButtonPrimaryStyle.boxShadow).toBe(BTN_PRI_SHADOW);
   });
 
-  it('secondary button variant uses SURFACE_EL background', () => {
+  it('secondary button variant uses SURFACE_EL background + shared emboss shadow', () => {
+    // After the cross-modal button refactor (2026-04-11) secondary
+    // buttons delegate to BUTTON_RECIPE.secondary, which means the
+    // lift comes from the emboss shadow — not a 1px border + flat
+    // SHADOW_MD drop. Asserting `border === undefined` locks the
+    // new silhouette.
     expect(pauseButtonSecondaryStyle.background).toBe(SURFACE_EL);
     expect(pauseButtonSecondaryStyle.color).toBe(TEXT_PRI);
-    expect(String(pauseButtonSecondaryStyle.border)).toContain(BORDER);
-    expect(pauseButtonSecondaryStyle.boxShadow).toBe(SHADOW_MD);
+    expect(pauseButtonSecondaryStyle.border).toBeUndefined();
+    expect(String(pauseButtonSecondaryStyle.boxShadow ?? '')).toMatch(/0 4px 0/);
   });
 
-  it('destructive button variant rests at secondary style but hovers red', () => {
+  it('destructive button variant rests at secondary style but hovers red destructive', () => {
+    // Rest state = shared secondary recipe; hover swaps in the shared
+    // destructive variant (red gradient + red emboss edge). Neither
+    // carries an explicit border — the 3D emboss does the work.
     expect(pauseButtonDestructiveStyle.background).toBe(SURFACE_EL);
-    expect(String(pauseButtonDestructiveStyle.border)).toContain(BORDER);
-    expect(pauseButtonDestructiveHoverStyle.background).toBe(RED_DARK);
-    expect(String(pauseButtonDestructiveHoverStyle.border)).toContain(RED);
+    expect(pauseButtonDestructiveStyle.border).toBeUndefined();
+    expect(String(pauseButtonDestructiveHoverStyle.background ?? '')).toContain('linear-gradient');
+    expect(String(pauseButtonDestructiveHoverStyle.background ?? '')).toContain(RED);
+    expect(String(pauseButtonDestructiveHoverStyle.background ?? '')).toContain(RED_DARK);
+    expect(pauseButtonDestructiveHoverStyle.border).toBeUndefined();
   });
 
   it('button base style uses FONT_DISPLAY uppercase', () => {

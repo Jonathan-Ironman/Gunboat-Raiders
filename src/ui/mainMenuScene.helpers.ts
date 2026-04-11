@@ -15,25 +15,18 @@
 
 import type { CSSProperties } from 'react';
 
+import { BUTTON_RECIPE } from './buttonRecipes';
 import {
   BG,
   BG_DEEP,
-  BORDER,
-  BTN_PRI_BG,
-  BTN_PRI_COLOR,
-  BTN_PRI_SHADOW,
-  DUR_FAST,
   DUR_MEDIUM,
   EASE_OUT,
   FONT_DISPLAY,
   FONT_UI,
   GOLD,
-  RADIUS_MD,
-  SHADOW_MD,
   SP_3,
   SP_5,
   SP_6,
-  SURFACE_EL,
   TEXT_DIM,
   TEXT_PRI,
 } from './tokens';
@@ -187,52 +180,30 @@ export const mainMenuButtonStackStyle: CSSProperties = {
 };
 
 /**
- * Shared base style for every main-menu button. Variants spread
- * `{ ...mainMenuButtonBaseStyle, ...mainMenuButtonPrimaryStyle }` etc.
+ * Shared base style for every main-menu button. Delegates to the
+ * cross-modal `BUTTON_RECIPE.base` so every button in the game —
+ * across main menu, pause, briefing, game-over, settings, confirm —
+ * renders with the exact same silhouette.
  */
-export const mainMenuButtonBaseStyle: CSSProperties = {
-  display: 'block',
-  width: '100%',
-  padding: `${String(SP_3)}px ${String(SP_6)}px`,
-  fontFamily: FONT_DISPLAY,
-  fontWeight: 700,
-  fontSize: '16px',
-  letterSpacing: '0.08em',
-  textTransform: 'uppercase',
-  border: 'none',
-  borderRadius: `${String(RADIUS_MD)}px`,
-  cursor: 'pointer',
-  transition: `transform ${String(DUR_FAST)}ms ${EASE_OUT}, background ${String(DUR_FAST)}ms ${EASE_OUT}, box-shadow ${String(DUR_FAST)}ms ${EASE_OUT}, opacity ${String(DUR_FAST)}ms ${EASE_OUT}`,
-};
+export const mainMenuButtonBaseStyle: CSSProperties = BUTTON_RECIPE.base;
 
 /** Primary (gold) button variant — the topmost enabled action. */
-export const mainMenuButtonPrimaryStyle: CSSProperties = {
-  background: BTN_PRI_BG,
-  color: BTN_PRI_COLOR,
-  boxShadow: BTN_PRI_SHADOW,
-};
+export const mainMenuButtonPrimaryStyle: CSSProperties = BUTTON_RECIPE.primary;
 
-/** Secondary button variant — secondary surface + border. */
-export const mainMenuButtonSecondaryStyle: CSSProperties = {
-  background: SURFACE_EL,
-  color: TEXT_PRI,
-  border: `1px solid ${BORDER}`,
-  boxShadow: SHADOW_MD,
-};
+/**
+ * Secondary button variant — shared neutral fill. Intentionally uses
+ * the same 3D emboss silhouette as the primary variant so the only
+ * visual difference is the fill color, never the button structure.
+ */
+export const mainMenuButtonSecondaryStyle: CSSProperties = BUTTON_RECIPE.secondary;
 
 /**
  * Disabled Continue button — greyed out, no hover effect, no
  * pointer cursor. Spec: `opacity: 0.4`, `cursor: not-allowed`,
- * `aria-disabled="true"`.
+ * `aria-disabled="true"`. Uses the shared disabled variant so its
+ * silhouette matches every other button in the game.
  */
-export const mainMenuButtonDisabledStyle: CSSProperties = {
-  background: SURFACE_EL,
-  color: TEXT_PRI,
-  border: `1px solid ${BORDER}`,
-  boxShadow: SHADOW_MD,
-  opacity: 0.4,
-  cursor: 'not-allowed',
-};
+export const mainMenuButtonDisabledStyle: CSSProperties = BUTTON_RECIPE.disabled;
 
 // ---------------------------------------------------------------------------
 // Footer

@@ -15,21 +15,16 @@
 
 import type { CSSProperties } from 'react';
 
+import { BUTTON_RECIPE } from './buttonRecipes';
 import {
   BORDER,
-  BTN_PRI_BG,
-  BTN_PRI_COLOR,
-  BTN_PRI_SHADOW,
-  DUR_FAST,
   DUR_NORMAL,
   EASE_OUT,
   FONT_DISPLAY,
   FONT_UI,
   GOLD,
-  RADIUS_MD,
   RADIUS_XL,
   SHADOW_LG,
-  SHADOW_MD,
   SP_2,
   SP_3,
   SP_4,
@@ -37,7 +32,6 @@ import {
   SP_6,
   SP_8,
   SURFACE,
-  SURFACE_EL,
   TEXT_PRI,
   TEXT_SEC,
 } from './tokens';
@@ -254,44 +248,29 @@ export const briefingButtonRowStyle: CSSProperties = {
 };
 
 /**
- * Secondary button — BACK TO MENU. Surface-el background with a solid
- * border, primary text color. Mirrors the Harbour Dawn secondary-
- * button silhouette used by `SettingsModal`.
+ * Secondary button — BACK TO MENU. Delegates to the shared
+ * `BUTTON_RECIPE.secondary` so the button silhouette matches every
+ * other secondary button in the game. `width: 'auto'` cancels the
+ * recipe's default `width: '100%'` so the briefing button row can
+ * size each button by its label instead.
  */
 export const briefingSecondaryButtonStyle: CSSProperties = {
+  ...BUTTON_RECIPE.base,
+  ...BUTTON_RECIPE.secondary,
+  width: 'auto',
   padding: `${String(SP_3)}px ${String(SP_6)}px`,
-  background: SURFACE_EL,
-  border: `1px solid ${BORDER}`,
-  borderRadius: `${String(RADIUS_MD)}px`,
-  color: TEXT_PRI,
-  fontFamily: FONT_DISPLAY,
-  fontWeight: 700,
-  fontSize: '14px',
-  letterSpacing: '0.08em',
-  textTransform: 'uppercase',
-  cursor: 'pointer',
-  boxShadow: SHADOW_MD,
-  transition: `transform ${String(DUR_FAST)}ms ${EASE_OUT}, background ${String(DUR_FAST)}ms ${EASE_OUT}`,
 };
 
 /**
- * Primary button — START. Gold gradient, hard-contrast deep text
- * color, drop shadow + warm glow.
+ * Primary button — START. Shared gold variant with wider horizontal
+ * padding than the neutral secondary so the "START" CTA reads as
+ * the obvious next step on the briefing screen.
  */
 export const briefingPrimaryButtonStyle: CSSProperties = {
+  ...BUTTON_RECIPE.base,
+  ...BUTTON_RECIPE.primary,
+  width: 'auto',
   padding: `${String(SP_3)}px ${String(SP_8)}px`,
-  background: BTN_PRI_BG,
-  border: 'none',
-  borderRadius: `${String(RADIUS_MD)}px`,
-  color: BTN_PRI_COLOR,
-  fontFamily: FONT_DISPLAY,
-  fontWeight: 800,
-  fontSize: '16px',
-  letterSpacing: '0.08em',
-  textTransform: 'uppercase',
-  cursor: 'pointer',
-  boxShadow: BTN_PRI_SHADOW,
-  transition: `transform ${String(DUR_FAST)}ms ${EASE_OUT}, box-shadow ${String(DUR_FAST)}ms ${EASE_OUT}`,
 };
 
 // ---------------------------------------------------------------------------

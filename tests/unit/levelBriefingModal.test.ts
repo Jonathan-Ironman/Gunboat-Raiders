@@ -249,19 +249,28 @@ describe('levelBriefingModal.helpers — style recipes use tokens', () => {
     expect(briefingButtonRowStyle.justifyContent).toBe('center');
   });
 
-  it('secondary button uses FONT_DISPLAY + SURFACE_EL background', () => {
+  it('secondary BACK TO MENU button uses FONT_DISPLAY + shared secondary fill', () => {
+    // After the cross-modal button refactor (2026-04-11) the BACK
+    // TO MENU button delegates to BUTTON_RECIPE.secondary: no
+    // explicit 1px border (emboss shadow provides the lift), shared
+    // neutral fill, shared font.
     expect(briefingSecondaryButtonStyle.fontFamily).toBe(FONT_DISPLAY);
     expect(briefingSecondaryButtonStyle.background).toBe(SURFACE_EL);
-    expect(String(briefingSecondaryButtonStyle.border)).toContain(BORDER);
+    expect(briefingSecondaryButtonStyle.border).toBe('none');
     expect(briefingSecondaryButtonStyle.color).toBe(TEXT_PRI);
     expect(briefingSecondaryButtonStyle.textTransform).toBe('uppercase');
+    expect(String(briefingSecondaryButtonStyle.boxShadow ?? '')).toMatch(/0 4px 0/);
   });
 
-  it('primary button uses BTN_PRI_BG gradient and BTN_PRI_COLOR text', () => {
+  it('primary START button uses BTN_PRI_BG gradient and BTN_PRI_COLOR text', () => {
+    // The primary variant shares the cross-modal BUTTON_RECIPE, which
+    // uses fontWeight 700 (not 800 — that was the pre-refactor
+    // briefing-only override). Structural uniformity across every
+    // modal matters more than one-off weight deltas.
     expect(briefingPrimaryButtonStyle.background).toBe(BTN_PRI_BG);
     expect(briefingPrimaryButtonStyle.color).toBe(BTN_PRI_COLOR);
     expect(briefingPrimaryButtonStyle.fontFamily).toBe(FONT_DISPLAY);
-    expect(briefingPrimaryButtonStyle.fontWeight).toBe(800);
+    expect(briefingPrimaryButtonStyle.fontWeight).toBe(700);
   });
 
   it('briefing keyframes define a namespaced fade-in animation', () => {

@@ -16,31 +16,22 @@
 
 import type { CSSProperties } from 'react';
 
+import { BUTTON_RECIPE } from './buttonRecipes';
 import {
   BORDER,
-  BTN_PRI_BG,
-  BTN_PRI_COLOR,
-  BTN_PRI_SHADOW,
-  DUR_FAST,
   DUR_NORMAL,
   EASE_OUT,
   FONT_DISPLAY,
   FONT_UI,
-  RADIUS_MD,
   RADIUS_XL,
-  RED,
-  RED_DARK,
   SHADOW_LG,
-  SHADOW_MD,
   SP_2,
   SP_3,
-  SP_4,
   SP_5,
   SP_6,
   SP_8,
   SP_10,
   SURFACE,
-  SURFACE_EL,
   TEXT_MUTED,
   TEXT_PRI,
   TEXT_SEC,
@@ -174,63 +165,35 @@ export const pauseButtonStackStyle: CSSProperties = {
 };
 
 /**
- * Shared base style for every pause-menu button. Variants spread
- * `{ ...pauseButtonBaseStyle, ...pauseButtonPrimaryStyle }` etc. —
- * keeps the primary / secondary / destructive branches declarative.
+ * Shared base style for every pause-menu button. Delegates to the
+ * cross-modal `BUTTON_RECIPE.base` so every button in the game shares
+ * the exact same silhouette (padding, font, radius, 3D emboss
+ * shadow). The pause-menu variants below only change color.
  */
-export const pauseButtonBaseStyle: CSSProperties = {
-  display: 'block',
-  width: '100%',
-  padding: `${String(SP_4)}px ${String(SP_6)}px`,
-  fontFamily: FONT_DISPLAY,
-  fontWeight: 700,
-  fontSize: '16px',
-  letterSpacing: '0.08em',
-  textTransform: 'uppercase',
-  border: 'none',
-  borderRadius: `${String(RADIUS_MD)}px`,
-  cursor: 'pointer',
-  transition: `transform ${String(DUR_FAST)}ms ${EASE_OUT}, background ${String(DUR_FAST)}ms ${EASE_OUT}, box-shadow ${String(DUR_FAST)}ms ${EASE_OUT}`,
-};
+export const pauseButtonBaseStyle: CSSProperties = BUTTON_RECIPE.base;
 
 /** Primary (gold) button variant — CONTINUE in the pause menu. */
-export const pauseButtonPrimaryStyle: CSSProperties = {
-  background: BTN_PRI_BG,
-  color: BTN_PRI_COLOR,
-  boxShadow: BTN_PRI_SHADOW,
-};
+export const pauseButtonPrimaryStyle: CSSProperties = BUTTON_RECIPE.primary;
 
 /** Secondary button variant — SETTINGS in the pause menu. */
-export const pauseButtonSecondaryStyle: CSSProperties = {
-  background: SURFACE_EL,
-  color: TEXT_PRI,
-  border: `1px solid ${BORDER}`,
-  boxShadow: SHADOW_MD,
-};
+export const pauseButtonSecondaryStyle: CSSProperties = BUTTON_RECIPE.secondary;
 
 /**
- * Destructive secondary button — used for EXIT. Identical base to
- * the secondary button at rest; the red accent kicks in via JSX
- * mouse-enter / mouse-leave handlers swapping to
- * `pauseButtonDestructiveHoverStyle`.
+ * Resting state for the EXIT button — reads as a neutral secondary
+ * button until the user hovers, at which point
+ * `pauseButtonDestructiveHoverStyle` swaps in the red destructive
+ * variant. This two-stage reveal is deliberate: the pause menu's
+ * exit is irreversible, but the player should not feel "pushed
+ * toward" quitting the moment they open the menu.
  */
-export const pauseButtonDestructiveStyle: CSSProperties = {
-  background: SURFACE_EL,
-  color: TEXT_PRI,
-  border: `1px solid ${BORDER}`,
-  boxShadow: SHADOW_MD,
-};
+export const pauseButtonDestructiveStyle: CSSProperties = BUTTON_RECIPE.secondary;
 
 /**
- * Hover override for the destructive variant — subtle red tint on the
- * background + red border, text remains TEXT_PRI for legibility.
+ * Hover override for the destructive variant — full red destructive
+ * fill so hovering telegraphs "this will destroy progress" without
+ * restructuring the button silhouette.
  */
-export const pauseButtonDestructiveHoverStyle: CSSProperties = {
-  background: RED_DARK,
-  color: TEXT_PRI,
-  border: `1px solid ${RED}`,
-  boxShadow: SHADOW_MD,
-};
+export const pauseButtonDestructiveHoverStyle: CSSProperties = BUTTON_RECIPE.destructive;
 
 /**
  * Run summary line below the button stack —
@@ -313,45 +276,34 @@ export const confirmButtonRowStyle: CSSProperties = {
   marginTop: `${String(SP_2)}px`,
 };
 
-/** Shared base for the two confirm-dialog buttons. */
+/**
+ * Shared base for the two confirm-dialog buttons. Built on top of
+ * `BUTTON_RECIPE.base` so confirm-dialog buttons are structurally
+ * identical to every other button in the game — same emboss shadow,
+ * same font family, same radius. The dialog only tweaks `flex: 1`
+ * so the two buttons split the row evenly.
+ *
+ * The width override (`width: 'auto'`) cancels the recipe's default
+ * `width: '100%'` so the flex row can size each button by its
+ * `flex: 1` ratio instead of forcing both to 100%.
+ */
 export const confirmButtonBaseStyle: CSSProperties = {
+  ...BUTTON_RECIPE.base,
+  width: 'auto',
   flex: 1,
-  padding: `${String(SP_3)}px ${String(SP_5)}px`,
-  fontFamily: FONT_DISPLAY,
-  fontWeight: 700,
-  fontSize: '14px',
-  letterSpacing: '0.08em',
-  textTransform: 'uppercase',
-  border: 'none',
-  borderRadius: `${String(RADIUS_MD)}px`,
-  cursor: 'pointer',
-  transition: `transform ${String(DUR_FAST)}ms ${EASE_OUT}, background ${String(DUR_FAST)}ms ${EASE_OUT}, box-shadow ${String(DUR_FAST)}ms ${EASE_OUT}`,
 };
 
-/** Cancel button variant — secondary surface + border. */
-export const confirmCancelStyle: CSSProperties = {
-  background: SURFACE_EL,
-  color: TEXT_PRI,
-  border: `1px solid ${BORDER}`,
-  boxShadow: SHADOW_MD,
-};
+/** Cancel button variant — shared neutral fill. */
+export const confirmCancelStyle: CSSProperties = BUTTON_RECIPE.secondary;
 
 /** Confirm button variant — primary gold gradient. */
-export const confirmPrimaryStyle: CSSProperties = {
-  background: BTN_PRI_BG,
-  color: BTN_PRI_COLOR,
-  boxShadow: BTN_PRI_SHADOW,
-};
+export const confirmPrimaryStyle: CSSProperties = BUTTON_RECIPE.primary;
 
 /**
  * Destructive confirm variant — red gradient. Overrides the primary
  * variant when `destructive === true` on the dialog.
  */
-export const confirmDestructiveStyle: CSSProperties = {
-  background: `linear-gradient(135deg, ${RED}, ${RED_DARK})`,
-  color: TEXT_PRI,
-  boxShadow: SHADOW_MD,
-};
+export const confirmDestructiveStyle: CSSProperties = BUTTON_RECIPE.destructive;
 
 // ---------------------------------------------------------------------------
 // Keyframes — shared fade-in for the pause overlay and confirm dialog

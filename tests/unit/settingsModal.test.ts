@@ -223,11 +223,16 @@ describe('settingsModal.helpers — style recipes use tokens', () => {
     expect(settingsFieldCaptionStyle.color).toBe(TEXT_DIM);
   });
 
-  it('secondary button uses FONT_DISPLAY and SURFACE_EL background', () => {
+  it('secondary button uses FONT_DISPLAY, SURFACE_EL background, and the shared emboss shadow', () => {
+    // After the cross-modal button refactor (2026-04-11) the BACK
+    // button delegates to BUTTON_RECIPE — no explicit 1px border
+    // (emboss shadow provides the lift) and the shared 3D emboss
+    // stack instead of the old flat SHADOW_MD drop.
     expect(settingsSecondaryButtonStyle.fontFamily).toBe(FONT_DISPLAY);
     expect(settingsSecondaryButtonStyle.background).toBe(SURFACE_EL);
-    expect(String(settingsSecondaryButtonStyle.border)).toContain(BORDER);
+    expect(settingsSecondaryButtonStyle.border).toBe('none');
     expect(settingsSecondaryButtonStyle.color).toBe(TEXT_PRI);
+    expect(String(settingsSecondaryButtonStyle.boxShadow ?? '')).toMatch(/0 4px 0/);
   });
 
   it('tabs container has a subtle bottom border', () => {

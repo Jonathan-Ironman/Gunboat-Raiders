@@ -16,27 +16,20 @@
 
 import type { CSSProperties } from 'react';
 
+import { BUTTON_RECIPE } from './buttonRecipes';
 import {
-  BORDER,
-  BTN_PRI_BG,
-  BTN_PRI_COLOR,
-  BTN_PRI_SHADOW,
-  DUR_FAST,
   DUR_NORMAL,
   EASE_OUT,
   FONT_DISPLAY,
   FONT_UI,
-  RADIUS_MD,
   RED,
   SHADOW_LG,
-  SHADOW_MD,
   SP_3,
   SP_4,
   SP_5,
   SP_6,
   SP_8,
   SP_10,
-  SURFACE_EL,
   TEXT_DIM,
   TEXT_PRI,
   TEXT_SEC,
@@ -260,36 +253,19 @@ export const gameOverButtonStackStyle: CSSProperties = {
   marginTop: `${String(SP_5)}px`,
 };
 
-/** Shared base style for every game-over button. */
-export const gameOverButtonBaseStyle: CSSProperties = {
-  display: 'block',
-  width: '100%',
-  padding: `${String(SP_4)}px ${String(SP_6)}px`,
-  fontFamily: FONT_DISPLAY,
-  fontWeight: 700,
-  fontSize: '16px',
-  letterSpacing: '0.08em',
-  textTransform: 'uppercase',
-  border: 'none',
-  borderRadius: `${String(RADIUS_MD)}px`,
-  cursor: 'pointer',
-  transition: `transform ${String(DUR_FAST)}ms ${EASE_OUT}, background ${String(DUR_FAST)}ms ${EASE_OUT}, box-shadow ${String(DUR_FAST)}ms ${EASE_OUT}`,
-};
+/**
+ * Shared base style for every game-over button. Delegates to the
+ * cross-modal `BUTTON_RECIPE.base` so the game-over screen's PLAY
+ * AGAIN / MAIN MENU buttons share the exact same silhouette as the
+ * pause, briefing, settings, and main-menu buttons.
+ */
+export const gameOverButtonBaseStyle: CSSProperties = BUTTON_RECIPE.base;
 
 /** Primary (gold) button variant — PLAY AGAIN. */
-export const gameOverButtonPrimaryStyle: CSSProperties = {
-  background: BTN_PRI_BG,
-  color: BTN_PRI_COLOR,
-  boxShadow: BTN_PRI_SHADOW,
-};
+export const gameOverButtonPrimaryStyle: CSSProperties = BUTTON_RECIPE.primary;
 
 /** Secondary button variant — MAIN MENU. */
-export const gameOverButtonSecondaryStyle: CSSProperties = {
-  background: SURFACE_EL,
-  color: TEXT_PRI,
-  border: `1px solid ${BORDER}`,
-  boxShadow: SHADOW_MD,
-};
+export const gameOverButtonSecondaryStyle: CSSProperties = BUTTON_RECIPE.secondary;
 
 // Re-export SHADOW_LG so downstream callers that want to tweak the
 // panel shadow in future don't have to reach back into tokens.ts.
