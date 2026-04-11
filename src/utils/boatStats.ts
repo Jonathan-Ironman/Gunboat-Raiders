@@ -32,27 +32,29 @@ export const BOAT_STATS = {
       // that lands projectiles close to, not exactly on, the target.
       splashRadius: 5,
       muzzleVelocity: 60,
-      // Near-flat fire: a 3.4° elevation plus 60 m/s gives a sweet-spot hit
-      // around 55–65 m and a ballistic range under 80 m. This matches the
-      // game's intended combat envelope (boats at arena-scale distances)
-      // without turning the cannons into long-range artillery.
-      elevationAngle: 0.06,
+      // ~5.7° elevation plus 60 m/s gives a more pronounced arc with a
+      // sweet-spot hit around 55–70 m and a ballistic range under 85 m.
+      // This matches the game's intended combat envelope while making shots
+      // feel like they loft naturally rather than flying flat.
+      // Max total elevation (baseline + MAX_PITCH_OFFSET_UP) = 5.7° + 8° ≈ 13.7°,
+      // well within a safe arc and under any elevation cap.
+      elevationAngle: 0.1,
       mounts: [
-        // Fore (2 small)
-        { quadrant: 'fore', localOffset: [0.4, 0.8, 2.0], localDirection: [0, 0.3, 1] },
-        { quadrant: 'fore', localOffset: [-0.4, 0.8, 2.0], localDirection: [0, 0.3, 1] },
-        // Port broadside (4)
-        { quadrant: 'port', localOffset: [-1.2, 0.8, 1.0], localDirection: [-1, 0.3, 0] },
-        { quadrant: 'port', localOffset: [-1.2, 0.8, 0.0], localDirection: [-1, 0.3, 0] },
-        { quadrant: 'port', localOffset: [-1.2, 0.8, -0.5], localDirection: [-1, 0.3, 0] },
-        { quadrant: 'port', localOffset: [-1.2, 0.8, -1.0], localDirection: [-1, 0.3, 0] },
-        // Starboard broadside (4)
-        { quadrant: 'starboard', localOffset: [1.2, 0.8, 1.0], localDirection: [1, 0.3, 0] },
-        { quadrant: 'starboard', localOffset: [1.2, 0.8, 0.0], localDirection: [1, 0.3, 0] },
-        { quadrant: 'starboard', localOffset: [1.2, 0.8, -0.5], localDirection: [1, 0.3, 0] },
-        { quadrant: 'starboard', localOffset: [1.2, 0.8, -1.0], localDirection: [1, 0.3, 0] },
-        // Aft (1 small)
-        { quadrant: 'aft', localOffset: [0, 0.8, -2.0], localDirection: [0, 0.3, -1] },
+        // Fore (2 small) — pulled inward (x: ±0.4→±0.2) and lowered (y: 0.8→0.4)
+        { quadrant: 'fore', localOffset: [0.2, 0.4, 2.0], localDirection: [0, 0.3, 1] },
+        { quadrant: 'fore', localOffset: [-0.2, 0.4, 2.0], localDirection: [0, 0.3, 1] },
+        // Port broadside (4) — pulled inward (x: -1.2→-0.6) and lowered (y: 0.8→0.4)
+        { quadrant: 'port', localOffset: [-0.6, 0.4, 1.0], localDirection: [-1, 0.3, 0] },
+        { quadrant: 'port', localOffset: [-0.6, 0.4, 0.0], localDirection: [-1, 0.3, 0] },
+        { quadrant: 'port', localOffset: [-0.6, 0.4, -0.5], localDirection: [-1, 0.3, 0] },
+        { quadrant: 'port', localOffset: [-0.6, 0.4, -1.0], localDirection: [-1, 0.3, 0] },
+        // Starboard broadside (4) — pulled inward (x: 1.2→0.6) and lowered (y: 0.8→0.4)
+        { quadrant: 'starboard', localOffset: [0.6, 0.4, 1.0], localDirection: [1, 0.3, 0] },
+        { quadrant: 'starboard', localOffset: [0.6, 0.4, 0.0], localDirection: [1, 0.3, 0] },
+        { quadrant: 'starboard', localOffset: [0.6, 0.4, -0.5], localDirection: [1, 0.3, 0] },
+        { quadrant: 'starboard', localOffset: [0.6, 0.4, -1.0], localDirection: [1, 0.3, 0] },
+        // Aft (1 small) — lowered (y: 0.8→0.4), x stays 0
+        { quadrant: 'aft', localOffset: [0, 0.4, -2.0], localDirection: [0, 0.3, -1] },
       ],
     },
   },
