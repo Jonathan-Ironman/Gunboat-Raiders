@@ -1,8 +1,10 @@
 /**
  * Rock entity -- static rigid body with a Kenney pirate-kit rock GLB model.
  *
- * Six distinct GLB variants (rocks-a/b/c + rocks-sand-a/b/c) are selected
- * via the `variant` field on RockConfig so the world has visual variety.
+ * Three light-grey GLB variants (rocks-sand-a/b/c) are selected via the
+ * `variant` field on RockConfig so the world has visual variety. The plain
+ * `rocks-a/b/c` dark-grey variants were removed from the pool after the
+ * 2026-04-11 playtest (see src/utils/rockPreload.ts for details).
  */
 
 import { useGLTF } from '@react-three/drei';

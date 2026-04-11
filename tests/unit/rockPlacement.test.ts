@@ -101,8 +101,32 @@ describe('generateRockPositions', () => {
   it('multiple variant values are used across rocks (variety check)', () => {
     const rocks = generateRockPositions(SEED, COUNT, ARENA_RADIUS, SAFE_ZONE_RADIUS, MIN_SPACING);
     const usedVariants = new Set(rocks.map((r) => r.variant));
-    // With 20 rocks across 6 variants, expect at least 3 distinct variants
-    expect(usedVariants.size).toBeGreaterThanOrEqual(3);
+    // With 20 rocks across ROCK_VARIANT_COUNT variants we expect every
+    // available variant to be exercised (floor(rng()*3) over 20 draws).
+    expect(usedVariants.size).toBe(ROCK_VARIANT_COUNT);
+  });
+
+  it('every rock is perfectly level (roll = 0, pitch = 0)', () => {
+    const rocks = generateRockPositions(SEED, COUNT, ARENA_RADIUS, SAFE_ZONE_RADIUS, MIN_SPACING);
+    expect(rocks.length).toBeGreaterThan(0);
+    for (const rock of rocks) {
+      // rotation is stored as [rotX (roll), rotY (yaw), rotZ (pitch)].
+      // Rocks are grounded on the seabed, so only yaw is allowed.
+      expect(rock.rotation[0]).toBe(0);
+      expect(rock.rotation[2]).toBe(0);
+    }
+  });
+
+  it('every rock has a seed-based Y-axis rotation in [0, 2π)', () => {
+    const rocks = generateRockPositions(SEED, COUNT, ARENA_RADIUS, SAFE_ZONE_RADIUS, MIN_SPACING);
+    const TWO_PI = Math.PI * 2;
+    for (const rock of rocks) {
+      expect(rock.rotation[1]).toBeGreaterThanOrEqual(0);
+      expect(rock.rotation[1]).toBeLessThan(TWO_PI);
+    }
+    // Sanity: yaw should actually vary across rocks, not all be the same.
+    const distinctYaws = new Set(rocks.map((r) => r.rotation[1]));
+    expect(distinctYaws.size).toBeGreaterThan(1);
   });
 
   it('handles count=0 (returns empty array)', () => {

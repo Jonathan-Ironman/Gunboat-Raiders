@@ -4,12 +4,19 @@ export interface RockConfig {
   position: [number, number, number];
   scale: [number, number, number];
   rotation: [number, number, number];
-  /** Index into ROCK_VARIANTS (0–5) — selects which GLB model to render. */
+  /** Index in [0, ROCK_VARIANT_COUNT) — selects which GLB model to render. */
   variant: number;
 }
 
-/** Total number of distinct rock GLB models available. */
-export const ROCK_VARIANT_COUNT = 6;
+/**
+ * Total number of distinct rock GLB models available.
+ *
+ * Matches the length of ROCK_MODEL_PATHS in src/utils/rockPreload.ts.
+ * Currently 3 (the light-grey `rocks-sand-*` variants); the dark-grey
+ * `rocks-a/b/c` variants were removed from the pool during the 2026-04-11
+ * playtest because their colormap sampling reads as near-black.
+ */
+export const ROCK_VARIANT_COUNT = 3;
 
 /** Maximum placement retries per rock before skipping. */
 const MAX_RETRIES = 20;
@@ -100,16 +107,17 @@ export function generateRockPositions(
           const scaleY = SCALE_MIN[1] + rng() * (maxScaleY - SCALE_MIN[1]);
           const scaleZ = SCALE_MIN[2] + rng() * (maxScaleZ - SCALE_MIN[2]);
 
-          const rotX = rng() * TWO_PI;
+          // Rocks are grounded on the seabed -- only yaw (Y-axis) varies.
+          // Roll (X) and pitch (Z) must stay at 0 so rocks sit level; the
+          // Kenney models are modelled upright and look wrong when tilted.
           const rotY = rng() * TWO_PI;
-          const rotZ = rng() * TWO_PI;
 
           const variant = Math.floor(rng() * ROCK_VARIANT_COUNT);
 
           rocks.push({
             position: [x, 0, z],
             scale: [scaleX, scaleY, scaleZ],
-            rotation: [rotX, rotY, rotZ],
+            rotation: [0, rotY, 0],
             variant,
           });
           placed = true;
