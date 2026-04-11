@@ -82,6 +82,21 @@ function embossShadow(edgeColor: string, glowColor: string): string {
   return `0 4px 0 ${edgeColor}, 0 6px 18px ${glowColor}`;
 }
 
+/**
+ * Builds a three-layer emboss shadow: the standard two-layer base
+ * (hard bottom edge + drop-shadow) plus an additional ambient accent
+ * bloom (`0 0 24px <accentColor>`).
+ *
+ * Used for secondary and destructive variants so they have a visible
+ * outer glow against the dark `SURFACE_EL` background. The accent
+ * color differs by variant:
+ * - secondary → ocean-blue ambient (subtle "lit panel" effect)
+ * - destructive → faint red bloom (danger hint without alarming red)
+ */
+function embossShadowWithAccent(edgeColor: string, glowColor: string, accentColor: string): string {
+  return `0 4px 0 ${edgeColor}, 0 6px 18px ${glowColor}, 0 0 24px ${accentColor}`;
+}
+
 // ---------------------------------------------------------------------------
 // Shadow edge + glow colors per variant
 // ---------------------------------------------------------------------------
@@ -109,15 +124,31 @@ const SECONDARY_EDGE = '#0a1a2d';
 const DESTRUCTIVE_EDGE = '#7a1a1a';
 
 /**
- * Shared drop-shadow used by ALL button variants.
+ * Shared drop-shadow glow color used by ALL button variants.
  *
- * The per-variant colored glows (gold, red) were visually inconsistent:
- * the gold glow washed out the depth illusion while the neutral black
- * created clear depth. Unifying to a single dark drop-shadow ensures
- * every button has identical perceived depth — only the background
- * color differs between variants.
+ * Raised from 0.35 to 0.6 opacity so the outer halo is actually
+ * visible when the button sits on the dark `SURFACE_EL` (#1c3556)
+ * background — at 0.35 the near-black shadow was indistinguishable
+ * from the surface itself.
  */
-const SHARED_DROP_SHADOW = 'rgba(7, 17, 32, 0.35)';
+const SHARED_DROP_SHADOW = 'rgba(7, 17, 32, 0.6)';
+
+/**
+ * Subtle ocean-blue ambient bloom added on top of the shared drop-shadow
+ * so secondary buttons have a visible outer glow on dark surfaces.
+ * Uses the `OCEAN` hue family (rgba of #4a8ac4) at low opacity so it
+ * reads as "lit from behind" rather than a colored accent.
+ */
+const SECONDARY_AMBIENT_GLOW = 'rgba(74, 138, 196, 0.18)';
+
+/**
+ * Resting red accent glow that distinguishes the destructive variant
+ * from plain secondary buttons without making it aggressively red.
+ * Applied as a third shadow layer on top of the base emboss stack.
+ * Uses `RED_DARK` (#cc3333) at low opacity so it reads as a faint
+ * danger hint rather than an alarm.
+ */
+const DESTRUCTIVE_REST_GLOW = 'rgba(204, 51, 51, 0.25)';
 
 // ---------------------------------------------------------------------------
 // Recipe shape
@@ -198,6 +229,10 @@ const primary: CSSProperties = {
  * shadow stack, font, everything. Only the background + text color
  * + shadow colors change.
  *
+ * Uses a three-layer shadow: hard bottom edge + drop-shadow +
+ * subtle ocean-blue ambient bloom so the glow is actually visible
+ * against the dark `SURFACE_EL` background.
+ *
  * Note: unlike the legacy secondary style this does NOT carry a
  * 1px `BORDER` border. The emboss edge provides the lift, and
  * layering a solid border on top would flatten it.
@@ -205,25 +240,27 @@ const primary: CSSProperties = {
 const secondary: CSSProperties = {
   background: SURFACE_EL,
   color: TEXT_PRI,
-  boxShadow: embossShadow(SECONDARY_EDGE, SHARED_DROP_SHADOW),
+  boxShadow: embossShadowWithAccent(SECONDARY_EDGE, SHARED_DROP_SHADOW, SECONDARY_AMBIENT_GLOW),
 };
 
 /**
- * Destructive variant — rests in the same neutral state as secondary
- * so the button does not alarm the user before they interact with it.
- * Only the `:hover` state reveals the danger — the CSS stylesheet
- * below transitions to a red gradient when the user mouses over.
+ * Destructive variant — structurally identical to secondary at rest:
+ * same neutral background, same emboss edge, same text color.
  *
- * Default state is visually identical to secondary: same background,
- * same emboss edge color, same text color. This satisfies Jonathan's
- * request: "in de normale staat mag deze gewoon grijs zijn, zoals de
- * andere buttons" (in the normal state it should just be grey, like
- * the other buttons).
+ * The `:hover` state reveals the red danger (CSS stylesheet below
+ * transitions to a red gradient on mouse-over). At rest the button
+ * carries only a faint red ambient bloom (`DESTRUCTIVE_REST_GLOW`)
+ * as a third shadow layer — subtle enough that it does not alarm the
+ * player, but distinct enough that a side-by-side comparison with a
+ * plain secondary still reads differently.
+ *
+ * Shadow stack: hard bottom edge + shared drop-shadow (identical to
+ * secondary base) + `0 0 24px rgba(204, 51, 51, 0.25)` red tint.
  */
 const destructive: CSSProperties = {
   background: SURFACE_EL,
   color: TEXT_PRI,
-  boxShadow: embossShadow(SECONDARY_EDGE, SHARED_DROP_SHADOW),
+  boxShadow: embossShadowWithAccent(SECONDARY_EDGE, SHARED_DROP_SHADOW, DESTRUCTIVE_REST_GLOW),
 };
 
 /**
@@ -373,13 +410,24 @@ export function buttonStylesheet(): string {
  */
 export const __test_embossShadow = embossShadow;
 
+/**
+ * Internal three-layer emboss-shadow helper, re-exported for tests so
+ * the `0 4px 0 <edge>, 0 6px 18px <glow>, 0 0 24px <accent>` shape
+ * is locked in a single spot. Not intended for production use.
+ */
+export const __test_embossShadowWithAccent = embossShadowWithAccent;
+
 /** Internal edge colors and shared drop-shadow, re-exported for tests. */
 export const __test_edges = {
   primary: PRIMARY_EDGE,
   secondary: SECONDARY_EDGE,
   destructive: DESTRUCTIVE_EDGE,
-  /** The single shared drop-shadow applied to all three variants. */
+  /** The shared dark drop-shadow applied to all three variants as the second layer. */
   sharedDropShadow: SHARED_DROP_SHADOW,
+  /** Ocean-blue ambient glow added as third layer to secondary buttons. */
+  secondaryAmbientGlow: SECONDARY_AMBIENT_GLOW,
+  /** Faint red ambient bloom added as third layer to destructive buttons. */
+  destructiveRestGlow: DESTRUCTIVE_REST_GLOW,
 } as const;
 
 // ---------------------------------------------------------------------------

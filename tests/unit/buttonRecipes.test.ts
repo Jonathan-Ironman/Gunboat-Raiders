@@ -28,6 +28,7 @@ import {
   BUTTON_RECIPE,
   __test_edges,
   __test_embossShadow,
+  __test_embossShadowWithAccent,
   PANEL_BORDER,
 } from '../../src/ui/buttonRecipes';
 import {
@@ -128,9 +129,19 @@ describe('BUTTON_RECIPE.secondary', () => {
     expect(BUTTON_RECIPE.secondary.color).toBe(TEXT_PRI);
   });
 
-  it('uses the same emboss shadow shape as primary with the shared drop-shadow', () => {
-    const expected = __test_embossShadow(__test_edges.secondary, __test_edges.sharedDropShadow);
+  it('uses a three-layer emboss shadow: hard edge + drop-shadow + ocean ambient bloom', () => {
+    const expected = __test_embossShadowWithAccent(
+      __test_edges.secondary,
+      __test_edges.sharedDropShadow,
+      __test_edges.secondaryAmbientGlow,
+    );
     expect(BUTTON_RECIPE.secondary.boxShadow).toBe(expected);
+  });
+
+  it('boxShadow contains the shared drop-shadow base layer', () => {
+    expect(String(BUTTON_RECIPE.secondary.boxShadow ?? '')).toContain(
+      __test_edges.sharedDropShadow,
+    );
   });
 
   it('does NOT declare its own border (emboss shadow provides the lift)', () => {
@@ -146,7 +157,8 @@ describe('BUTTON_RECIPE.destructive', () => {
   /**
    * Destructive rests in the same neutral state as secondary — "in de
    * normale staat mag deze gewoon grijs zijn, zoals de andere buttons".
-   * Only the CSS :hover rule reveals the red danger state.
+   * Only the CSS :hover rule reveals the full red danger state.
+   * At rest a faint red ambient bloom distinguishes it from plain secondary.
    */
   it('default background equals secondary background (grey rest state)', () => {
     expect(BUTTON_RECIPE.destructive.background).toBe(BUTTON_RECIPE.secondary.background);
@@ -156,13 +168,32 @@ describe('BUTTON_RECIPE.destructive', () => {
     expect(BUTTON_RECIPE.destructive.color).toBe(BUTTON_RECIPE.secondary.color);
   });
 
-  it('default boxShadow equals secondary boxShadow (same grey emboss edge in rest state)', () => {
-    expect(BUTTON_RECIPE.destructive.boxShadow).toBe(BUTTON_RECIPE.secondary.boxShadow);
+  it('default boxShadow differs from secondary — destructive adds a red ambient layer', () => {
+    expect(BUTTON_RECIPE.destructive.boxShadow).not.toBe(BUTTON_RECIPE.secondary.boxShadow);
   });
 
-  it('uses the same emboss shadow shape as secondary with the shared drop-shadow', () => {
-    const expected = __test_embossShadow(__test_edges.secondary, __test_edges.sharedDropShadow);
+  it('uses a three-layer emboss shadow: hard edge + drop-shadow + red ambient glow', () => {
+    const expected = __test_embossShadowWithAccent(
+      __test_edges.secondary,
+      __test_edges.sharedDropShadow,
+      __test_edges.destructiveRestGlow,
+    );
     expect(BUTTON_RECIPE.destructive.boxShadow).toBe(expected);
+  });
+
+  it('boxShadow contains the shared drop-shadow base layer (same foundation as secondary)', () => {
+    expect(String(BUTTON_RECIPE.destructive.boxShadow ?? '')).toContain(
+      __test_edges.sharedDropShadow,
+    );
+  });
+
+  it('boxShadow contains a red ambient glow layer that secondary does not have', () => {
+    expect(String(BUTTON_RECIPE.destructive.boxShadow ?? '')).toContain(
+      __test_edges.destructiveRestGlow,
+    );
+    expect(String(BUTTON_RECIPE.secondary.boxShadow ?? '')).not.toContain(
+      __test_edges.destructiveRestGlow,
+    );
   });
 
   it('uses SURFACE_EL background (same as secondary) not a red gradient', () => {

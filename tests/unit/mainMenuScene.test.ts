@@ -277,7 +277,7 @@ describe('mainMenuScene.helpers — style recipes use tokens', () => {
     expect(mainMenuButtonPrimaryStyle.color).toBe(BTN_PRI_COLOR);
     // Shadow uses gold edge + shared dark drop-shadow (not a per-variant gold glow)
     expect(String(mainMenuButtonPrimaryStyle.boxShadow ?? '')).toContain('#9a6808');
-    expect(String(mainMenuButtonPrimaryStyle.boxShadow ?? '')).toContain('rgba(7, 17, 32, 0.35)');
+    expect(String(mainMenuButtonPrimaryStyle.boxShadow ?? '')).toContain('rgba(7, 17, 32, 0.6)');
   });
 
   it('secondary button variant uses SURFACE_EL background + shared emboss shadow', () => {
