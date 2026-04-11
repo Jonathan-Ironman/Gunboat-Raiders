@@ -48,6 +48,17 @@ export function getProjectilePoolManager(): ProjectilePoolManager | null {
   return poolManagerRef;
 }
 
+/** Separate pool manager for enemy-fired projectiles. */
+let enemyPoolManagerRef: ProjectilePoolManager | null = null;
+
+export function setEnemyProjectilePoolManager(manager: ProjectilePoolManager | null): void {
+  enemyPoolManagerRef = manager;
+}
+
+export function getEnemyProjectilePoolManager(): ProjectilePoolManager | null {
+  return enemyPoolManagerRef;
+}
+
 /** Pool-slot metadata keyed by pool index. */
 const slotMetadata = new Map<number, ProjectileSlotMetadata>();
 
@@ -91,4 +102,30 @@ export function drainPendingProjectileDeactivations(): number[] {
 
 export function clearAllPendingProjectileDeactivations(): void {
   pendingDeactivations.clear();
+}
+
+/**
+ * Separate deactivation queue for the enemy projectile pool.
+ * Kept distinct so ProjectileSystemR3F can drain each pool's queue with
+ * the correct pool manager without index aliasing.
+ */
+const pendingEnemyDeactivations = new Set<number>();
+
+export function queueEnemyProjectileDeactivation(index: number): void {
+  pendingEnemyDeactivations.add(index);
+}
+
+export function isEnemyProjectileDeactivationPending(index: number): boolean {
+  return pendingEnemyDeactivations.has(index);
+}
+
+export function drainPendingEnemyProjectileDeactivations(): number[] {
+  if (pendingEnemyDeactivations.size === 0) return [];
+  const indices = Array.from(pendingEnemyDeactivations);
+  pendingEnemyDeactivations.clear();
+  return indices;
+}
+
+export function clearAllPendingEnemyProjectileDeactivations(): void {
+  pendingEnemyDeactivations.clear();
 }

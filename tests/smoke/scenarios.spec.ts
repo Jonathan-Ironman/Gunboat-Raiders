@@ -663,4 +663,91 @@ test.describe('End-to-end gameplay scenarios', () => {
       ).toBeGreaterThan(0);
     }
   });
+
+  test('10 — activeQuadrant updates from mouse position when pointer lock is released', async ({
+    page,
+  }) => {
+    // Regression test for the pointer-lock azimuth freeze bug.
+    //
+    // When pointer lock is active the camera azimuth updates from movementX
+    // deltas (correct). When pointer lock is released, movementX is always 0
+    // so azimuthRef freezes — and with it activeQuadrant freezes too.
+    //
+    // The fix: when pointer lock is NOT active, compute the active quadrant
+    // from raw mouse cursor position relative to canvas center. Moving the
+    // cursor to the right half of the canvas => starboard; left half => port.
+    //
+    // BASELINE (before fix): this test FAILS because activeQuadrant never
+    // changes after pointer lock is released regardless of mouse position.
+    // AFTER FIX: the test passes because quadrant tracks cursor position.
+    test.setTimeout(60_000);
+
+    await startPlaying(page);
+    await page.waitForTimeout(3_000);
+
+    // Release pointer lock (if held by the canvas from startPlaying)
+    await page.evaluate(() => {
+      document.exitPointerLock();
+    });
+    await page.waitForTimeout(200);
+
+    // Get canvas bounding box so we can compute meaningful cursor positions
+    const canvas = page.locator('canvas');
+    const bbox = await canvas.boundingBox();
+    if (!bbox) throw new Error('Canvas not found');
+
+    const cx = bbox.x + bbox.width / 2;
+    const cy = bbox.y + bbox.height / 2;
+
+    // Move mouse to right side of canvas — should resolve to 'starboard'
+    await page.mouse.move(bbox.x + bbox.width * 0.75, cy);
+    await page.waitForTimeout(200);
+
+    const quadrantAfterRightMove = await page.evaluate<string>(() => {
+      const w = window as unknown as {
+        __ZUSTAND_STORE__?: { getState: () => { activeQuadrant: string } };
+      };
+      return w.__ZUSTAND_STORE__?.getState().activeQuadrant ?? 'unknown';
+    });
+
+    // Move mouse to left side of canvas — should resolve to 'port'
+    await page.mouse.move(bbox.x + bbox.width * 0.25, cy);
+    await page.waitForTimeout(200);
+
+    const quadrantAfterLeftMove = await page.evaluate<string>(() => {
+      const w = window as unknown as {
+        __ZUSTAND_STORE__?: { getState: () => { activeQuadrant: string } };
+      };
+      return w.__ZUSTAND_STORE__?.getState().activeQuadrant ?? 'unknown';
+    });
+
+    // Move mouse to top-center — should resolve to 'fore'
+    await page.mouse.move(cx, bbox.y + bbox.height * 0.1);
+    await page.waitForTimeout(200);
+
+    const quadrantAfterTopMove = await page.evaluate<string>(() => {
+      const w = window as unknown as {
+        __ZUSTAND_STORE__?: { getState: () => { activeQuadrant: string } };
+      };
+      return w.__ZUSTAND_STORE__?.getState().activeQuadrant ?? 'unknown';
+    });
+
+    expect(
+      quadrantAfterRightMove,
+      `Mouse on right side of canvas (no pointer lock) should yield 'starboard'. ` +
+        `Got: '${quadrantAfterRightMove}'`,
+    ).toBe('starboard');
+
+    expect(
+      quadrantAfterLeftMove,
+      `Mouse on left side of canvas (no pointer lock) should yield 'port'. ` +
+        `Got: '${quadrantAfterLeftMove}'`,
+    ).toBe('port');
+
+    expect(
+      quadrantAfterTopMove,
+      `Mouse at top-center of canvas (no pointer lock) should yield 'fore'. ` +
+        `Got: '${quadrantAfterTopMove}'`,
+    ).toBe('fore');
+  });
 });

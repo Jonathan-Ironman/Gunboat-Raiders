@@ -9,9 +9,6 @@ export const useWaveNumber = () => useGameStore((s) => s.wave);
 /** Current score. */
 export const useScore = () => useGameStore((s) => s.score);
 
-/** Currently active firing quadrant. */
-export const useActiveQuadrant = () => useGameStore((s) => s.activeQuadrant);
-
 /** Current game phase. */
 export const useGamePhase = () => useGameStore((s) => s.phase);
 

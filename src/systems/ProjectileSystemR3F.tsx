@@ -11,7 +11,9 @@ import { useGameStore } from '@/store/gameStore';
 import { getExpiredProjectiles } from './ProjectileSystem';
 import {
   getProjectilePoolManager,
+  getEnemyProjectilePoolManager,
   drainPendingProjectileDeactivations,
+  drainPendingEnemyProjectileDeactivations,
 } from './projectilePoolRefs';
 import { getAllProjectileBodyStates } from './physicsRefs';
 import { emitVfxEvent } from '@/effects/vfxEvents';
@@ -36,6 +38,15 @@ export function ProjectileSystemR3F() {
       const pending = drainPendingProjectileDeactivations();
       for (const i of pending) {
         poolManagerEarly.deactivate(i);
+      }
+    }
+
+    // Drain enemy pool deactivations with the enemy pool manager
+    const enemyPoolManagerEarly = getEnemyProjectilePoolManager();
+    if (enemyPoolManagerEarly) {
+      const enemyPending = drainPendingEnemyProjectileDeactivations();
+      for (const i of enemyPending) {
+        enemyPoolManagerEarly.deactivate(i);
       }
     }
 

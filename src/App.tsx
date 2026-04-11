@@ -9,6 +9,7 @@ import { SkySetup } from './environment/Sky';
 import { PlayerBoat } from './entities/PlayerBoat';
 import { EnemyBoat } from './entities/EnemyBoat';
 import { ProjectilePool } from './entities/ProjectilePool';
+import { EnemyProjectilePool } from './entities/EnemyProjectilePool';
 import { BuoyancySystemR3F } from './systems/BuoyancySystemR3F';
 import { MovementSystemR3F } from './systems/MovementSystemR3F';
 import { CameraSystemR3F } from './systems/CameraSystemR3F';
@@ -63,6 +64,7 @@ function GameEntities() {
       <PlayerBoat />
       <EnemyFleet />
       <ProjectilePool />
+      <EnemyProjectilePool />
       <BuoyancySystemR3F />
       <MovementSystemR3F />
       <WeaponSystemR3F />

@@ -4,9 +4,12 @@
  * Ticks cooldowns, listens for mouse click to fire,
  * spawns projectiles through the pool manager.
  *
- * Firing requires pointer lock to be active (left click while locked fires
- * cannons). The first canvas click acquires pointer lock (handled by
- * CameraSystemR3F); subsequent clicks trigger fire.
+ * Firing works whenever the game phase is 'playing'. The pointer-lock gate
+ * has been intentionally removed: pointer lock can be lost at any time
+ * (Escape, alt-tab, browser focus change) and silently dropping clicks when
+ * lock is absent makes firing feel broken. The game already requires an
+ * initial canvas click to enter playing state, so any left-click during
+ * 'playing' phase is a valid fire intent.
  */
 
 import { useEffect, useCallback, useRef } from 'react';
@@ -21,11 +24,12 @@ import { emitVfxEvent } from '@/effects/vfxEvents';
 export function WeaponSystemR3F() {
   const fireRequestedRef = useRef(false);
 
-  // Listen for mousedown on document to capture clicks while pointer-locked.
-  // Pointer lock must be active (acquired by CameraSystemR3F on first canvas
-  // click) — the first click requests lock and does not fire.
+  // Listen for left-click on document. Fire whenever the game is in the
+  // 'playing' phase — no pointer-lock requirement. Pointer lock is acquired
+  // by CameraSystemR3F for mouse-look, but losing it must not silently
+  // disable firing.
   const onMouseDown = useCallback((e: MouseEvent) => {
-    if (e.button === 0 && document.pointerLockElement !== null) {
+    if (e.button === 0 && useGameStore.getState().phase === 'playing') {
       fireRequestedRef.current = true;
     }
   }, []);

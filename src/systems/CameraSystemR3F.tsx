@@ -5,6 +5,14 @@
  * Uses pointer lock so camera rotates freely without requiring a mouse button hold.
  * Each frame: positions camera around player, computes active firing quadrant.
  *
+ * When pointer lock is active, azimuth updates from movementX deltas (accurate).
+ * When pointer lock is NOT active (e.g. after Escape or alt-tab), the azimuth
+ * is frozen but the active firing quadrant falls back to a cursor-position-based
+ * computation: the angle from canvas center to the mouse cursor determines which
+ * quadrant the player is aiming at. This prevents the frozen-quadrant bug where
+ * clicking after lock loss always fires into a stale, potentially-cooldown-blocked
+ * quadrant.
+ *
  * Includes a position guard to prevent the camera from following the player
  * body to extreme positions during initial physics stabilization.
  */
@@ -47,6 +55,13 @@ export function CameraSystemR3F() {
   const isPointerLockedRef = useRef(false);
 
   /**
+   * Raw mouse cursor position in page coordinates.
+   * Updated on every mousemove event — works regardless of pointer-lock state.
+   * Used to compute the active quadrant when pointer lock is not held.
+   */
+  const mousePosRef = useRef({ x: 0, y: 0 });
+
+  /**
    * Last quadrant we wrote to the store. Kept here (not read from the store)
    * so that external callers — particularly automated tests that call
    * `setActiveQuadrant` directly — can override the quadrant without the
@@ -56,7 +71,11 @@ export function CameraSystemR3F() {
   const lastWrittenQuadrantRef = useRef<ReturnType<typeof computeQuadrant> | null>(null);
 
   const onMouseMove = useCallback((e: MouseEvent) => {
-    // Only rotate camera when pointer is locked — raw movementX/Y give true deltas
+    // Always track raw cursor position — used for quadrant computation when lock is absent.
+    mousePosRef.current = { x: e.clientX, y: e.clientY };
+
+    // Only update azimuth from deltas when pointer is locked.
+    // movementX/Y are unreliable (usually 0) without pointer lock.
     if (!isPointerLockedRef.current) return;
     azimuthRef.current -= e.movementX * CAMERA_SENSITIVITY_X;
     elevationRef.current = Math.max(
@@ -143,11 +162,38 @@ export function CameraSystemR3F() {
     _euler.setFromQuaternion(_quat, 'YXZ');
     const boatHeading = _euler.y;
 
-    // Compute active quadrant and only push to the store when OUR computed
-    // value changes — not when the store value disagrees. This allows
-    // external callers (e.g. tests) to set the quadrant independently
-    // without the camera system immediately overwriting it every frame.
-    const quadrant = computeQuadrant(cameraAngle, boatHeading);
+    // Determine the active quadrant.
+    //
+    // When pointer lock is active: use the camera orbit azimuth (accurate,
+    // reflects actual camera orientation from pointer deltas).
+    //
+    // When pointer lock is NOT active: the azimuth is frozen (movementX/Y are
+    // unreliable without lock). Fall back to computing the quadrant from the
+    // raw mouse cursor position relative to canvas center. The angle from
+    // canvas center to cursor is treated as a camera-relative direction, giving
+    // the player intuitive cursor-based quadrant selection while lock is absent.
+    let quadrant: ReturnType<typeof computeQuadrant>;
+    if (isPointerLockedRef.current) {
+      quadrant = computeQuadrant(cameraAngle, boatHeading);
+    } else {
+      const domElement = gl.domElement;
+      const rect = domElement.getBoundingClientRect();
+      const dx = mousePosRef.current.x - (rect.left + rect.width / 2);
+      // Invert dy so "up on screen" = positive (matches math convention: fore is up)
+      const dy = -(mousePosRef.current.y - (rect.top + rect.height / 2));
+      // Angle of the cursor from canvas center, in world-space terms.
+      // atan2(dx, dy): dy is "forward" (up on screen = fore), dx is "right" (starboard).
+      const cursorAngle = Math.atan2(dx, dy);
+      // The cursor angle is relative to the canvas — treat it as an absolute
+      // world-space azimuth (same coordinate system as boatHeading) so that
+      // computeQuadrant correctly maps it to port/starboard/fore/aft.
+      quadrant = computeQuadrant(cursorAngle + boatHeading, boatHeading);
+    }
+
+    // Only push to the store when OUR computed value changes — not when the
+    // store value disagrees. This allows external callers (e.g. tests) to set
+    // the quadrant independently without the camera system immediately
+    // overwriting it every frame.
     if (lastWrittenQuadrantRef.current !== quadrant) {
       lastWrittenQuadrantRef.current = quadrant;
       useGameStore.getState().setActiveQuadrant(quadrant);

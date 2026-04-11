@@ -48,7 +48,7 @@ test.describe('UI smoke tests', () => {
     await expect(scoreDisplay).toBeVisible({ timeout: 5_000 });
   });
 
-  test('quadrant indicator has 4 directional segments', async ({ page }) => {
+  test('crosshair is not rendered during gameplay', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
@@ -56,13 +56,25 @@ test.describe('UI smoke tests', () => {
     await expect(startButton).toBeVisible({ timeout: 15_000 });
     await startButton.click();
 
-    const quadrant = page.locator('[data-testid="quadrant-indicator"]');
-    await expect(quadrant).toBeVisible({ timeout: 5_000 });
+    const hud = page.locator('[data-testid="hud"]');
+    await expect(hud).toBeVisible({ timeout: 5_000 });
 
-    // Check all 4 segments exist
-    await expect(page.locator('[data-testid="quadrant-f"]')).toBeVisible();
-    await expect(page.locator('[data-testid="quadrant-a"]')).toBeVisible();
-    await expect(page.locator('[data-testid="quadrant-p"]')).toBeVisible();
-    await expect(page.locator('[data-testid="quadrant-s"]')).toBeVisible();
+    // Crosshair must be absent — trajectory lines serve as the aiming cue
+    await expect(page.locator('[data-testid="crosshair"]')).toHaveCount(0);
+  });
+
+  test('quadrant indicator is not rendered during gameplay', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+
+    const startButton = page.locator('[data-testid="start-button"]');
+    await expect(startButton).toBeVisible({ timeout: 15_000 });
+    await startButton.click();
+
+    const hud = page.locator('[data-testid="hud"]');
+    await expect(hud).toBeVisible({ timeout: 5_000 });
+
+    // Quadrant indicator diamonds must be absent
+    await expect(page.locator('[data-testid="quadrant-indicator"]')).toHaveCount(0);
   });
 });

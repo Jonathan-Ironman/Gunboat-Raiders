@@ -8,7 +8,7 @@ import { useFrame } from '@react-three/fiber';
 import { Euler, Quaternion } from 'three';
 import { useGameStore } from '@/store/gameStore';
 import { getEnemyBody, getPlayerBodyState, getEnemyBodyState } from './physicsRefs';
-import { getProjectilePoolManager } from './projectilePoolRefs';
+import { getEnemyProjectilePoolManager } from './projectilePoolRefs';
 import { computeAIDecision } from './AISystem';
 import type { AIContext } from './AISystem';
 import { computeFireData, tickCooldowns, canFire } from './WeaponSystem';
@@ -132,7 +132,7 @@ export function AISystemR3F() {
             enemy.weapons.elevationAngle,
           );
 
-          const poolManager = getProjectilePoolManager();
+          const poolManager = getEnemyProjectilePoolManager();
           if (poolManager) {
             for (const spawn of spawns) {
               poolManager.activate(
