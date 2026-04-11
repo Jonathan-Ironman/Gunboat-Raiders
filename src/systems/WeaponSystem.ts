@@ -136,6 +136,13 @@ export interface ProjectileSpawn {
  * @param boatRotation - Boat world rotation as quaternion [x, y, z, w]
  * @param muzzleVelocity - Speed of the projectile
  * @param elevationAngle - Upward angle in radians added to the fire direction
+ * @param yawOffset - Optional fine-aim yaw delta in radians. Rotates the
+ *   horizontal component of each mount's world direction around the Y
+ *   axis before the elevation is applied. Positive values yaw toward the
+ *   quadrant's clockwise edge (right-hand rule around +Y). Default: 0.
+ * @param pitchOffset - Optional fine-aim pitch delta in radians, ADDED to
+ *   `elevationAngle` before the sin/cos split. Positive values tilt the
+ *   shot higher (more arc), negative flatter. Default: 0.
  * @returns Array of spawn data for each mount in the quadrant
  */
 export function computeFireData(
@@ -145,9 +152,20 @@ export function computeFireData(
   boatRotation: [number, number, number, number],
   muzzleVelocity: number,
   elevationAngle: number,
+  yawOffset = 0,
+  pitchOffset = 0,
 ): ProjectileSpawn[] {
   const quadrantMounts = mounts.filter((m) => m.quadrant === quadrant);
   const [qx, qy, qz, qw] = boatRotation;
+
+  // Pre-compute trig for the two offsets — identical for every mount in
+  // the quadrant since the offset is a player-aim delta, not a per-mount
+  // property.
+  const cosYaw = Math.cos(yawOffset);
+  const sinYaw = Math.sin(yawOffset);
+  const effectiveElevation = elevationAngle + pitchOffset;
+  const cosElev = Math.cos(effectiveElevation);
+  const sinElev = Math.sin(effectiveElevation);
 
   return quadrantMounts.map((mount) => {
     // Transform local offset to world space using quaternion rotation
@@ -161,18 +179,27 @@ export function computeFireData(
     // Transform local direction to world space
     const worldDir = rotateByQuaternion(mount.localDirection, qx, qy, qz, qw);
 
-    // Normalize the horizontal component and add elevation
+    // Normalize the horizontal component, apply yaw offset around the
+    // world Y axis, then apply elevation (base + pitch offset).
     const hLen = Math.sqrt(worldDir[0] * worldDir[0] + worldDir[2] * worldDir[2]);
     let dirX: number;
     let dirY: number;
     let dirZ: number;
 
     if (hLen > 0.0001) {
-      const cosElev = Math.cos(elevationAngle);
-      const sinElev = Math.sin(elevationAngle);
-      dirX = (worldDir[0] / hLen) * cosElev;
+      // Horizontal unit direction of the mount.
+      const hx = worldDir[0] / hLen;
+      const hz = worldDir[2] / hLen;
+      // Rotate (hx, hz) around +Y by yawOffset. Standard 2D rotation in
+      // the XZ plane with +Y pointing UP (right-hand rule): a positive
+      // yaw sends +Z toward +X, i.e. the matrix
+      //   [ cosY  sinY ] [hx]
+      //   [-sinY  cosY ] [hz]
+      const rx = hx * cosYaw + hz * sinYaw;
+      const rz = -hx * sinYaw + hz * cosYaw;
+      dirX = rx * cosElev;
       dirY = sinElev;
-      dirZ = (worldDir[2] / hLen) * cosElev;
+      dirZ = rz * cosElev;
     } else {
       // Degenerate case: direction is purely vertical
       dirX = 0;

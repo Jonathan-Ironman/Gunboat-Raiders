@@ -16,6 +16,7 @@ import {
 } from 'three';
 import { useGameStore, type FiringQuadrant, type WeaponMount } from '@/store/gameStore';
 import { getPlayerBodyState } from '@/systems/physicsRefs';
+import { getAimOffset } from '@/systems/aimOffsetRefs';
 
 const TRAJECTORY_STEPS = 60;
 const TRAJECTORY_DT = 0.05; // seconds per step
@@ -123,17 +124,32 @@ export function TrajectoryPreview() {
     const startY = bPos.y + worldOffset[1];
     const startZ = bPos.z + worldOffset[2];
 
-    // Transform direction to world space and apply elevation
+    // Transform direction to world space, apply the same fine-aim yaw +
+    // pitch offsets as the weapon pipeline, then add the base elevation.
+    // These MUST match computeFireData's math exactly — otherwise the
+    // preview arc and the real projectile path would diverge, which
+    // silently breaks the player's ability to learn to aim.
     const worldDir = rotateVec(mountData.direction, bRot.x, bRot.y, bRot.z, bRot.w);
     const hLen = Math.sqrt(worldDir[0] * worldDir[0] + worldDir[2] * worldDir[2]);
 
+    const aim = getAimOffset();
+    const cosYaw = Math.cos(aim.yaw);
+    const sinYaw = Math.sin(aim.yaw);
+    const effectiveElevation = player.weapons.elevationAngle + aim.pitch;
+    const cosElev = Math.cos(effectiveElevation);
+    const sinElev = Math.sin(effectiveElevation);
+
     let dirX: number, dirY: number, dirZ: number;
     if (hLen > 0.0001) {
-      const cosElev = Math.cos(player.weapons.elevationAngle);
-      const sinElev = Math.sin(player.weapons.elevationAngle);
-      dirX = (worldDir[0] / hLen) * cosElev;
+      const hx = worldDir[0] / hLen;
+      const hz = worldDir[2] / hLen;
+      // Rotate (hx, hz) around +Y by yawOffset — right-hand rule, same
+      // matrix as computeFireData.
+      const rx = hx * cosYaw + hz * sinYaw;
+      const rz = -hx * sinYaw + hz * cosYaw;
+      dirX = rx * cosElev;
       dirY = sinElev;
-      dirZ = (worldDir[2] / hLen) * cosElev;
+      dirZ = rz * cosElev;
     } else {
       dirX = 0;
       dirY = 1;

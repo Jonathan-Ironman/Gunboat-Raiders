@@ -22,7 +22,8 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { Euler, Quaternion, Vector3 } from 'three';
 import { getPlayerBodyState } from './physicsRefs';
 import { computeQuadrant } from './CameraSystem';
-import { useGameStore } from '@/store/gameStore';
+import { useGameStore, type FiringQuadrant } from '@/store/gameStore';
+import { setAimOffset, MAX_PITCH_OFFSET } from './aimOffsetRefs';
 
 /** Camera orbit configuration */
 const CAMERA_RADIUS = 15;
@@ -38,6 +39,84 @@ const MAX_BODY_COORD = 500;
 
 /** Minimum camera Y position — always stay above water surface. */
 const CAMERA_MIN_Y = 3;
+
+/**
+ * Centre angles (relative to boat heading) for each firing quadrant.
+ * Each quadrant is a 90° slice around these centres; the player's
+ * fine-aim yaw offset is the angular distance between the camera's
+ * look-angle and the centre of the current quadrant, clamped to a safe
+ * sub-cone by `aimOffsetRefs.MAX_YAW_OFFSET`.
+ */
+const QUADRANT_CENTER: Record<FiringQuadrant, number> = {
+  fore: 0,
+  starboard: Math.PI / 2,
+  aft: Math.PI,
+  port: -Math.PI / 2,
+};
+
+/** Normalise an angle to the `(-π, π]` range. */
+function normalizeAngle(a: number): number {
+  let n = a;
+  while (n > Math.PI) n -= 2 * Math.PI;
+  while (n < -Math.PI) n += 2 * Math.PI;
+  return n;
+}
+
+/**
+ * Hard floor and ceiling for the TOTAL cannon elevation (base + pitch
+ * offset combined). Applied after the offset is computed so the clamp is
+ * always respected regardless of the player's base `elevationAngle`.
+ *
+ * MIN: -2° (−0.035 rad) — prevents firing straight into the water.
+ * MAX: +18° (+0.314 rad) — prevents mortaring straight up.
+ */
+const TOTAL_ELEVATION_MIN = (-2 * Math.PI) / 180;
+const TOTAL_ELEVATION_MAX = (18 * Math.PI) / 180;
+
+/**
+ * Player base elevation angle (radians). Mirrors `BOAT_STATS.player.weapons.elevationAngle`
+ * so the hard-cap computation can clamp pitch offsets without importing boatStats.
+ * Must be kept in sync if boatStats changes.
+ */
+const PLAYER_BASE_ELEVATION = 0.06;
+
+/**
+ * Map the camera orbit elevation to a pitch offset added on top of the
+ * weapon's base `elevationAngle`.
+ *
+ * Behaviour:
+ *   elevation = CAMERA_INITIAL_ELEVATION (30°) → zero offset (comfortable
+ *     horizon view fires at the base elevation — no adjustment).
+ *   elevation < CAMERA_INITIAL_ELEVATION (camera near sea-level, looking
+ *     outward) → positive pitch offset (slight extra arc for long range).
+ *   elevation > CAMERA_INITIAL_ELEVATION (steep top-down view, camera
+ *     high above) → negative pitch offset (flatter shot for close targets).
+ *
+ * The ±8° range (MAX_PITCH_OFFSET) is intentionally tight. The total
+ * elevation is hard-clamped by the caller to [TOTAL_ELEVATION_MIN,
+ * TOTAL_ELEVATION_MAX] so the cannon can never fire into the water or
+ * arc straight overhead regardless of the raw camera elevation.
+ *
+ * The two half-ranges (min..initial and initial..max) are NOT symmetric
+ * in degrees (15° wide vs 30° wide), so the mapping is piecewise linear
+ * in elevation but maps each half to the full ±MAX_PITCH_OFFSET cone.
+ */
+function cameraElevationToPitchOffset(elevation: number): number {
+  if (elevation <= CAMERA_INITIAL_ELEVATION) {
+    // [min, initial] → [+max_pitch, 0].
+    const span = CAMERA_INITIAL_ELEVATION - CAMERA_MIN_ELEVATION;
+    if (span <= 0) return 0;
+    const t = (elevation - CAMERA_MIN_ELEVATION) / span;
+    const clamped = t < 0 ? 0 : t > 1 ? 1 : t;
+    return MAX_PITCH_OFFSET * (1 - clamped);
+  }
+  // (initial, max] → (0, -max_pitch].
+  const span = CAMERA_MAX_ELEVATION - CAMERA_INITIAL_ELEVATION;
+  if (span <= 0) return 0;
+  const t = (elevation - CAMERA_INITIAL_ELEVATION) / span;
+  const clamped = t < 0 ? 0 : t > 1 ? 1 : t;
+  return -MAX_PITCH_OFFSET * clamped;
+}
 
 // Reusable Three.js objects to avoid per-frame allocations
 const _quat = new Quaternion();
@@ -196,7 +275,8 @@ export function CameraSystemR3F() {
     _euler.setFromQuaternion(_quat, 'YXZ');
     const boatHeading = _euler.y;
 
-    // Determine the active quadrant.
+    // Determine the active quadrant AND the camera-relative angle used to
+    // derive the fine-aim yaw offset below.
     //
     // When pointer lock is active: use the camera orbit azimuth (accurate,
     // reflects actual camera orientation from pointer deltas).
@@ -207,7 +287,12 @@ export function CameraSystemR3F() {
     // canvas center to cursor is treated as a camera-relative direction, giving
     // the player intuitive cursor-based quadrant selection while lock is absent.
     let quadrant: ReturnType<typeof computeQuadrant>;
+    // `aimRelative` is the camera's aiming direction in a boat-local frame
+    // (−π..π, 0 = fore). Used for both quadrant selection and yaw-offset
+    // computation so the two reads are guaranteed to agree.
+    let aimRelative: number;
     if (isPointerLockedRef.current) {
+      aimRelative = normalizeAngle(cameraAngle - boatHeading);
       quadrant = computeQuadrant(cameraAngle, boatHeading);
     } else {
       const domElement = gl.domElement;
@@ -218,6 +303,7 @@ export function CameraSystemR3F() {
       // Angle of the cursor from canvas center, in world-space terms.
       // atan2(dx, dy): dy is "forward" (up on screen = fore), dx is "right" (starboard).
       const cursorAngle = Math.atan2(dx, dy);
+      aimRelative = cursorAngle;
       // The cursor angle is relative to the canvas — treat it as an absolute
       // world-space azimuth (same coordinate system as boatHeading) so that
       // computeQuadrant correctly maps it to port/starboard/fore/aft.
@@ -232,6 +318,33 @@ export function CameraSystemR3F() {
       lastWrittenQuadrantRef.current = quadrant;
       useGameStore.getState().setActiveQuadrant(quadrant);
     }
+
+    // Variable aim within the active quadrant.
+    //
+    // The quadrant acts as a 90° gate — the weapon system snaps the shot to
+    // whichever quadrant the camera (or cursor, in lock-absent mode) is
+    // pointing into — and on top of that the player gets a ±18° yaw / ±8°
+    // pitch cone of fine aim. The yaw delta is the signed angular distance
+    // between the player's boat-local aim direction (`aimRelative`) and the
+    // centre of the current quadrant; setAimOffset() clamps both axes to
+    // their allowed range so the aim can never leak into the adjacent
+    // quadrant's arc.
+    //
+    // Keeping the offset module-scope (aimOffsetRefs) instead of in the
+    // Zustand store avoids a per-frame reactive write for a value that no
+    // React component subscribes to — the only readers are WeaponSystemR3F
+    // and TrajectoryPreview, both of which run inside useFrame.
+    const yawDelta = normalizeAngle(aimRelative - QUADRANT_CENTER[quadrant]);
+    const rawPitchDelta = cameraElevationToPitchOffset(elevationRef.current);
+    // Hard cap on total cannon elevation (base + pitch offset). Clamp the
+    // pitch delta so the effective elevation (PLAYER_BASE_ELEVATION + delta)
+    // never drops below TOTAL_ELEVATION_MIN (can't fire into the water) or
+    // exceeds TOTAL_ELEVATION_MAX (can't mortar straight overhead).
+    const minPitch = TOTAL_ELEVATION_MIN - PLAYER_BASE_ELEVATION;
+    const maxPitch = TOTAL_ELEVATION_MAX - PLAYER_BASE_ELEVATION;
+    const pitchDelta =
+      rawPitchDelta < minPitch ? minPitch : rawPitchDelta > maxPitch ? maxPitch : rawPitchDelta;
+    setAimOffset(yawDelta, pitchDelta);
   }, -1);
 
   return null;

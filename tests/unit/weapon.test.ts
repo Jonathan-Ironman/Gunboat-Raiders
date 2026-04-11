@@ -181,6 +181,269 @@ describe('WeaponSystem — computeFireData', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Variable aim: yaw + pitch offsets layered on top of mount direction.
+// Proves computeFireData rotates the horizontal component by `yawOffset`
+// around +Y and adds `pitchOffset` to the base elevation angle.
+// ---------------------------------------------------------------------------
+
+describe('WeaponSystem — computeFireData aim offsets', () => {
+  const playerMounts = BOAT_STATS.player.weapons.mounts as unknown as WeaponMount[];
+  const identityQuat: [number, number, number, number] = [0, 0, 0, 1];
+  const origin: [number, number, number] = [0, 0, 0];
+  const muzzleVelocity = 60;
+  const elevationAngle = 0.06; // match production player preset
+
+  /** Fall-back impulse when a quadrant has no mounts. */
+  const ZERO_IMPULSE: readonly [number, number, number] = [0, 0, 0];
+
+  /** Extract the impulse of the first spawn, or zero if nothing spawned. */
+  function firstImpulse(
+    spawns: ReturnType<typeof computeFireData>,
+  ): readonly [number, number, number] {
+    return spawns[0]?.impulse ?? ZERO_IMPULSE;
+  }
+
+  /** Compute horizontal azimuth of an impulse: `atan2(x, z)`. */
+  function impulseAzimuth(impulse: readonly [number, number, number]): number {
+    return Math.atan2(impulse[0], impulse[2]);
+  }
+
+  /** Signed shortest-arc angular difference in (-π, π]. */
+  function angularDelta(a: number, b: number): number {
+    let d = a - b;
+    while (d > Math.PI) d -= 2 * Math.PI;
+    while (d < -Math.PI) d += 2 * Math.PI;
+    return d;
+  }
+
+  it('default zero offsets match baseline (backwards compatible)', () => {
+    const baseline = computeFireData(
+      playerMounts,
+      'fore',
+      origin,
+      identityQuat,
+      muzzleVelocity,
+      elevationAngle,
+    );
+    const withZero = computeFireData(
+      playerMounts,
+      'fore',
+      origin,
+      identityQuat,
+      muzzleVelocity,
+      elevationAngle,
+      0,
+      0,
+    );
+
+    expect(withZero).toHaveLength(baseline.length);
+    expect(baseline.length).toBeGreaterThan(0);
+    for (let i = 0; i < baseline.length; i++) {
+      const b = baseline[i]?.impulse ?? ZERO_IMPULSE;
+      const z = withZero[i]?.impulse ?? ZERO_IMPULSE;
+      expect(z[0]).toBeCloseTo(b[0], 6);
+      expect(z[1]).toBeCloseTo(b[1], 6);
+      expect(z[2]).toBeCloseTo(b[2], 6);
+    }
+  });
+
+  it('yawOffset rotates fore impulse azimuth by the requested angle', () => {
+    // Fore mount direction is [0, 0.3, 1] → horizontal = +Z → baseline
+    // azimuth = atan2(0, 1) = 0.
+    const baseline = computeFireData(
+      playerMounts,
+      'fore',
+      origin,
+      identityQuat,
+      muzzleVelocity,
+      elevationAngle,
+    );
+    const baseAz = impulseAzimuth(firstImpulse(baseline));
+    expect(baseAz).toBeCloseTo(0, 6);
+
+    // Positive yaw offset should rotate the azimuth by exactly that amount.
+    const YAW = 0.3; // ~17°
+    const rotated = computeFireData(
+      playerMounts,
+      'fore',
+      origin,
+      identityQuat,
+      muzzleVelocity,
+      elevationAngle,
+      YAW,
+      0,
+    );
+    const rotAz = impulseAzimuth(firstImpulse(rotated));
+    expect(Math.abs(angularDelta(rotAz, YAW))).toBeLessThan(1e-6);
+  });
+
+  it('yawOffset works for all four quadrants at identity rotation', () => {
+    const YAW = 0.25; // ~14°
+    const cases: Array<{ q: 'fore' | 'aft' | 'port' | 'starboard'; baseAz: number }> = [
+      { q: 'fore', baseAz: 0 },
+      { q: 'starboard', baseAz: Math.PI / 2 },
+      { q: 'aft', baseAz: Math.PI },
+      { q: 'port', baseAz: -Math.PI / 2 },
+    ];
+
+    for (const { q, baseAz } of cases) {
+      const rotated = computeFireData(
+        playerMounts,
+        q,
+        origin,
+        identityQuat,
+        muzzleVelocity,
+        elevationAngle,
+        YAW,
+        0,
+      );
+      const rotAz = impulseAzimuth(firstImpulse(rotated));
+      // Each quadrant's yaw-offset shot should sit YAW radians off the
+      // quadrant's baseline azimuth.
+      expect(
+        Math.abs(angularDelta(rotAz, baseAz + YAW)),
+        `Quadrant ${q}: expected az=${(baseAz + YAW).toFixed(3)} got ${rotAz.toFixed(3)}`,
+      ).toBeLessThan(1e-6);
+    }
+  });
+
+  it('negative yawOffset rotates the other way', () => {
+    const NEG = -0.2;
+    const rotated = computeFireData(
+      playerMounts,
+      'fore',
+      origin,
+      identityQuat,
+      muzzleVelocity,
+      elevationAngle,
+      NEG,
+      0,
+    );
+    const rotAz = impulseAzimuth(firstImpulse(rotated));
+    expect(Math.abs(angularDelta(rotAz, NEG))).toBeLessThan(1e-6);
+  });
+
+  it('pitchOffset increases vertical component and decreases horizontal', () => {
+    const baseline = computeFireData(
+      playerMounts,
+      'fore',
+      origin,
+      identityQuat,
+      muzzleVelocity,
+      elevationAngle,
+    );
+    const lofted = computeFireData(
+      playerMounts,
+      'fore',
+      origin,
+      identityQuat,
+      muzzleVelocity,
+      elevationAngle,
+      0,
+      0.25, // +14° pitch
+    );
+
+    const b = firstImpulse(baseline);
+    const l = firstImpulse(lofted);
+
+    // Same azimuth on the horizontal plane...
+    const baseAz = impulseAzimuth(b);
+    const loftAz = impulseAzimuth(l);
+    expect(Math.abs(angularDelta(loftAz, baseAz))).toBeLessThan(1e-6);
+
+    // ...but larger Y, smaller horizontal magnitude.
+    const bSpeed = Math.hypot(b[0], b[2]);
+    const lSpeed = Math.hypot(l[0], l[2]);
+    expect(l[1]).toBeGreaterThan(b[1]);
+    expect(lSpeed).toBeLessThan(bSpeed);
+
+    // Total speed is preserved (both sides use muzzleVelocity).
+    const baseTotal = Math.hypot(b[0], b[1], b[2]);
+    const loftTotal = Math.hypot(l[0], l[1], l[2]);
+    expect(loftTotal).toBeCloseTo(baseTotal, 4);
+    expect(loftTotal).toBeCloseTo(muzzleVelocity, 4);
+  });
+
+  it('negative pitchOffset depresses the shot (Y can go below zero)', () => {
+    const baseline = computeFireData(
+      playerMounts,
+      'fore',
+      origin,
+      identityQuat,
+      muzzleVelocity,
+      elevationAngle,
+    );
+    const depressed = computeFireData(
+      playerMounts,
+      'fore',
+      origin,
+      identityQuat,
+      muzzleVelocity,
+      elevationAngle,
+      0,
+      -0.25, // well below baseline elevation of 0.06 → net negative
+    );
+    const b = firstImpulse(baseline);
+    const d = firstImpulse(depressed);
+    expect(d[1]).toBeLessThan(b[1]);
+    expect(d[1]).toBeLessThan(0);
+  });
+
+  it('combined yaw + pitch offsets compose cleanly (no cross-axis leak)', () => {
+    const YAW = 0.2;
+    const PITCH = 0.15;
+    const combined = computeFireData(
+      playerMounts,
+      'starboard',
+      origin,
+      identityQuat,
+      muzzleVelocity,
+      elevationAngle,
+      YAW,
+      PITCH,
+    );
+
+    const impulse = firstImpulse(combined);
+
+    // Horizontal azimuth matches starboard baseline (π/2) + YAW.
+    const az = impulseAzimuth(impulse);
+    expect(Math.abs(angularDelta(az, Math.PI / 2 + YAW))).toBeLessThan(1e-6);
+
+    // Vertical component matches sin(elevationAngle + PITCH).
+    const expectedY = Math.sin(elevationAngle + PITCH) * muzzleVelocity;
+    expect(impulse[1]).toBeCloseTo(expectedY, 4);
+
+    // Total speed matches muzzleVelocity.
+    const totalSpeed = Math.hypot(impulse[0], impulse[1], impulse[2]);
+    expect(totalSpeed).toBeCloseTo(muzzleVelocity, 4);
+  });
+
+  it('yaw offset still respects boat yaw rotation (composes with quaternion)', () => {
+    // Rotate the boat 90° around +Y so fore now points along +X.
+    const sin45 = Math.sin(Math.PI / 4);
+    const cos45 = Math.cos(Math.PI / 4);
+    const rotatedQuat: [number, number, number, number] = [0, sin45, 0, cos45];
+
+    const YAW = 0.3;
+    const spawns = computeFireData(
+      playerMounts,
+      'fore',
+      origin,
+      rotatedQuat,
+      muzzleVelocity,
+      elevationAngle,
+      YAW,
+      0,
+    );
+
+    // With yaw=0, a +90° boat yaw would send fore along +X (az ≈ π/2).
+    // With YAW=+0.3 layered on top, the expected azimuth is π/2 + 0.3.
+    const az = impulseAzimuth(firstImpulse(spawns));
+    expect(Math.abs(angularDelta(az, Math.PI / 2 + YAW))).toBeLessThan(1e-6);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Required regression tests (4 new, per task brief)
 // ---------------------------------------------------------------------------
 

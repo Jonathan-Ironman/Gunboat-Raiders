@@ -58,6 +58,7 @@ import {
   type HeatState,
 } from './WeaponSystem';
 import { consumeTestFireRequest } from './weaponTestBridge';
+import { getAimOffset } from './aimOffsetRefs';
 import { emitVfxEvent } from '@/effects/vfxEvents';
 
 /**
@@ -228,6 +229,14 @@ export function WeaponSystemR3F() {
     const pos = bodyState.position;
     const rot = bodyState.rotation;
 
+    // Read the current fine-aim offset (yaw + pitch) written by
+    // CameraSystemR3F this frame. The simpler "counter + live read" queue
+    // semantics mean that if a click arrives during a cooldown, the
+    // queued shot fires at the aim direction that's live at drain time —
+    // which matches the hold-to-fire intuition of "shoot where I'm
+    // pointing right now" with a 1-2 frame lag that is imperceptible.
+    const aim = getAimOffset();
+
     const spawns = computeFireData(
       player.weapons.mounts,
       quadrant,
@@ -235,6 +244,8 @@ export function WeaponSystemR3F() {
       [rot.x, rot.y, rot.z, rot.w],
       player.weapons.muzzleVelocity,
       player.weapons.elevationAngle,
+      aim.yaw,
+      aim.pitch,
     );
 
     // Read the bracket multiplier from the PRE-SHOT heat so this shot's
