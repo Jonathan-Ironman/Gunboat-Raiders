@@ -24,7 +24,7 @@ import { PostProcessing } from './effects/PostProcessing';
 import { ParticleManager } from './effects/ParticleManager';
 import { useGameStore } from './store/gameStore';
 import { HUD } from './ui/HUD';
-import { TitleScreen } from './ui/TitleScreen';
+import { MainMenuScene } from './ui/MainMenuScene';
 import { LevelBriefingModal } from './ui/LevelBriefingModal';
 import { GameOverScreen } from './ui/GameOverScreen';
 import { PerfMonitorR3F } from './components/PerfMonitorR3F';
@@ -137,7 +137,7 @@ export function App() {
 
         {/* HTML overlay UI -- sibling div outside Canvas */}
         <HUD />
-        <TitleScreen />
+        <MainMenuScene />
         <LevelBriefingModal />
         <GameOverScreen />
       </div>

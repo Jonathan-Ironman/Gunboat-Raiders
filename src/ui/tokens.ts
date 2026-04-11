@@ -5,7 +5,7 @@
  * colors, spacing, radii, shadows, motion, typography, and a handful of
  * higher-level recipes (health bar gradients, button gradients, thresholds).
  *
- * Downstream UI slices (HUD, TitleScreen, PauseMenu, HealthBar, etc.) MUST
+ * Downstream UI slices (HUD, MainMenuScene, PauseMenu, HealthBar, etc.) MUST
  * import from this module rather than hardcoding hex values or magic numbers.
  * The numeric tokens are raw numbers (px / ms) so components can compose them
  * into `${n}px` / `${n}ms` strings as needed.

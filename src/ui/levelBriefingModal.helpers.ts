@@ -48,7 +48,7 @@ import {
 
 /**
  * zIndex for the briefing overlay. Sits above HUD (10) and
- * TitleScreen/GameOverScreen (20), but below SettingsModal (32) so a
+ * MainMenuScene/GameOverScreen (20), but below SettingsModal (32) so a
  * future SettingsModal mount from the briefing screen would still
  * layer correctly.
  */

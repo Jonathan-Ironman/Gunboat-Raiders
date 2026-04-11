@@ -10,7 +10,7 @@
  *
  * The modal self-gates on `useGamePhase() === 'briefing'`, so it can
  * be mounted unconditionally from `App.tsx` alongside the other
- * phase-gated overlays (`TitleScreen`, `GameOverScreen`) without
+ * phase-gated overlays (`MainMenuScene`, `GameOverScreen`) without
  * needing any parent conditional.
  *
  * Keyboard:
