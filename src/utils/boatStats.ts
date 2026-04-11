@@ -3,7 +3,12 @@ import type { HealthComponent, MovementComponent, WeaponComponent } from '../sto
 interface BoatStatPreset {
   health: HealthComponent;
   movement: MovementComponent;
-  weapons: Omit<WeaponComponent, 'cooldownRemaining'>;
+  /**
+   * Boat preset omits per-entity runtime state (`cooldownRemaining`,
+   * `heat`, `heatLockout`) — those are initialised to zero when a boat
+   * is spawned from the preset.
+   */
+  weapons: Omit<WeaponComponent, 'cooldownRemaining' | 'heat' | 'heatLockout'>;
 }
 
 export const BOAT_STATS = {

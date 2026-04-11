@@ -38,7 +38,16 @@ import { useFrame } from '@react-three/fiber';
 import { useGameStore } from '@/store/gameStore';
 import { getPlayerBodyState } from './physicsRefs';
 import { getProjectilePoolManager } from './projectilePoolRefs';
-import { tickCooldowns, canFire, computeFireData } from './WeaponSystem';
+import {
+  tickCooldowns,
+  canFire,
+  computeFireData,
+  applyShotHeat,
+  decayHeat,
+  heatBracketCooldownMultiplier,
+  isFireAllowedByHeat,
+  type HeatState,
+} from './WeaponSystem';
 import { consumeTestFireRequest } from './weaponTestBridge';
 import { emitVfxEvent } from '@/effects/vfxEvents';
 
@@ -79,7 +88,7 @@ export function WeaponSystemR3F() {
     const { player } = store;
     if (!player) return;
 
-    // Tick cooldowns
+    // Tick cooldowns.
     const updatedCooldowns = tickCooldowns(
       {
         cooldown: player.weapons.cooldown,
@@ -88,54 +97,74 @@ export function WeaponSystemR3F() {
       delta,
     ).cooldownRemaining;
 
+    // Snapshot current heat and immediately apply one frame of passive
+    // decay. Decay is ALWAYS on — whether or not the player fires this
+    // frame — so the tuning math is a simple per-second net rate:
+    //
+    //   (shots/s × HEAT_PER_SHOT) − HEAT_DECAY_PER_SECOND
+    //
+    // Calibrated so full broadside (26.67 shots/s) nets +0.05 heat/s.
+    let heatState: HeatState = decayHeat(
+      { heat: player.weapons.heat, lockedOut: player.weapons.heatLockout },
+      delta,
+    );
+
     // Drain any test-bridge fire requests (dev-only, used by Playwright).
     // Each test request is equivalent to one mouse click.
     if (consumeTestFireRequest() && pendingFiresRef.current < PENDING_FIRE_CAP) {
       pendingFiresRef.current += 1;
     }
 
-    // If nothing is pending we still need to push the ticked cooldowns
-    // back to the store so the UI / other systems see them decreasing.
-    if (pendingFiresRef.current === 0) {
+    // Helper: commit cooldowns + heat to the store, re-reading `player` so
+    // concurrent updates (damage, movement) are not clobbered by this frame.
+    const commit = (cooldownRemaining: Record<typeof store.activeQuadrant, number>): void => {
+      const currentPlayer = useGameStore.getState().player;
+      if (!currentPlayer) return;
       useGameStore.setState({
         player: {
-          ...player,
-          weapons: { ...player.weapons, cooldownRemaining: updatedCooldowns },
+          ...currentPlayer,
+          weapons: {
+            ...currentPlayer.weapons,
+            cooldownRemaining,
+            heat: heatState.heat,
+            heatLockout: heatState.lockedOut,
+          },
         },
       });
+    };
+
+    // If nothing is pending, push the decayed heat + cooldowns so the UI
+    // and other systems see them progressing.
+    if (pendingFiresRef.current === 0) {
+      commit(updatedCooldowns);
       return;
     }
 
-    // Try to drain one pending intent. At most one fire per frame per
-    // quadrant because firing resets that quadrant's cooldown.
+    // A fire intent is pending. Two independent gates must pass:
+    //   1) The active quadrant's cooldown must have elapsed.
+    //   2) The shared heat must not be in sticky lockout.
+    // If either fails we keep the intent queued. Heat already decayed
+    // above so the player isn't punished for clicking during lockout.
     const quadrant = store.activeQuadrant;
-    if (
-      !canFire({ cooldown: player.weapons.cooldown, cooldownRemaining: updatedCooldowns }, quadrant)
-    ) {
-      // Cannot fire this frame — keep the pending intent queued and push
-      // the ticked cooldowns so they continue counting down.
-      useGameStore.setState({
-        player: {
-          ...player,
-          weapons: { ...player.weapons, cooldownRemaining: updatedCooldowns },
-        },
-      });
+    const quadrantReady = canFire(
+      { cooldown: player.weapons.cooldown, cooldownRemaining: updatedCooldowns },
+      quadrant,
+    );
+    const heatAllows = isFireAllowedByHeat(heatState);
+
+    if (!quadrantReady || !heatAllows) {
+      commit(updatedCooldowns);
       return;
     }
 
     // Consume one pending intent and fire.
     pendingFiresRef.current -= 1;
 
-    // Read from cached body state (safe during useFrame)
+    // Read from cached body state (safe during useFrame).
     const bodyState = getPlayerBodyState();
     if (!bodyState) {
-      // No body yet — push cooldowns and drop this intent (cannot fire).
-      useGameStore.setState({
-        player: {
-          ...player,
-          weapons: { ...player.weapons, cooldownRemaining: updatedCooldowns },
-        },
-      });
+      // No body yet — drop this intent. Heat already decayed.
+      commit(updatedCooldowns);
       return;
     }
 
@@ -150,6 +179,12 @@ export function WeaponSystemR3F() {
       player.weapons.muzzleVelocity,
       player.weapons.elevationAngle,
     );
+
+    // Read the bracket multiplier from the PRE-SHOT heat so this shot's
+    // cooldown reflects the bracket the player clicked in, not the one the
+    // click pushed them into. Locking this in before the per-projectile
+    // heat increments also avoids a rare cross-bracket jump mid-click.
+    const bracketMultiplier = heatBracketCooldownMultiplier(heatState.heat);
 
     const poolManager = getProjectilePoolManager();
     if (poolManager) {
@@ -169,26 +204,21 @@ export function WeaponSystemR3F() {
           position: spawn.position,
           time: performance.now() / 1000,
         });
+
+        // Heat bookkeeping: each spawned projectile adds HEAT_PER_SHOT to
+        // the shared heat pool. A full broadside (4 mounts) contributes
+        // 4× the increment per click, so the time-to-100% calibration
+        // (20 s of sustained broadside → 1.0) is preserved.
+        heatState = applyShotHeat(heatState);
       }
     }
 
-    // Reset cooldown for the fired quadrant and push ticked cooldowns
-    // for the others. Re-read player from store to avoid a stale closure.
-    const currentPlayer = useGameStore.getState().player;
-    if (currentPlayer) {
-      useGameStore.setState({
-        player: {
-          ...currentPlayer,
-          weapons: {
-            ...currentPlayer.weapons,
-            cooldownRemaining: {
-              ...updatedCooldowns,
-              [quadrant]: currentPlayer.weapons.cooldown,
-            },
-          },
-        },
-      });
-    }
+    // Reset cooldown for the fired quadrant (scaled by the heat bracket
+    // multiplier) and push the ticked cooldowns for the others.
+    commit({
+      ...updatedCooldowns,
+      [quadrant]: player.weapons.cooldown * bracketMultiplier,
+    });
   });
 
   return null;

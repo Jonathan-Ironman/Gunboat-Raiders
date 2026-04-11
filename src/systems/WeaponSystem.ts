@@ -1,9 +1,20 @@
 /**
- * Pure weapon logic — cooldown management and fire data computation.
- * No R3F, no browser APIs, fully headless-testable.
+ * Pure weapon logic — cooldown management, overheat mechanic, and fire
+ * data computation. No R3F, no browser APIs, fully headless-testable.
  */
 
 import type { FiringQuadrant, WeaponMount } from '@/store/gameStore';
+import {
+  HEAT_COOLDOWN_MULT_GREEN,
+  HEAT_COOLDOWN_MULT_RED,
+  HEAT_COOLDOWN_MULT_YELLOW,
+  HEAT_DECAY_PER_SECOND,
+  HEAT_GREEN_MAX,
+  HEAT_LOCKOUT_RECOVERY_THRESHOLD,
+  HEAT_LOCKOUT_THRESHOLD,
+  HEAT_PER_SHOT,
+  HEAT_YELLOW_MAX,
+} from '@/utils/overheatConstants';
 
 export interface WeaponState {
   cooldownRemaining: Record<FiringQuadrant, number>;
@@ -27,11 +38,85 @@ export function tickCooldowns(state: WeaponState, delta: number): WeaponState {
  * Check if a quadrant can fire.
  *
  * Returns true only when the quadrant's cooldown has fully elapsed (≤ 0).
- * Per-quadrant cooldown of 150 ms gives the player a consistent, spammable
- * fire rate (~6.7 shots/s per quadrant) without exhausting the projectile pool.
+ * Per-quadrant cooldown of 150 ms (× heat bracket multiplier) gives the
+ * player a consistent, spammable fire rate that gets progressively
+ * penalised as heat climbs.
  */
 export function canFire(state: WeaponState, quadrant: FiringQuadrant): boolean {
   return state.cooldownRemaining[quadrant] <= 0;
+}
+
+// ---------------------------------------------------------------------------
+// Overheat (shared across all quadrants)
+// ---------------------------------------------------------------------------
+
+/**
+ * Immutable heat sub-state. Kept separate from `WeaponState` so the
+ * cooldown helpers above stay pure and the heat model can be ticked
+ * independently (the R3F wrapper ticks both each frame).
+ */
+export interface HeatState {
+  /** Current heat in [0, 1]. */
+  heat: number;
+  /**
+   * Sticky lockout flag. Set to true when heat hits
+   * `HEAT_LOCKOUT_THRESHOLD`; cleared when heat drops back below
+   * `HEAT_LOCKOUT_RECOVERY_THRESHOLD`. Prevents single-frame chatter at
+   * the cap.
+   */
+  lockedOut: boolean;
+}
+
+/**
+ * Returns the cooldown multiplier that applies at a given heat value.
+ * The multiplier is applied to the base per-quadrant cooldown on the
+ * FRAME A SHOT IS FIRED — so the next shot's wait is governed by the
+ * heat bracket at fire time.
+ */
+export function heatBracketCooldownMultiplier(heat: number): number {
+  if (heat < HEAT_GREEN_MAX) return HEAT_COOLDOWN_MULT_GREEN;
+  if (heat < HEAT_YELLOW_MAX) return HEAT_COOLDOWN_MULT_YELLOW;
+  return HEAT_COOLDOWN_MULT_RED;
+}
+
+/**
+ * Compute the next-frame lockout flag given current heat and the
+ * previous-frame flag. Lockout is sticky: once engaged, it clears only
+ * when heat has cooled past `HEAT_LOCKOUT_RECOVERY_THRESHOLD`.
+ */
+export function nextLockout(heat: number, previouslyLocked: boolean): boolean {
+  if (heat >= HEAT_LOCKOUT_THRESHOLD) return true;
+  if (previouslyLocked) return heat > HEAT_LOCKOUT_RECOVERY_THRESHOLD;
+  return false;
+}
+
+/**
+ * Whether firing is permitted at this heat + lockout state.
+ * Firing is blocked whenever the sticky lockout flag is set.
+ */
+export function isFireAllowedByHeat(state: HeatState): boolean {
+  return !state.lockedOut;
+}
+
+/**
+ * Apply a single shot's worth of heat to the shared heat pool. Clamps
+ * the result to [0, 1] and recomputes the sticky lockout flag.
+ */
+export function applyShotHeat(state: HeatState): HeatState {
+  const raw = state.heat + HEAT_PER_SHOT;
+  const heat = raw > 1 ? 1 : raw;
+  return { heat, lockedOut: nextLockout(heat, state.lockedOut) };
+}
+
+/**
+ * Decay heat by `HEAT_DECAY_PER_SECOND * delta`. Clamps to zero and
+ * recomputes the sticky lockout flag (which may clear once heat crosses
+ * `HEAT_LOCKOUT_RECOVERY_THRESHOLD` from above).
+ */
+export function decayHeat(state: HeatState, delta: number): HeatState {
+  const raw = state.heat - HEAT_DECAY_PER_SECOND * delta;
+  const heat = raw < 0 ? 0 : raw;
+  return { heat, lockedOut: nextLockout(heat, state.lockedOut) };
 }
 
 /** Data for spawning a single projectile. */

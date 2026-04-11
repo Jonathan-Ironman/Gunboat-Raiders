@@ -47,6 +47,19 @@ export interface WeaponComponent {
   splashRadius: number;
   muzzleVelocity: number;
   elevationAngle: number; // radians
+  /**
+   * Shared overheat value in [0, 1]. Accumulates when a shot actually
+   * fires and decays when the weapon is idle. See
+   * `src/utils/overheatConstants.ts` for tuning and
+   * `WeaponSystem.ts` for the pure heat helpers.
+   */
+  heat: number;
+  /**
+   * Sticky lockout flag. `true` once `heat` hits 1.0, and stays `true`
+   * until `heat` drops below `HEAT_LOCKOUT_RECOVERY_THRESHOLD`. Firing
+   * is blocked while this flag is set.
+   */
+  heatLockout: boolean;
 }
 
 export interface MovementComponent {
@@ -171,6 +184,8 @@ export const useGameStore = create<GameState>()((set, get) => ({
         ...preset.weapons,
         mounts: [...preset.weapons.mounts],
         cooldownRemaining: makeDefaultCooldowns(),
+        heat: 0,
+        heatLockout: false,
       },
       position: [0, 0, 0],
       rotation: [0, 0, 0, 1],
@@ -192,6 +207,8 @@ export const useGameStore = create<GameState>()((set, get) => ({
         ...preset.weapons,
         mounts: [...preset.weapons.mounts],
         cooldownRemaining: makeDefaultCooldowns(),
+        heat: 0,
+        heatLockout: false,
       },
       ai: {
         type,
@@ -313,6 +330,8 @@ export const useGameStore = create<GameState>()((set, get) => ({
         ...preset.weapons,
         mounts: [...preset.weapons.mounts],
         cooldownRemaining: makeDefaultCooldowns(),
+        heat: 0,
+        heatLockout: false,
       },
       position: [0, 0, 0],
       rotation: [0, 0, 0, 1],
