@@ -16,7 +16,7 @@
 
 import type { CSSProperties } from 'react';
 
-import { BUTTON_DESTRUCTIVE_RED, BUTTON_RECIPE } from './buttonRecipes';
+import { BUTTON_RECIPE } from './buttonRecipes';
 import {
   BORDER,
   DUR_NORMAL,
@@ -165,37 +165,6 @@ export const pauseButtonStackStyle: CSSProperties = {
 };
 
 /**
- * Shared base style for every pause-menu button. Delegates to the
- * cross-modal `BUTTON_RECIPE.base` so every button in the game shares
- * the exact same silhouette (padding, font, radius, 3D emboss
- * shadow). The pause-menu variants below only change color.
- */
-export const pauseButtonBaseStyle: CSSProperties = BUTTON_RECIPE.base;
-
-/** Primary (gold) button variant — CONTINUE in the pause menu. */
-export const pauseButtonPrimaryStyle: CSSProperties = BUTTON_RECIPE.primary;
-
-/** Secondary button variant — SETTINGS in the pause menu. */
-export const pauseButtonSecondaryStyle: CSSProperties = BUTTON_RECIPE.secondary;
-
-/**
- * Resting state for the EXIT button — reads as a neutral secondary
- * button until the user hovers, at which point
- * `pauseButtonDestructiveHoverStyle` swaps in the red destructive
- * variant. This two-stage reveal is deliberate: the pause menu's
- * exit is irreversible, but the player should not feel "pushed
- * toward" quitting the moment they open the menu.
- */
-export const pauseButtonDestructiveStyle: CSSProperties = BUTTON_RECIPE.secondary;
-
-/**
- * Hover override for the destructive variant — full red destructive
- * fill so hovering telegraphs "this will destroy progress" without
- * restructuring the button silhouette.
- */
-export const pauseButtonDestructiveHoverStyle: CSSProperties = BUTTON_DESTRUCTIVE_RED;
-
-/**
  * Run summary line below the button stack —
  * "Wave {wave} · Score {score}" in FONT_UI 13px TEXT_MUTED, centered.
  */
@@ -298,15 +267,6 @@ export const confirmCancelStyle: CSSProperties = BUTTON_RECIPE.secondary;
 
 /** Confirm button variant — primary gold gradient. */
 export const confirmPrimaryStyle: CSSProperties = BUTTON_RECIPE.primary;
-
-/**
- * Destructive confirm variant — always-red gradient. Used inside
- * `ConfirmDialog` where the surrounding context already provides the
- * "are you sure?" framing so the button must communicate danger at a
- * glance. Unlike `BUTTON_RECIPE.destructive` (which rests grey and
- * only turns red on CSS `:hover`), this is persistently red.
- */
-export const confirmDestructiveStyle: CSSProperties = BUTTON_DESTRUCTIVE_RED;
 
 // ---------------------------------------------------------------------------
 // Keyframes — shared fade-in for the pause overlay and confirm dialog

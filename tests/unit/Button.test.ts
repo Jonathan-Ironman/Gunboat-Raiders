@@ -238,8 +238,8 @@ describe('buttonStylesheet — hover + active rules', () => {
   it('contains the secondary hover rule targeting .gbr-btn--secondary', () => {
     const css = buttonStylesheet();
     expect(css).toContain('.gbr-btn--secondary:not(:disabled):hover');
-    // Warm harbour-blue hover background
-    expect(css).toContain('254b72');
+    // Body color matches destructive on hover — same red gradient
+    expect(css).toContain('ff9090');
   });
 
   it('contains the secondary active rule', () => {

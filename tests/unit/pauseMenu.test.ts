@@ -95,8 +95,6 @@ import {
   BTN_PRI_COLOR,
   FONT_DISPLAY,
   FONT_UI,
-  RED,
-  RED_DARK,
   SHADOW_LG,
   SURFACE,
   SURFACE_EL,
@@ -109,7 +107,6 @@ import {
   confirmButtonBaseStyle,
   confirmButtonRowStyle,
   confirmCancelStyle,
-  confirmDestructiveStyle,
   confirmMessageStyle,
   confirmPanelStyle,
   confirmPrimaryStyle,
@@ -120,11 +117,6 @@ import {
   isConfirmEscapeKey,
   isPauseEscapeKey,
   pauseBackdropStyle,
-  pauseButtonBaseStyle,
-  pauseButtonDestructiveHoverStyle,
-  pauseButtonDestructiveStyle,
-  pauseButtonPrimaryStyle,
-  pauseButtonSecondaryStyle,
   pauseButtonStackStyle,
   pauseKeyframes,
   pausePanelStyle,
@@ -252,44 +244,6 @@ describe('pauseMenu.helpers — pause overlay style recipes', () => {
     expect(String(pauseButtonStackStyle.gap)).toBe('12px');
   });
 
-  it('primary button variant uses the BTN_PRI_* token family', () => {
-    expect(pauseButtonPrimaryStyle.background).toBe(BTN_PRI_BG);
-    expect(pauseButtonPrimaryStyle.color).toBe(BTN_PRI_COLOR);
-    // Shadow uses gold edge + shared dark drop-shadow (not a per-variant gold glow)
-    expect(String(pauseButtonPrimaryStyle.boxShadow ?? '')).toContain('#9a6808');
-    expect(String(pauseButtonPrimaryStyle.boxShadow ?? '')).toContain('rgba(7, 17, 32, 0.6)');
-  });
-
-  it('secondary button variant uses SURFACE_EL background + shared emboss shadow', () => {
-    // After the cross-modal button refactor (2026-04-11) secondary
-    // buttons delegate to BUTTON_RECIPE.secondary, which means the
-    // lift comes from the emboss shadow — not a 1px border + flat
-    // SHADOW_MD drop. Asserting `border === undefined` locks the
-    // new silhouette.
-    expect(pauseButtonSecondaryStyle.background).toBe(SURFACE_EL);
-    expect(pauseButtonSecondaryStyle.color).toBe(TEXT_PRI);
-    expect(pauseButtonSecondaryStyle.border).toBeUndefined();
-    expect(String(pauseButtonSecondaryStyle.boxShadow ?? '')).toMatch(/0 4px 0/);
-  });
-
-  it('destructive button variant rests at secondary style but hovers red destructive', () => {
-    // Rest state = shared secondary recipe; hover swaps in the shared
-    // destructive variant (red gradient + red emboss edge). Neither
-    // carries an explicit border — the 3D emboss does the work.
-    expect(pauseButtonDestructiveStyle.background).toBe(SURFACE_EL);
-    expect(pauseButtonDestructiveStyle.border).toBeUndefined();
-    expect(String(pauseButtonDestructiveHoverStyle.background ?? '')).toContain('linear-gradient');
-    expect(String(pauseButtonDestructiveHoverStyle.background ?? '')).toContain(RED);
-    expect(String(pauseButtonDestructiveHoverStyle.background ?? '')).toContain(RED_DARK);
-    expect(pauseButtonDestructiveHoverStyle.border).toBeUndefined();
-  });
-
-  it('button base style uses FONT_DISPLAY uppercase', () => {
-    expect(pauseButtonBaseStyle.fontFamily).toBe(FONT_DISPLAY);
-    expect(pauseButtonBaseStyle.textTransform).toBe('uppercase');
-    expect(pauseButtonBaseStyle.cursor).toBe('pointer');
-  });
-
   it('run summary line uses TEXT_MUTED at 13px FONT_UI', () => {
     expect(pauseSummaryStyle.color).toBe(TEXT_MUTED);
     expect(pauseSummaryStyle.fontFamily).toBe(FONT_UI);
@@ -351,12 +305,6 @@ describe('pauseMenu.helpers — confirm dialog style recipes', () => {
   it('primary (non-destructive) confirm uses BTN_PRI tokens', () => {
     expect(confirmPrimaryStyle.background).toBe(BTN_PRI_BG);
     expect(confirmPrimaryStyle.color).toBe(BTN_PRI_COLOR);
-  });
-
-  it('destructive confirm uses a red gradient pulling RED / RED_DARK', () => {
-    expect(String(confirmDestructiveStyle.background)).toContain(RED);
-    expect(String(confirmDestructiveStyle.background)).toContain(RED_DARK);
-    expect(confirmDestructiveStyle.color).toBe(TEXT_PRI);
   });
 });
 

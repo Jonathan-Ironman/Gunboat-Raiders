@@ -50,8 +50,6 @@ import {
   FONT_DISPLAY,
   GOLD,
   RADIUS_MD,
-  RED,
-  RED_DARK,
   SP_3,
   SP_6,
   SURFACE_EL,
@@ -80,21 +78,6 @@ import {
  */
 function embossShadow(edgeColor: string, glowColor: string): string {
   return `0 4px 0 ${edgeColor}, 0 6px 18px ${glowColor}`;
-}
-
-/**
- * Builds a three-layer emboss shadow: the standard two-layer base
- * (hard bottom edge + drop-shadow) plus an additional ambient accent
- * bloom (`0 0 40px <accentColor>`).
- *
- * Used for secondary and destructive variants so they have a visible
- * outer glow against the dark `SURFACE_EL` background. The accent
- * color differs by variant:
- * - secondary → ocean-blue ambient (subtle "lit panel" effect)
- * - destructive → faint red bloom (danger hint without alarming red)
- */
-function embossShadowWithAccent(edgeColor: string, glowColor: string, accentColor: string): string {
-  return `0 4px 0 ${edgeColor}, 0 6px 18px ${glowColor}, 0 0 40px ${accentColor}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -126,29 +109,12 @@ const DESTRUCTIVE_EDGE = '#7a1a1a';
 /**
  * Shared drop-shadow glow color used by ALL button variants.
  *
- * Raised from 0.35 to 0.6 opacity so the outer halo is actually
- * visible when the button sits on the dark `SURFACE_EL` (#1c3556)
- * background — at 0.35 the near-black shadow was indistinguishable
- * from the surface itself.
+ * Subtle near-black halo — identical across every variant so buttons
+ * have a uniform perceived depth regardless of background color. The
+ * low opacity keeps the shadow "almost invisible" against the dark
+ * `SURFACE_EL` (#1c3556) background, which is the intended effect.
  */
-const SHARED_DROP_SHADOW = 'rgba(7, 17, 32, 0.6)';
-
-/**
- * Subtle ocean-blue ambient bloom added on top of the shared drop-shadow
- * so secondary buttons have a visible outer glow on dark surfaces.
- * Uses the `OCEAN` hue family (rgba of #4a8ac4) at low opacity so it
- * reads as "lit from behind" rather than a colored accent.
- */
-const SECONDARY_AMBIENT_GLOW = 'rgba(100, 180, 240, 0.45)';
-
-/**
- * Resting red accent glow that distinguishes the destructive variant
- * from plain secondary buttons without making it aggressively red.
- * Applied as a third shadow layer on top of the base emboss stack.
- * Uses `RED_DARK` (#cc3333) at low opacity so it reads as a faint
- * danger hint rather than an alarm.
- */
-const DESTRUCTIVE_REST_GLOW = 'rgba(255, 80, 80, 0.65)';
+const SHARED_DROP_SHADOW = 'rgba(7, 17, 32, 0.35)';
 
 // ---------------------------------------------------------------------------
 // Recipe shape
@@ -229,10 +195,6 @@ const primary: CSSProperties = {
  * shadow stack, font, everything. Only the background + text color
  * + shadow colors change.
  *
- * Uses a three-layer shadow: hard bottom edge + drop-shadow +
- * subtle ocean-blue ambient bloom so the glow is actually visible
- * against the dark `SURFACE_EL` background.
- *
  * Note: unlike the legacy secondary style this does NOT carry a
  * 1px `BORDER` border. The emboss edge provides the lift, and
  * layering a solid border on top would flatten it.
@@ -240,27 +202,25 @@ const primary: CSSProperties = {
 const secondary: CSSProperties = {
   background: SURFACE_EL,
   color: TEXT_PRI,
-  boxShadow: embossShadowWithAccent(SECONDARY_EDGE, SHARED_DROP_SHADOW, SECONDARY_AMBIENT_GLOW),
+  boxShadow: embossShadow(SECONDARY_EDGE, SHARED_DROP_SHADOW),
 };
 
 /**
  * Destructive variant — structurally identical to secondary at rest:
- * same neutral background, same emboss edge, same text color.
+ * same neutral background, same emboss shape, same text color.
  *
  * The `:hover` state reveals the red danger (CSS stylesheet below
  * transitions to a red gradient on mouse-over). At rest the button
- * carries only a faint red ambient bloom (`DESTRUCTIVE_REST_GLOW`)
- * as a third shadow layer — subtle enough that it does not alarm the
- * player, but distinct enough that a side-by-side comparison with a
- * plain secondary still reads differently.
- *
- * Shadow stack: hard bottom edge + shared drop-shadow (identical to
- * secondary base) + `0 0 24px rgba(204, 51, 51, 0.25)` red tint.
+ * carries NO accent glow — it shares the exact same 2-layer shadow
+ * shape as every other variant. The only visual difference at rest
+ * is the dark-red `DESTRUCTIVE_EDGE` bottom line vs the blue
+ * `SECONDARY_EDGE`, providing a subtle distinction without alarming
+ * the player.
  */
 const destructive: CSSProperties = {
   background: SURFACE_EL,
   color: TEXT_PRI,
-  boxShadow: embossShadowWithAccent(SECONDARY_EDGE, SHARED_DROP_SHADOW, DESTRUCTIVE_REST_GLOW),
+  boxShadow: embossShadow(DESTRUCTIVE_EDGE, SHARED_DROP_SHADOW),
 };
 
 /**
@@ -292,37 +252,19 @@ export const BUTTON_RECIPE: ButtonRecipe = {
   disabled,
 };
 
-/**
- * Explicitly-red destructive style for contexts where the danger must
- * always be visible (e.g. the Confirm button inside `ConfirmDialog`).
- *
- * Unlike `BUTTON_RECIPE.destructive` (which rests grey and only turns
- * red on CSS `:hover`), this variant is always red — use it when the
- * surrounding UI already provides the "are you sure?" framing and the
- * button must communicate danger at a glance without any mouse
- * interaction.
- */
-export const BUTTON_DESTRUCTIVE_RED: CSSProperties = {
-  background: `linear-gradient(135deg, ${RED}, ${RED_DARK})`,
-  color: TEXT_PRI,
-  boxShadow: embossShadow(DESTRUCTIVE_EDGE, SHARED_DROP_SHADOW),
-};
-
 // ---------------------------------------------------------------------------
 // Hover + active shadow stacks per variant
 // ---------------------------------------------------------------------------
 
 /**
- * Warm light overlay for the secondary button hover state. The fill
- * shifts to a slightly lighter deep-harbour blue so the button does
- * not feel dead — subtler than primary/destructive because secondary
- * actions should never compete with the gold CTA.
- */
-const SECONDARY_HOVER_BG = '#254b72';
-
-/**
  * Brightened secondary emboss edge for hover — one step lighter than
  * the resting edge so the lift reads a touch taller on mouse-over.
+ *
+ * Note: the secondary hover BACKGROUND is the same red gradient used
+ * by destructive hover (per Jonathan's explicit request — Settings
+ * should turn red on hover just like Exit does). Only the bottom
+ * 4px emboss edge keeps its blue tint to subtly distinguish from
+ * the destructive variant at rest.
  */
 const SECONDARY_HOVER_EDGE = '#0d2540';
 
@@ -369,9 +311,10 @@ export function buttonStylesheet(): string {
   box-shadow: ${activeEmbossShadow(PRIMARY_EDGE)};
 }
 
-/* Secondary (neutral) hover + active */
+/* Secondary (neutral) hover + active — body color matches destructive on hover */
 .gbr-btn--secondary:not(:disabled):hover {
-  background: ${SECONDARY_HOVER_BG};
+  background: linear-gradient(135deg, #ff9090, #e03030);
+  filter: brightness(1.1);
   box-shadow: ${embossShadow(SECONDARY_HOVER_EDGE, SHARED_DROP_SHADOW)};
 }
 .gbr-btn--secondary:not(:disabled):active {
@@ -410,24 +353,13 @@ export function buttonStylesheet(): string {
  */
 export const __test_embossShadow = embossShadow;
 
-/**
- * Internal three-layer emboss-shadow helper, re-exported for tests so
- * the `0 4px 0 <edge>, 0 6px 18px <glow>, 0 0 24px <accent>` shape
- * is locked in a single spot. Not intended for production use.
- */
-export const __test_embossShadowWithAccent = embossShadowWithAccent;
-
 /** Internal edge colors and shared drop-shadow, re-exported for tests. */
 export const __test_edges = {
   primary: PRIMARY_EDGE,
   secondary: SECONDARY_EDGE,
   destructive: DESTRUCTIVE_EDGE,
-  /** The shared dark drop-shadow applied to all three variants as the second layer. */
+  /** The shared dark drop-shadow applied to all variants as the second layer. */
   sharedDropShadow: SHARED_DROP_SHADOW,
-  /** Ocean-blue ambient glow added as third layer to secondary buttons. */
-  secondaryAmbientGlow: SECONDARY_AMBIENT_GLOW,
-  /** Faint red ambient bloom added as third layer to destructive buttons. */
-  destructiveRestGlow: DESTRUCTIVE_REST_GLOW,
 } as const;
 
 // ---------------------------------------------------------------------------

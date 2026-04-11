@@ -28,7 +28,6 @@ import {
   BUTTON_RECIPE,
   __test_edges,
   __test_embossShadow,
-  __test_embossShadowWithAccent,
   PANEL_BORDER,
 } from '../../src/ui/buttonRecipes';
 import {
@@ -129,12 +128,8 @@ describe('BUTTON_RECIPE.secondary', () => {
     expect(BUTTON_RECIPE.secondary.color).toBe(TEXT_PRI);
   });
 
-  it('uses a three-layer emboss shadow: hard edge + drop-shadow + ocean ambient bloom', () => {
-    const expected = __test_embossShadowWithAccent(
-      __test_edges.secondary,
-      __test_edges.sharedDropShadow,
-      __test_edges.secondaryAmbientGlow,
-    );
+  it('uses the canonical two-layer emboss shadow: hard edge + shared drop-shadow', () => {
+    const expected = __test_embossShadow(__test_edges.secondary, __test_edges.sharedDropShadow);
     expect(BUTTON_RECIPE.secondary.boxShadow).toBe(expected);
   });
 
@@ -168,32 +163,24 @@ describe('BUTTON_RECIPE.destructive', () => {
     expect(BUTTON_RECIPE.destructive.color).toBe(BUTTON_RECIPE.secondary.color);
   });
 
-  it('default boxShadow differs from secondary — destructive adds a red ambient layer', () => {
+  it('default boxShadow differs from secondary — destructive uses the dark-red edge color', () => {
     expect(BUTTON_RECIPE.destructive.boxShadow).not.toBe(BUTTON_RECIPE.secondary.boxShadow);
   });
 
-  it('uses a three-layer emboss shadow: hard edge + drop-shadow + red ambient glow', () => {
-    const expected = __test_embossShadowWithAccent(
-      __test_edges.secondary,
-      __test_edges.sharedDropShadow,
-      __test_edges.destructiveRestGlow,
-    );
+  it('uses the canonical two-layer emboss shadow with the destructive edge color', () => {
+    const expected = __test_embossShadow(__test_edges.destructive, __test_edges.sharedDropShadow);
     expect(BUTTON_RECIPE.destructive.boxShadow).toBe(expected);
   });
 
-  it('boxShadow contains the shared drop-shadow base layer (same foundation as secondary)', () => {
+  it('boxShadow contains the shared drop-shadow (same foundation as every other variant)', () => {
     expect(String(BUTTON_RECIPE.destructive.boxShadow ?? '')).toContain(
       __test_edges.sharedDropShadow,
     );
   });
 
-  it('boxShadow contains a red ambient glow layer that secondary does not have', () => {
-    expect(String(BUTTON_RECIPE.destructive.boxShadow ?? '')).toContain(
-      __test_edges.destructiveRestGlow,
-    );
-    expect(String(BUTTON_RECIPE.secondary.boxShadow ?? '')).not.toContain(
-      __test_edges.destructiveRestGlow,
-    );
+  it('boxShadow contains the destructive edge color (dark red) to distinguish it from secondary', () => {
+    expect(String(BUTTON_RECIPE.destructive.boxShadow ?? '')).toContain(__test_edges.destructive);
+    expect(String(BUTTON_RECIPE.secondary.boxShadow ?? '')).not.toContain(__test_edges.destructive);
   });
 
   it('uses SURFACE_EL background (same as secondary) not a red gradient', () => {
