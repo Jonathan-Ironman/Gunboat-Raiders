@@ -20,7 +20,8 @@ export const BOAT_STATS = {
     // yields a terminal yaw rate of ~0.98 rad/s (~56 deg/s) — comfortably
     // above the 45 deg/s target, with the first-order response feeling
     // responsive from the very first frame.
-    movement: { thrustForce: 8000, reverseForce: 2500, turnTorque: 2000, maxSpeed: 22 },
+    // Power bumped ~25% per playtest feedback (felt sluggish).
+    movement: { thrustForce: 10000, reverseForce: 3000, turnTorque: 2000, maxSpeed: 28 },
     weapons: {
       cooldown: 0.15,
       damage: 25,
@@ -59,10 +60,10 @@ export const BOAT_STATS = {
     health: { armor: 30, armorMax: 30, armorRegenRate: 1, hull: 40, hullMax: 40 },
     // thrustForce must overcome linearDamping (0.8) on a 1000kg boat to
     // achieve any meaningful pursuit speed. Terminal velocity is roughly
-    // F / (m * damping) = 2000 / (1000 * 0.8) = 2.5 m/s, fast enough to
-    // close on the player from the 80-120m spawn ring during a wave while
-    // still being a hittable target for aimed cannon volleys.
-    movement: { thrustForce: 2000, reverseForce: 800, turnTorque: 350, maxSpeed: 18 },
+    // F / (m * damping) = 3500 / (1000 * 0.8) = 4.375 m/s — fast enough to
+    // actually close on and threaten the player.
+    // Power bumped ~75% per playtest feedback (enemies were in slow motion).
+    movement: { thrustForce: 3500, reverseForce: 1400, turnTorque: 350, maxSpeed: 32 },
     weapons: {
       cooldown: 3.0,
       damage: 15,
@@ -79,8 +80,9 @@ export const BOAT_STATS = {
   barge: {
     health: { armor: 80, armorMax: 80, armorRegenRate: 2, hull: 120, hullMax: 120 },
     // Slower and heavier-feeling than a skiff but still capable of pursuit.
-    // Terminal velocity ~= 1200 / (1000 * 0.8) = 1.5 m/s.
-    movement: { thrustForce: 1200, reverseForce: 500, turnTorque: 150, maxSpeed: 8 },
+    // Terminal velocity ~= 1800 / (1000 * 0.8) = 2.25 m/s.
+    // Power bumped ~50% per playtest feedback (enemies were in slow motion).
+    movement: { thrustForce: 1800, reverseForce: 750, turnTorque: 150, maxSpeed: 12 },
     weapons: {
       cooldown: 2.5,
       damage: 20,
