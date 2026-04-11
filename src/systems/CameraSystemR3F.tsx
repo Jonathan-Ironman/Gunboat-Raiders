@@ -23,7 +23,7 @@ import { Euler, Quaternion, Vector3 } from 'three';
 import { getPlayerBodyState } from './physicsRefs';
 import { computeQuadrant } from './CameraSystem';
 import { useGameStore, type FiringQuadrant } from '@/store/gameStore';
-import { setAimOffset, MAX_PITCH_OFFSET } from './aimOffsetRefs';
+import { setAimOffset, MAX_PITCH_OFFSET_UP, MAX_PITCH_OFFSET_DOWN } from './aimOffsetRefs';
 
 /** Camera orbit configuration */
 const CAMERA_RADIUS = 15;
@@ -92,30 +92,34 @@ const PLAYER_BASE_ELEVATION = 0.06;
  *   elevation > CAMERA_INITIAL_ELEVATION (steep top-down view, camera
  *     high above) → negative pitch offset (flatter shot for close targets).
  *
- * The ±8° range (MAX_PITCH_OFFSET) is intentionally tight. The total
- * elevation is hard-clamped by the caller to [TOTAL_ELEVATION_MIN,
- * TOTAL_ELEVATION_MAX] so the cannon can never fire into the water or
- * arc straight overhead regardless of the raw camera elevation.
+ * The upward and downward ranges are ASYMMETRIC:
+ *   upward:   MAX_PITCH_OFFSET_UP   (+8°) — generous upward reach preserved
+ *             from playtest feedback.
+ *   downward: MAX_PITCH_OFFSET_DOWN (-3°) — tight downward reach so the
+ *             cannon does not dip too far when the camera looks steeply down.
+ *
+ * The total elevation is hard-clamped by the caller to
+ * [TOTAL_ELEVATION_MIN, TOTAL_ELEVATION_MAX] as a second safety net.
  *
  * The two half-ranges (min..initial and initial..max) are NOT symmetric
  * in degrees (15° wide vs 30° wide), so the mapping is piecewise linear
- * in elevation but maps each half to the full ±MAX_PITCH_OFFSET cone.
+ * in elevation but maps each half to its respective pitch limit.
  */
 function cameraElevationToPitchOffset(elevation: number): number {
   if (elevation <= CAMERA_INITIAL_ELEVATION) {
-    // [min, initial] → [+max_pitch, 0].
+    // [min, initial] → [+MAX_PITCH_OFFSET_UP, 0].
     const span = CAMERA_INITIAL_ELEVATION - CAMERA_MIN_ELEVATION;
     if (span <= 0) return 0;
     const t = (elevation - CAMERA_MIN_ELEVATION) / span;
     const clamped = t < 0 ? 0 : t > 1 ? 1 : t;
-    return MAX_PITCH_OFFSET * (1 - clamped);
+    return MAX_PITCH_OFFSET_UP * (1 - clamped);
   }
-  // (initial, max] → (0, -max_pitch].
+  // (initial, max] → (0, -MAX_PITCH_OFFSET_DOWN].
   const span = CAMERA_MAX_ELEVATION - CAMERA_INITIAL_ELEVATION;
   if (span <= 0) return 0;
   const t = (elevation - CAMERA_INITIAL_ELEVATION) / span;
   const clamped = t < 0 ? 0 : t > 1 ? 1 : t;
-  return -MAX_PITCH_OFFSET * clamped;
+  return -MAX_PITCH_OFFSET_DOWN * clamped;
 }
 
 // Reusable Three.js objects to avoid per-frame allocations
@@ -323,8 +327,8 @@ export function CameraSystemR3F() {
     //
     // The quadrant acts as a 90° gate — the weapon system snaps the shot to
     // whichever quadrant the camera (or cursor, in lock-absent mode) is
-    // pointing into — and on top of that the player gets a ±18° yaw / ±8°
-    // pitch cone of fine aim. The yaw delta is the signed angular distance
+    // pointing into — and on top of that the player gets a ±12° yaw /
+    // (+8°/-3°) asymmetric pitch cone of fine aim. The yaw delta is the signed angular distance
     // between the player's boat-local aim direction (`aimRelative`) and the
     // centre of the current quadrant; setAimOffset() clamps both axes to
     // their allowed range so the aim can never leak into the adjacent

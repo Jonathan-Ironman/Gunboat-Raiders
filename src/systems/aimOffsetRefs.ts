@@ -2,8 +2,8 @@
  * Module-scope aim offset refs — the player's fine-aim delta within the
  * active firing quadrant. Black Flag-style variable aim: the quadrant is
  * still selected by camera azimuth (fore / aft / port / starboard), but
- * within each 90° slice the player gets a ±18° yaw window and a ±8°
- * pitch window layered on top of the mount direction.
+ * within each 90° slice the player gets a ±12° yaw window and an
+ * asymmetric pitch window (+8° up / -3° down) layered on top of the mount direction.
  *
  * The refs are written once per frame by `CameraSystemR3F` (priority -1,
  * before the weapon system) and read every time a shot is fired or the
@@ -31,19 +31,26 @@ export interface AimOffset {
 }
 
 /**
- * Maximum yaw offset (radians). ±18° keeps the aim cone inside a 90°
- * quadrant with a 27° safety margin on each side, so the player can
+ * Maximum yaw offset (radians). ±12° keeps the aim cone inside a 90°
+ * quadrant with a 33° safety margin on each side, so the player can
  * never accidentally fire into the adjacent quadrant's arc.
  */
-export const MAX_YAW_OFFSET = (18 * Math.PI) / 180;
+export const MAX_YAW_OFFSET = (12 * Math.PI) / 180;
 
 /**
- * Maximum pitch offset (radians). ±8° layered on top of the player's
- * base `elevationAngle` (~3.4°) gives an effective elevation range of
- * roughly -4.6° to +11.4° before the hard floor clamp. Tight enough
- * to prevent the cannons from arcing to the sky or firing into the water.
+ * Maximum upward pitch offset (radians). +8° layered on top of the player's
+ * base `elevationAngle` (~5.7°) gives an effective max elevation of ~13.7°.
+ * Do NOT reduce — the upward reach is correct per playtest feedback.
  */
-export const MAX_PITCH_OFFSET = (8 * Math.PI) / 180;
+export const MAX_PITCH_OFFSET_UP = (8 * Math.PI) / 180;
+
+/**
+ * Maximum downward pitch offset (radians). -3° layered on top of the player's
+ * base `elevationAngle` (~5.7°) gives an effective min elevation of ~2.7°,
+ * nearly horizontal but never below the waterline.
+ * Tighter than the upward range to prevent the cannon dipping too far down.
+ */
+export const MAX_PITCH_OFFSET_DOWN = (3 * Math.PI) / 180;
 
 // Module-scope singleton. Mutated in place every frame by CameraSystemR3F
 // and read by WeaponSystemR3F + TrajectoryPreview. A single shared object
@@ -57,7 +64,7 @@ const _aimOffset: AimOffset = { yaw: 0, pitch: 0 };
  */
 export function setAimOffset(yaw: number, pitch: number): void {
   _aimOffset.yaw = clamp(yaw, -MAX_YAW_OFFSET, MAX_YAW_OFFSET);
-  _aimOffset.pitch = clamp(pitch, -MAX_PITCH_OFFSET, MAX_PITCH_OFFSET);
+  _aimOffset.pitch = clamp(pitch, -MAX_PITCH_OFFSET_DOWN, MAX_PITCH_OFFSET_UP);
 }
 
 /**

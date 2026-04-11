@@ -4,7 +4,8 @@ import {
   setAimOffset,
   resetAimOffset,
   MAX_YAW_OFFSET,
-  MAX_PITCH_OFFSET,
+  MAX_PITCH_OFFSET_UP,
+  MAX_PITCH_OFFSET_DOWN,
 } from '@/systems/aimOffsetRefs';
 
 describe('aimOffsetRefs', () => {
@@ -33,12 +34,20 @@ describe('aimOffsetRefs', () => {
     expect(getAimOffset().yaw).toBeCloseTo(-MAX_YAW_OFFSET, 6);
   });
 
-  it('clamps pitch to ±MAX_PITCH_OFFSET', () => {
-    setAimOffset(0, MAX_PITCH_OFFSET + 1);
-    expect(getAimOffset().pitch).toBeCloseTo(MAX_PITCH_OFFSET, 6);
+  it('clamps pitch up to MAX_PITCH_OFFSET_UP', () => {
+    setAimOffset(0, MAX_PITCH_OFFSET_UP + 1);
+    expect(getAimOffset().pitch).toBeCloseTo(MAX_PITCH_OFFSET_UP, 6);
+  });
 
-    setAimOffset(0, -MAX_PITCH_OFFSET - 1);
-    expect(getAimOffset().pitch).toBeCloseTo(-MAX_PITCH_OFFSET, 6);
+  it('clamps pitch down to -MAX_PITCH_OFFSET_DOWN', () => {
+    setAimOffset(0, -MAX_PITCH_OFFSET_DOWN - 1);
+    expect(getAimOffset().pitch).toBeCloseTo(-MAX_PITCH_OFFSET_DOWN, 6);
+  });
+
+  it('asymmetric clamp: upward reach is wider than downward reach', () => {
+    // Upward pitch allows more travel than downward to keep the cannon from
+    // dipping into the water while still giving ample high-arc range.
+    expect(MAX_PITCH_OFFSET_UP).toBeGreaterThan(MAX_PITCH_OFFSET_DOWN);
   });
 
   it('reset returns both axes to zero even after extreme values', () => {
@@ -66,11 +75,17 @@ describe('aimOffsetRefs', () => {
     expect(MAX_YAW_OFFSET).toBeLessThan(Math.PI / 4);
   });
 
-  it('MAX_PITCH_OFFSET stays within a physically reasonable cannon arc', () => {
-    // The pitch offset must stay well below 45° so combining it with the
-    // base elevation (~3.4°) never puts the shot on a near-vertical
-    // trajectory — and must be positive so there's any aim-high range at all.
-    expect(MAX_PITCH_OFFSET).toBeGreaterThan(0);
-    expect(MAX_PITCH_OFFSET).toBeLessThan(Math.PI / 4);
+  it('MAX_YAW_OFFSET is ≤12° (tight lateral window from tuning pass 2)', () => {
+    expect(MAX_YAW_OFFSET).toBeLessThanOrEqual((12 * Math.PI) / 180 + 1e-9);
+  });
+
+  it('MAX_PITCH_OFFSET_UP stays within a physically reasonable cannon arc', () => {
+    expect(MAX_PITCH_OFFSET_UP).toBeGreaterThan(0);
+    expect(MAX_PITCH_OFFSET_UP).toBeLessThan(Math.PI / 4);
+  });
+
+  it('MAX_PITCH_OFFSET_DOWN stays within a physically reasonable cannon arc', () => {
+    expect(MAX_PITCH_OFFSET_DOWN).toBeGreaterThan(0);
+    expect(MAX_PITCH_OFFSET_DOWN).toBeLessThan(Math.PI / 4);
   });
 });
