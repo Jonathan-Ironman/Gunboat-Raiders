@@ -6,12 +6,12 @@ The 4 broadside cannons on the player boat are misaligned: 3 sit close together,
 
 ## Acceptance Criteria
 
-- [ ] All 4 port broadside cannons evenly spaced along the hull
-- [ ] All 4 starboard broadside cannons evenly spaced along the hull
-- [ ] Port and starboard cannons mirrored exactly
-- [ ] Cannons moved inward toward hull centerline (less overhang)
-- [ ] Fore cannons still positioned naturally at bow
-- [ ] Verified in a scenario/unit test asserting mount offsets
+- [x] All 4 port broadside cannons evenly spaced along the hull
+- [x] All 4 starboard broadside cannons evenly spaced along the hull
+- [x] Port and starboard cannons mirrored exactly
+- [x] Cannons moved inward toward hull centerline (less overhang)
+- [x] Fore cannons still positioned naturally at bow
+- [x] Verified in a scenario/unit test asserting mount offsets
 
 ## Relevant Files
 
@@ -108,3 +108,7 @@ Currently PASSES. Must still pass after fix.
 - `PlayerBoat.tsx` logs mesh bounding boxes in dev mode (lines 83-104). After the fix, checking those logs against the new X offset would confirm the cannon mesh fits within hull bounds — useful for the dev agent to verify visually.
 - Enemy alignment (barge/skiff) uses evenly-spaced mounts and is unaffected.
 - No test infrastructure changes are needed; `boatStats.ts` is already importable as a pure ES module with no R3F/browser dependencies.
+
+## Fixed 2026-04-11
+
+Front broadside mount Z corrected from `1.0` → `0.5` for both port and starboard, making all 4 mounts evenly spaced at 0.5-unit intervals (`0.5, 0.0, -0.5, -1.0`). Unit tests added to `tests/unit/boatStats.test.ts` pinning the new values and asserting even spacing. Changes landed in task `gbr-cannon-spacing-ribbon-width` (agent `gbr-dev-cannon-ribbon`, 202604112325).

@@ -43,13 +43,13 @@ export const BOAT_STATS = {
         // Fore (2 small) — pulled inward (x: ±0.4→±0.2) and lowered (y: 0.8→0.4)
         { quadrant: 'fore', localOffset: [0.2, 0.4, 2.0], localDirection: [0, 0.3, 1] },
         { quadrant: 'fore', localOffset: [-0.2, 0.4, 2.0], localDirection: [0, 0.3, 1] },
-        // Port broadside (4) — pulled inward (x: -1.2→-0.6) and lowered (y: 0.8→0.4)
-        { quadrant: 'port', localOffset: [-0.6, 0.4, 1.0], localDirection: [-1, 0.3, 0] },
+        // Port broadside (4) — evenly spaced at Z: 0.5, 0.0, -0.5, -1.0 (0.5 gap each)
+        { quadrant: 'port', localOffset: [-0.6, 0.4, 0.5], localDirection: [-1, 0.3, 0] },
         { quadrant: 'port', localOffset: [-0.6, 0.4, 0.0], localDirection: [-1, 0.3, 0] },
         { quadrant: 'port', localOffset: [-0.6, 0.4, -0.5], localDirection: [-1, 0.3, 0] },
         { quadrant: 'port', localOffset: [-0.6, 0.4, -1.0], localDirection: [-1, 0.3, 0] },
-        // Starboard broadside (4) — pulled inward (x: 1.2→0.6) and lowered (y: 0.8→0.4)
-        { quadrant: 'starboard', localOffset: [0.6, 0.4, 1.0], localDirection: [1, 0.3, 0] },
+        // Starboard broadside (4) — evenly spaced at Z: 0.5, 0.0, -0.5, -1.0 (0.5 gap each)
+        { quadrant: 'starboard', localOffset: [0.6, 0.4, 0.5], localDirection: [1, 0.3, 0] },
         { quadrant: 'starboard', localOffset: [0.6, 0.4, 0.0], localDirection: [1, 0.3, 0] },
         { quadrant: 'starboard', localOffset: [0.6, 0.4, -0.5], localDirection: [1, 0.3, 0] },
         { quadrant: 'starboard', localOffset: [0.6, 0.4, -1.0], localDirection: [1, 0.3, 0] },

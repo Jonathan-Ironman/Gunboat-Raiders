@@ -86,6 +86,50 @@ describe('BOAT_STATS movement values', () => {
         expect(m.localOffset[2]).toBe(-2.0);
       }
     });
+
+    it('port broadside front mount Z is 0.5 (gap closed from 1.0)', () => {
+      const port = w.mounts.filter((m) => m.quadrant === 'port');
+      const zValues = port.map((m) => m.localOffset[2]).sort((a, b) => b - a);
+      expect(zValues[0]).toBe(0.5);
+    });
+
+    it('port broadside Z offsets are evenly spaced at 0.5 intervals', () => {
+      const port = w.mounts.filter((m) => m.quadrant === 'port');
+      const zValues = port.map((m) => m.localOffset[2]).sort((a, b) => b - a);
+      for (let i = 1; i < zValues.length; i++) {
+        const prev = zValues[i - 1];
+        const curr = zValues[i];
+        if (prev !== undefined && curr !== undefined) {
+          expect(Math.abs(prev - curr)).toBeCloseTo(0.5, 5);
+        }
+      }
+    });
+
+    it('starboard broadside Z offsets are evenly spaced at 0.5 intervals', () => {
+      const starboard = w.mounts.filter((m) => m.quadrant === 'starboard');
+      const zValues = starboard.map((m) => m.localOffset[2]).sort((a, b) => b - a);
+      for (let i = 1; i < zValues.length; i++) {
+        const prev = zValues[i - 1];
+        const curr = zValues[i];
+        if (prev !== undefined && curr !== undefined) {
+          expect(Math.abs(prev - curr)).toBeCloseTo(0.5, 5);
+        }
+      }
+    });
+
+    it('port and starboard broadside Z offsets are mirrored exactly', () => {
+      const port = w.mounts.filter((m) => m.quadrant === 'port');
+      const star = w.mounts.filter((m) => m.quadrant === 'starboard');
+      expect(port.length).toBe(star.length);
+      const portZ = port.map((m) => m.localOffset[2]).sort((a, b) => b - a);
+      const starZ = star.map((m) => m.localOffset[2]).sort((a, b) => b - a);
+      portZ.forEach((pz, i) => {
+        const sz = starZ[i];
+        if (sz !== undefined) {
+          expect(pz).toBeCloseTo(sz, 5);
+        }
+      });
+    });
   });
 
   describe('skiff', () => {
