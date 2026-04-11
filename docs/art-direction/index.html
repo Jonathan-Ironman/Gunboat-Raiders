@@ -1,0 +1,3100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gunboat Raiders — Harbour Dawn Design System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* ── RESET ── */
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html {
+        scroll-behavior: smooth;
+        font-size: 16px;
+      }
+      body {
+        background: #0f1e36;
+        color: #e8f0f8;
+        font-family: 'Nunito', sans-serif;
+        line-height: 1.6;
+      }
+
+      /* ── TOKENS ── */
+      :root {
+        --bg: #0f1e36;
+        --bg-deep: #071120;
+        --surface: #152844;
+        --surface-el: #1c3556;
+        --border: #234870;
+        --border-sub: #1a3454;
+        --gold: #f2b640;
+        --gold-dark: #c8921a;
+        --teal: #2dd4aa;
+        --teal-dark: #1aaa84;
+        --red: #ff8080;
+        --red-dark: #cc3333;
+        --ocean: #4a8ac4;
+        --text-pri: #ffffff;
+        --text-sec: #c8dff0;
+        --text-muted: #7aaac8;
+        --text-dim: #4a7090;
+        --space-1: 4px;
+        --space-2: 8px;
+        --space-3: 12px;
+        --space-4: 16px;
+        --space-5: 20px;
+        --space-6: 24px;
+        --space-8: 32px;
+        --space-10: 40px;
+        --space-12: 48px;
+        --space-16: 64px;
+        --space-20: 80px;
+        --radius-sm: 4px;
+        --radius-md: 8px;
+        --radius-lg: 12px;
+        --radius-xl: 16px;
+        --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.4);
+        --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
+        --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
+        --shadow-gold: 0 4px 20px rgba(242, 182, 64, 0.25);
+      }
+
+      /* ── NAV ── */
+      .toc {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 200;
+        background: rgba(7, 17, 32, 0.97);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--border-sub);
+        display: flex;
+        gap: 6px;
+        padding: 10px 24px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .toc-brand {
+        font-family: 'Baloo 2', sans-serif;
+        font-weight: 800;
+        font-size: 13px;
+        color: var(--gold);
+        margin-right: 10px;
+        white-space: nowrap;
+        letter-spacing: 0.02em;
+      }
+      .toc a {
+        font-size: 11px;
+        font-weight: 700;
+        text-decoration: none;
+        padding: 4px 10px;
+        border-radius: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: var(--text-sec);
+        transition: all 0.15s;
+        white-space: nowrap;
+      }
+      .toc a:hover {
+        border-color: rgba(255, 255, 255, 0.3);
+        color: #fff;
+      }
+
+      /* ── LAYOUT ── */
+      .section {
+        padding: var(--space-20) 0 var(--space-16);
+        border-bottom: 1px solid var(--border-sub);
+      }
+      .section:last-child {
+        border-bottom: none;
+      }
+      .inner {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 0 var(--space-10);
+      }
+      .hero-pad {
+        padding-top: 72px;
+      }
+      .two-col {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-8);
+        align-items: start;
+      }
+      .three-col {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: var(--space-6);
+      }
+
+      /* ── HEADINGS ── */
+      .section-label {
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--gold);
+        opacity: 0.8;
+        margin-bottom: var(--space-2);
+      }
+      .section-title {
+        font-family: 'Baloo 2', sans-serif;
+        font-weight: 800;
+        font-size: 32px;
+        color: var(--text-pri);
+        margin-bottom: var(--space-2);
+        line-height: 1.1;
+      }
+      .section-sub {
+        font-size: 15px;
+        color: var(--text-sec);
+        margin-bottom: var(--space-8);
+        max-width: 620px;
+      }
+      h3.card-title {
+        font-family: 'Baloo 2', sans-serif;
+        font-weight: 700;
+        font-size: 17px;
+        color: var(--text-pri);
+        margin-bottom: var(--space-3);
+      }
+      h4.sub-heading {
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        margin-bottom: var(--space-3);
+      }
+
+      /* ── CARDS ── */
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: var(--space-6);
+      }
+      .card-el {
+        background: var(--surface-el);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: var(--space-6);
+      }
+
+      /* ── PALETTE ── */
+      .palette-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-3);
+        margin-bottom: var(--space-8);
+      }
+      .swatch-wrap {
+        width: 100px;
+      }
+      .swatch-block {
+        height: 64px;
+        border-radius: var(--radius-md);
+        margin-bottom: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+      }
+      .swatch-hex {
+        font-size: 11px;
+        font-family: 'Courier New', monospace;
+        font-weight: 700;
+        color: var(--text-sec);
+      }
+      .swatch-role {
+        font-size: 9px;
+        color: var(--text-muted);
+        margin-top: 2px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .swatch-cr {
+        font-size: 9px;
+        font-family: 'Courier New', monospace;
+        font-weight: 700;
+        margin-top: 3px;
+      }
+      .cr-aaa {
+        color: #2dd4aa;
+      }
+      .cr-aa {
+        color: #f2b640;
+      }
+      .cr-fail {
+        color: #ff8080;
+      }
+
+      /* ── CONTRAST TABLE ── */
+      .ct {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+        margin-bottom: var(--space-8);
+      }
+      .ct th {
+        text-align: left;
+        padding: 6px 12px;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        border-bottom: 1px solid var(--border);
+      }
+      .ct td {
+        padding: 7px 12px;
+        border-bottom: 1px solid var(--border-sub);
+        vertical-align: middle;
+      }
+      .ct tr:last-child td {
+        border-bottom: none;
+      }
+      .ct-preview {
+        display: inline-block;
+        padding: 2px 10px;
+        border-radius: 4px;
+        font-weight: 700;
+        font-size: 12px;
+      }
+      .badge {
+        display: inline-block;
+        padding: 1px 8px;
+        border-radius: 4px;
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+      }
+      .badge-aaa {
+        background: rgba(45, 212, 170, 0.15);
+        color: #2dd4aa;
+        border: 1px solid rgba(45, 212, 170, 0.3);
+      }
+      .badge-aa {
+        background: rgba(242, 182, 64, 0.12);
+        color: #f2b640;
+        border: 1px solid rgba(242, 182, 64, 0.25);
+      }
+      .badge-fail {
+        background: rgba(255, 128, 128, 0.12);
+        color: #ff8080;
+        border: 1px solid rgba(255, 128, 128, 0.25);
+      }
+      .badge-nt {
+        background: rgba(74, 138, 196, 0.1);
+        color: #4a8ac4;
+        border: 1px solid rgba(74, 138, 196, 0.2);
+        font-size: 8px;
+      }
+
+      /* ── TYPOGRAPHY ── */
+      .type-sample {
+        margin-bottom: var(--space-6);
+        padding: var(--space-5);
+        background: var(--surface);
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border);
+      }
+      .type-meta {
+        font-size: 10px;
+        font-family: 'Courier New', monospace;
+        color: var(--text-muted);
+        margin-top: 6px;
+      }
+      .type-display {
+        font-family: 'Baloo 2', sans-serif;
+        font-weight: 800;
+        font-size: 72px;
+        line-height: 0.92;
+        letter-spacing: -0.01em;
+        color: var(--text-pri);
+      }
+      .type-h1 {
+        font-family: 'Baloo 2', sans-serif;
+        font-weight: 800;
+        font-size: 48px;
+        line-height: 1;
+        letter-spacing: 0.01em;
+        color: var(--text-pri);
+      }
+      .type-h2 {
+        font-family: 'Baloo 2', sans-serif;
+        font-weight: 700;
+        font-size: 32px;
+        line-height: 1.1;
+        color: var(--text-pri);
+      }
+      .type-h3 {
+        font-family: 'Baloo 2', sans-serif;
+        font-weight: 700;
+        font-size: 22px;
+        line-height: 1.2;
+        color: var(--text-pri);
+      }
+      .type-body-lg {
+        font-family: 'Nunito', sans-serif;
+        font-weight: 600;
+        font-size: 18px;
+        line-height: 1.6;
+        color: var(--text-sec);
+      }
+      .type-body {
+        font-family: 'Nunito', sans-serif;
+        font-weight: 600;
+        font-size: 16px;
+        line-height: 1.6;
+        color: var(--text-sec);
+      }
+      .type-small {
+        font-family: 'Nunito', sans-serif;
+        font-weight: 700;
+        font-size: 13px;
+        line-height: 1.5;
+        color: var(--text-sec);
+      }
+      .type-caption {
+        font-family: 'Nunito', sans-serif;
+        font-weight: 700;
+        font-size: 11px;
+        line-height: 1.4;
+        letter-spacing: 0.04em;
+        color: var(--text-muted);
+      }
+
+      /* ── SPACING TABLE ── */
+      .sp-row {
+        display: flex;
+        align-items: center;
+        gap: var(--space-4);
+        padding: 6px 0;
+        border-bottom: 1px solid var(--border-sub);
+      }
+      .sp-row:last-child {
+        border-bottom: none;
+      }
+      .sp-bar-wrap {
+        flex: 1;
+        height: 20px;
+        display: flex;
+        align-items: center;
+      }
+      .sp-bar {
+        height: 10px;
+        background: var(--ocean);
+        border-radius: 2px;
+        opacity: 0.7;
+      }
+      .sp-label {
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        color: var(--text-sec);
+        width: 80px;
+        flex-shrink: 0;
+      }
+      .sp-val {
+        font-family: 'Courier New', monospace;
+        font-size: 11px;
+        color: var(--text-muted);
+        width: 40px;
+        flex-shrink: 0;
+      }
+      .sp-note {
+        font-size: 11px;
+        color: var(--text-muted);
+      }
+
+      /* ── ELEVATION ── */
+      .el-card {
+        border-radius: var(--radius-lg);
+        padding: var(--space-5);
+        margin-bottom: var(--space-4);
+      }
+
+      /* ── COMPONENTS ── */
+      /* Buttons */
+      .btn-pri {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 28px;
+        border-radius: var(--radius-md);
+        border: none;
+        cursor: pointer;
+        font-family: 'Baloo 2', sans-serif;
+        font-weight: 800;
+        font-size: 17px;
+        letter-spacing: 0.03em;
+        background: linear-gradient(135deg, #f2b640, #d4920e);
+        color: #071120;
+        box-shadow:
+          0 4px 0 #9a6808,
+          0 6px 18px rgba(210, 140, 20, 0.3);
+        transition:
+          transform 0.1s,
+          box-shadow 0.1s;
+        text-decoration: none;
+      }
+      .btn-pri:hover {
+        transform: translateY(-1px);
+        box-shadow:
+          0 5px 0 #9a6808,
+          0 8px 24px rgba(210, 140, 20, 0.4);
+      }
+      .btn-pri:active {
+        transform: translateY(2px);
+        box-shadow:
+          0 2px 0 #9a6808,
+          0 3px 10px rgba(210, 140, 20, 0.2);
+      }
+      .btn-pri:disabled,
+      .btn-pri[disabled] {
+        opacity: 0.35;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: 0 2px 0 #4a3808;
+      }
+      .btn-sec {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 11px 26px;
+        border-radius: var(--radius-md);
+        border: 2px solid var(--border);
+        cursor: pointer;
+        font-family: 'Baloo 2', sans-serif;
+        font-weight: 700;
+        font-size: 16px;
+        background: var(--surface);
+        color: var(--text-pri);
+        transition: all 0.15s;
+      }
+      .btn-sec:hover {
+        border-color: var(--gold);
+        color: var(--gold);
+        background: rgba(242, 182, 64, 0.06);
+      }
+      .btn-sec:active {
+        transform: scale(0.98);
+      }
+      .btn-sec:disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
+      }
+      .btn-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: var(--radius-md);
+        border: 1.5px solid var(--border);
+        background: var(--surface);
+        color: var(--text-sec);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        transition: all 0.15s;
+      }
+      .btn-icon:hover {
+        border-color: var(--gold);
+        color: var(--gold);
+      }
+
+      /* Health bar */
+      .health-wrap {
+        margin-bottom: var(--space-4);
+      }
+      .health-label {
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 4px;
+      }
+      .health-track {
+        height: 14px;
+        background: var(--bg-deep);
+        border-radius: 7px;
+        border: 1px solid var(--border-sub);
+        overflow: hidden;
+      }
+      .health-fill {
+        height: 100%;
+        border-radius: 6px;
+        transition: width 0.2s ease-out;
+      }
+      .health-full {
+        background: linear-gradient(90deg, #2dd4aa, #22c4a0);
+        width: 100%;
+      }
+      .health-damaged {
+        background: linear-gradient(90deg, #e8b020, #c8920a);
+        width: 52%;
+      }
+      .health-critical {
+        background: linear-gradient(90deg, #ff6060, #cc2828);
+        width: 18%;
+        animation: hpflash 0.5s ease-in-out infinite alternate;
+      }
+      .health-flash {
+        outline: 2px solid #ff8080;
+        outline-offset: 1px;
+      }
+      @keyframes hpflash {
+        from {
+          opacity: 0.6;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      .health-text {
+        font-size: 10px;
+        font-weight: 700;
+        color: var(--text-muted);
+        margin-top: 3px;
+        font-family: 'Courier New', monospace;
+      }
+
+      /* Ammo pill */
+      .ammo-row {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+        margin-bottom: var(--space-3);
+      }
+      .ammo-slot {
+        width: 10px;
+        height: 22px;
+        border-radius: 2px;
+        transition: all 0.15s;
+      }
+      .ammo-ready {
+        background: linear-gradient(180deg, #f5c870, #d89020);
+      }
+      .ammo-spent {
+        background: var(--bg-deep);
+        border: 1px solid var(--border-sub);
+      }
+      .ammo-reloading {
+        background: var(--surface);
+        border: 1px solid var(--ocean);
+        animation: reload 1s linear infinite;
+      }
+      @keyframes reload {
+        0% {
+          opacity: 0.3;
+        }
+        50% {
+          opacity: 0.9;
+        }
+        100% {
+          opacity: 0.3;
+        }
+      }
+
+      /* Wave indicator */
+      .wave-ind {
+        background: var(--surface);
+        border: 1.5px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: var(--space-4);
+        text-align: center;
+      }
+      .wave-number {
+        font-family: 'Baloo 2', sans-serif;
+        font-weight: 800;
+        font-size: 48px;
+        color: #fff;
+        line-height: 1;
+        text-shadow: 0 2px 0 var(--bg-deep);
+      }
+      .wave-label {
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--gold);
+        margin-top: 2px;
+      }
+      .wave-next {
+        font-size: 11px;
+        color: var(--text-muted);
+        margin-top: 4px;
+      }
+
+      /* Score display */
+      .score-disp {
+        font-family: 'Baloo 2', sans-serif;
+        font-weight: 800;
+        font-size: 32px;
+        color: var(--gold);
+        line-height: 1;
+      }
+      .score-label {
+        font-size: 10px;
+        color: var(--text-muted);
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      /* Minimap */
+      .minimap {
+        width: 120px;
+        height: 120px;
+        background: var(--bg-deep);
+        border: 1.5px solid var(--border);
+        border-radius: var(--radius-md);
+        position: relative;
+        overflow: hidden;
+      }
+      .mm-dot {
+        position: absolute;
+        border-radius: 50%;
+      }
+      .mm-player {
+        width: 9px;
+        height: 9px;
+        background: var(--gold);
+        border: 2px solid #fff;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        box-shadow: 0 0 6px rgba(242, 182, 64, 0.5);
+      }
+      .mm-enemy {
+        width: 7px;
+        height: 7px;
+        background: var(--red);
+        border: 1.5px solid #fff;
+      }
+
+      /* Kill feed */
+      .killfeed {
+        background: rgba(7, 17, 32, 0.85);
+        border-radius: var(--radius-sm);
+        overflow: hidden;
+      }
+      .kf-row {
+        padding: 5px 10px;
+        font-size: 12px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      }
+      .kf-row:last-child {
+        border-bottom: none;
+      }
+      .kf-you {
+        color: var(--gold);
+      }
+      .kf-enemy {
+        color: var(--red);
+      }
+      .kf-verb {
+        color: var(--text-muted);
+        font-weight: 600;
+      }
+      .kf-pts {
+        font-size: 10px;
+        color: var(--text-muted);
+        margin-left: auto;
+      }
+
+      /* Damage numbers */
+      .dmg-num {
+        font-family: 'Baloo 2', sans-serif;
+        font-weight: 800;
+        pointer-events: none;
+        text-shadow: 0 2px 0 rgba(0, 0, 0, 0.6);
+      }
+      .dmg-hit {
+        font-size: 28px;
+        color: #fff;
+      }
+      .dmg-crit {
+        font-size: 42px;
+        color: var(--gold);
+        text-shadow:
+          0 3px 0 var(--gold-dark),
+          0 0 20px rgba(242, 182, 64, 0.4);
+      }
+      .dmg-recv {
+        font-size: 28px;
+        color: var(--red);
+        text-shadow: 0 2px 0 #7a1010;
+      }
+      .dmg-miss {
+        font-size: 16px;
+        color: var(--text-muted);
+        font-style: italic;
+      }
+
+      /* Hit marker */
+      .hitmarker {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 48px;
+        height: 48px;
+        position: relative;
+      }
+      .hitmarker::before,
+      .hitmarker::after {
+        content: '';
+        position: absolute;
+        background: var(--red);
+        border-radius: 1px;
+      }
+      .hitmarker::before {
+        width: 2px;
+        height: 14px;
+      }
+      .hitmarker::after {
+        width: 14px;
+        height: 2px;
+      }
+      .hm-gap {
+        display: inline-block;
+        width: 48px;
+        height: 48px;
+        border: 2px solid rgba(255, 255, 255, 0.5);
+        border-radius: 50%;
+        position: relative;
+      }
+      .hm-gap::before,
+      .hm-gap::after {
+        content: '';
+        position: absolute;
+        background: #fff;
+      }
+      .hm-gap::before {
+        width: 1px;
+        height: 8px;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+      }
+
+      /* Modal */
+      .modal-overlay {
+        background: rgba(7, 17, 32, 0.85);
+        backdrop-filter: blur(8px);
+        border-radius: var(--radius-xl);
+        border: 1px solid var(--border);
+        padding: var(--space-10);
+        max-width: 440px;
+      }
+      .modal-title {
+        font-family: 'Baloo 2', sans-serif;
+        font-weight: 800;
+        font-size: 28px;
+        color: var(--text-pri);
+        margin-bottom: var(--space-2);
+      }
+      .modal-sub {
+        font-size: 14px;
+        color: var(--text-sec);
+        margin-bottom: var(--space-8);
+      }
+      .modal-divider {
+        border: none;
+        border-top: 1px solid var(--border);
+        margin: var(--space-6) 0;
+      }
+
+      /* Menu list item */
+      .menu-item {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        padding: var(--space-3) var(--space-4);
+        border-radius: var(--radius-md);
+        cursor: pointer;
+        font-weight: 700;
+        font-size: 16px;
+        transition: all 0.15s;
+        border: 1px solid transparent;
+        color: var(--text-sec);
+      }
+      .menu-item:hover {
+        background: var(--surface-el);
+        border-color: var(--border);
+        color: var(--text-pri);
+      }
+      .menu-item.active {
+        background: rgba(242, 182, 64, 0.1);
+        border-color: rgba(242, 182, 64, 0.3);
+        color: var(--gold);
+      }
+      .menu-item.disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
+      }
+      .menu-item-icon {
+        width: 20px;
+        text-align: center;
+        font-size: 16px;
+      }
+
+      /* Toast */
+      .toast {
+        background: var(--surface-el);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: var(--space-3) var(--space-5);
+        font-weight: 700;
+        font-size: 14px;
+        color: var(--text-pri);
+        box-shadow: var(--shadow-md);
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+      }
+      .toast-success {
+        border-color: rgba(45, 212, 170, 0.4);
+        background: rgba(45, 212, 170, 0.08);
+      }
+      .toast-warn {
+        border-color: rgba(242, 182, 64, 0.4);
+        background: rgba(242, 182, 64, 0.08);
+      }
+      .toast-danger {
+        border-color: rgba(255, 128, 128, 0.4);
+        background: rgba(255, 128, 128, 0.08);
+      }
+      .toast-icon {
+        font-size: 18px;
+      }
+
+      /* Title treatment */
+      .title-treatment {
+        background: linear-gradient(150deg, #1a3e68 0%, #0f1e36 55%, #071120 100%);
+        border-radius: var(--radius-lg);
+        padding: 56px 36px;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+        border: 1.5px solid var(--border);
+      }
+      .title-glow {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 40%;
+        background: linear-gradient(0deg, rgba(242, 182, 64, 0.07) 0%, transparent 100%);
+      }
+      .title-game {
+        font-family: 'Baloo 2', sans-serif;
+        font-weight: 800;
+        font-size: clamp(52px, 8vw, 88px);
+        color: #fff;
+        letter-spacing: 0.03em;
+        line-height: 0.9;
+        position: relative;
+        z-index: 1;
+        text-shadow:
+          0 3px 0 #04101e,
+          0 6px 28px rgba(0, 0, 0, 0.5);
+      }
+      .title-tagline {
+        font-family: 'Nunito', sans-serif;
+        font-weight: 700;
+        font-size: 15px;
+        color: var(--gold);
+        margin-top: 12px;
+        letter-spacing: 0.06em;
+        position: relative;
+        z-index: 1;
+      }
+      .title-cta {
+        display: inline-block;
+        margin-top: 28px;
+        position: relative;
+        z-index: 1;
+        font-family: 'Baloo 2', sans-serif;
+        font-weight: 800;
+        font-size: 17px;
+        letter-spacing: 0.04em;
+        padding: 13px 52px;
+        border-radius: var(--radius-md);
+        background: linear-gradient(135deg, #f2b640, #d4920e);
+        color: #071120;
+        border: none;
+        cursor: pointer;
+        box-shadow:
+          0 4px 0 #9a6808,
+          var(--shadow-gold);
+      }
+
+      /* Do/Don't */
+      .do-dont {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-5);
+      }
+      .do-card {
+        background: rgba(45, 212, 170, 0.06);
+        border: 1px solid rgba(45, 212, 170, 0.2);
+        border-radius: var(--radius-md);
+        padding: var(--space-5);
+      }
+      .dont-card {
+        background: rgba(255, 128, 128, 0.06);
+        border: 1px solid rgba(255, 128, 128, 0.2);
+        border-radius: var(--radius-md);
+        padding: var(--space-5);
+      }
+      .do-label {
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: #2dd4aa;
+        margin-bottom: var(--space-3);
+      }
+      .dont-label {
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: #ff8080;
+        margin-bottom: var(--space-3);
+      }
+
+      /* Motion tokens */
+      .motion-row {
+        padding: var(--space-3) 0;
+        border-bottom: 1px solid var(--border-sub);
+        display: flex;
+        align-items: center;
+        gap: var(--space-6);
+      }
+      .motion-row:last-child {
+        border-bottom: none;
+      }
+      .motion-name {
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        color: var(--gold);
+        width: 160px;
+        flex-shrink: 0;
+      }
+      .motion-val {
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        color: var(--text-sec);
+        width: 180px;
+        flex-shrink: 0;
+      }
+      .motion-note {
+        font-size: 12px;
+        color: var(--text-muted);
+      }
+
+      /* Contrast checker widget */
+      .checker {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: var(--space-6);
+        margin-top: var(--space-8);
+      }
+      .checker h3 {
+        font-family: 'Baloo 2', sans-serif;
+        font-weight: 800;
+        font-size: 16px;
+        color: var(--text-pri);
+        margin-bottom: var(--space-4);
+      }
+      .checker-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr auto;
+        gap: var(--space-3);
+        align-items: end;
+        margin-bottom: var(--space-4);
+      }
+      .checker-field label {
+        font-size: 10px;
+        font-weight: 700;
+        color: var(--text-muted);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        display: block;
+        margin-bottom: 4px;
+      }
+      .checker-field input {
+        width: 100%;
+        padding: 8px 10px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: #fff;
+        font-family: 'Courier New', monospace;
+        font-size: 13px;
+      }
+      .checker-field input:focus {
+        outline: 2px solid rgba(74, 138, 196, 0.5);
+        border-color: transparent;
+      }
+      .checker-btn {
+        padding: 9px 18px;
+        background: #2a5a90;
+        border: none;
+        border-radius: 6px;
+        color: #fff;
+        font-family: 'Nunito', sans-serif;
+        font-weight: 800;
+        font-size: 12px;
+        cursor: pointer;
+        height: 36px;
+        align-self: end;
+      }
+      .checker-btn:hover {
+        background: #3a6aa0;
+      }
+      .checker-output {
+        margin-top: var(--space-4);
+      }
+      .checker-preview-box {
+        padding: 14px 20px;
+        border-radius: 6px;
+        margin-bottom: var(--space-3);
+        font-family: 'Baloo 2', sans-serif;
+        font-weight: 700;
+        font-size: 18px;
+        text-align: center;
+      }
+      .checker-ratio {
+        font-family: 'Baloo 2', sans-serif;
+        font-weight: 800;
+        font-size: 24px;
+        margin-bottom: 4px;
+      }
+      .checker-badges {
+        display: flex;
+        gap: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- NAV -->
+    <nav class="toc">
+      <span class="toc-brand">Harbour Dawn</span>
+      <a href="#identity">Identity</a>
+      <a href="#palette">Palette</a>
+      <a href="#contrast">Contrast</a>
+      <a href="#typography">Typography</a>
+      <a href="#spacing">Spacing</a>
+      <a href="#elevation">Elevation</a>
+      <a href="#components">Components</a>
+      <a href="#motion">Motion</a>
+      <a href="#iconography">Iconography</a>
+      <a href="#dodont">Do / Don't</a>
+    </nav>
+
+    <!-- HERO -->
+    <div class="hero-pad"></div>
+    <section class="section" id="identity" style="padding-top: 48px">
+      <div class="inner">
+        <div class="section-label">Design System</div>
+        <div class="section-title" style="font-size: 48px">Harbour Dawn</div>
+        <div class="section-sub" style="font-size: 17px; margin-bottom: 32px">
+          Premium naval combat — fresh, not childish. High legibility under fast action.
+        </div>
+
+        <div class="two-col" style="gap: 20px; margin-bottom: 40px">
+          <div class="card">
+            <h4 class="sub-heading">Design Principles</h4>
+            <div style="font-size: 14px; color: var(--text-sec); line-height: 1.9">
+              <div style="margin-bottom: 8px">
+                <strong style="color: var(--gold)">Premium naval strategy</strong> — dark, deep,
+                cinematic. Feels like a real game, not a flash toy.
+              </div>
+              <div style="margin-bottom: 8px">
+                <strong style="color: var(--gold)">High legibility always</strong> — every text
+                element must be readable at a glance under fast action. No exceptions.
+              </div>
+              <div style="margin-bottom: 8px">
+                <strong style="color: var(--gold)">Warm gold accent system</strong> — amber/gold
+                carries energy and status. Teal carries health and safety. Red carries danger.
+                Nothing else carries semantic weight.
+              </div>
+              <div style="margin-bottom: 8px">
+                <strong style="color: var(--gold)">Fresh, not childish</strong> — Baloo 2 adds
+                warmth without being a kids game font. Clean geometric UI language.
+              </div>
+              <div>
+                <strong style="color: var(--gold)">Restraint in decoration</strong> — one gradient
+                per surface at most. Glow effects only on interactive or active states.
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="title-treatment">
+              <div class="title-glow"></div>
+              <div class="title-game">GUNBOAT<br />RAIDERS</div>
+              <div class="title-tagline">DOMINATE THE HIGH SEAS</div>
+              <button class="title-cta">PLAY NOW</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="three-col">
+          <div class="card" style="text-align: center">
+            <div style="font-size: 32px; margin-bottom: 8px">🎨</div>
+            <div
+              style="
+                font-family: 'Baloo 2', sans-serif;
+                font-weight: 700;
+                font-size: 15px;
+                color: var(--text-pri);
+                margin-bottom: 4px;
+              "
+            >
+              Fonts
+            </div>
+            <div style="font-size: 13px; color: var(--text-muted)">
+              Baloo 2 (display) + Nunito (UI). Nothing else.
+            </div>
+          </div>
+          <div class="card" style="text-align: center">
+            <div style="font-size: 32px; margin-bottom: 8px">🌊</div>
+            <div
+              style="
+                font-family: 'Baloo 2', sans-serif;
+                font-weight: 700;
+                font-size: 15px;
+                color: var(--text-pri);
+                margin-bottom: 4px;
+              "
+            >
+              Mood
+            </div>
+            <div style="font-size: 13px; color: var(--text-muted)">
+              Naval dawn — deep navy, amber sunrise, teal horizon.
+            </div>
+          </div>
+          <div class="card" style="text-align: center">
+            <div style="font-size: 32px; margin-bottom: 8px">🎯</div>
+            <div
+              style="
+                font-family: 'Baloo 2', sans-serif;
+                font-weight: 700;
+                font-size: 15px;
+                color: var(--text-pri);
+                margin-bottom: 4px;
+              "
+            >
+              WCAG Target
+            </div>
+            <div style="font-size: 13px; color: var(--text-muted)">
+              AAA (7:1) for all body text. AA (4.5:1) min for non-text marks.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PALETTE -->
+    <section class="section" id="palette">
+      <div class="inner">
+        <div class="section-label">Color System</div>
+        <div class="section-title">Full Color Palette</div>
+        <div class="section-sub">
+          Every token used in the design. Contrast ratios calculated against the primary background
+          (#0f1e36) unless noted.
+        </div>
+
+        <h4 class="sub-heading">Backgrounds &amp; Surfaces</h4>
+        <div class="palette-grid" id="palette-bg"></div>
+
+        <h4 class="sub-heading">Accent &amp; Semantic Colors</h4>
+        <div class="palette-grid" id="palette-accent"></div>
+
+        <h4 class="sub-heading">Text Colors</h4>
+        <div class="palette-grid" id="palette-text"></div>
+
+        <h4 class="sub-heading">Border &amp; Structural</h4>
+        <div class="palette-grid" id="palette-border"></div>
+      </div>
+    </section>
+
+    <!-- CONTRAST AUDIT -->
+    <section class="section" id="contrast">
+      <div class="inner">
+        <div class="section-label">Accessibility</div>
+        <div class="section-title">Contrast Audit</div>
+        <div class="section-sub">
+          All valid text-on-background pairings. Generated at page load by the inline contrast
+          engine. Pairs marked NT are non-text decorative marks — AA sufficient. All body/label text
+          must be AAA.
+        </div>
+
+        <table class="ct" id="contrast-table">
+          <thead>
+            <tr>
+              <th>Foreground</th>
+              <th>Background</th>
+              <th>Usage</th>
+              <th>Preview</th>
+              <th>Ratio</th>
+              <th>Level</th>
+            </tr>
+          </thead>
+          <tbody id="contrast-tbody"></tbody>
+        </table>
+
+        <!-- Interactive checker -->
+        <div class="checker">
+          <h3>Interactive Contrast Checker</h3>
+          <div class="checker-row">
+            <div class="checker-field">
+              <label>Foreground</label>
+              <input type="text" id="ck-fg" value="#f2b640" placeholder="#rrggbb" />
+            </div>
+            <div class="checker-field">
+              <label>Background</label>
+              <input type="text" id="ck-bg" value="#0f1e36" placeholder="#rrggbb" />
+            </div>
+            <button class="checker-btn" onclick="runChecker()">Check</button>
+          </div>
+          <div class="checker-output" id="ck-output"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TYPOGRAPHY -->
+    <section class="section" id="typography">
+      <div class="inner">
+        <div class="section-label">Type System</div>
+        <div class="section-title">Typography Scale</div>
+        <div class="section-sub">
+          Baloo 2 for all display, heading, and score contexts. Nunito for all UI labels, body copy,
+          and HUD text. Two fonts, nothing else.
+        </div>
+
+        <div class="type-sample">
+          <div class="type-display">GUNBOAT RAIDERS</div>
+          <div class="type-meta">
+            display — Baloo 2 800 / 72px / lh 0.92 / ls -0.01em — Title screens only
+          </div>
+        </div>
+        <div class="type-sample">
+          <div class="type-h1">Wave 7 Incoming</div>
+          <div class="type-meta">
+            h1 — Baloo 2 800 / 48px / lh 1.0 / ls 0.01em — Major headings, modal titles
+          </div>
+        </div>
+        <div class="type-sample">
+          <div class="type-h2">Final Score</div>
+          <div class="type-meta">
+            h2 — Baloo 2 700 / 32px / lh 1.1 — Section headings, panel titles
+          </div>
+        </div>
+        <div class="type-sample">
+          <div class="type-h3">Health: Critical</div>
+          <div class="type-meta">
+            h3 — Baloo 2 700 / 22px / lh 1.2 — Card titles, subsection headings
+          </div>
+        </div>
+        <div class="type-sample">
+          <div class="type-body-lg">
+            Use your cannon wisely — reload takes 2 seconds at full fire rate.
+          </div>
+          <div class="type-meta">
+            body-large — Nunito 600 / 18px / lh 1.6 — Key instructional copy, descriptions
+          </div>
+        </div>
+        <div class="type-sample">
+          <div class="type-body">
+            Enemy barges have 3× the hull strength of a standard skiff. Target the waterline.
+          </div>
+          <div class="type-meta">
+            body — Nunito 600 / 16px / lh 1.6 — Standard UI copy, menu descriptions
+          </div>
+        </div>
+        <div class="type-sample">
+          <div class="type-small">Press SPACE to fire · WASD to steer · F for boost</div>
+          <div class="type-meta">
+            small — Nunito 700 / 13px / lh 1.5 — HUD labels, tooltips, keybind hints
+          </div>
+        </div>
+        <div class="type-sample">
+          <div class="type-caption">WAVE 3 · SCORE 4,200 · KILLS 7</div>
+          <div class="type-meta">
+            caption — Nunito 700 / 11px / lh 1.4 / ls 0.04em — All-caps labels, secondary HUD stats
+          </div>
+        </div>
+
+        <div class="two-col" style="margin-top: 32px">
+          <div class="card">
+            <h4 class="sub-heading">Baloo 2 Weights Used</h4>
+            <div
+              style="
+                font-family: 'Baloo 2', sans-serif;
+                margin-bottom: 8px;
+                font-size: 22px;
+                font-weight: 600;
+                color: var(--text-sec);
+              "
+            >
+              600 — Subtitles
+            </div>
+            <div
+              style="
+                font-family: 'Baloo 2', sans-serif;
+                margin-bottom: 8px;
+                font-size: 22px;
+                font-weight: 700;
+                color: var(--text-pri);
+              "
+            >
+              700 — Headings
+            </div>
+            <div
+              style="
+                font-family: 'Baloo 2', sans-serif;
+                font-size: 22px;
+                font-weight: 800;
+                color: var(--gold);
+              "
+            >
+              800 — Display / Scores
+            </div>
+          </div>
+          <div class="card">
+            <h4 class="sub-heading">Nunito Weights Used</h4>
+            <div
+              style="
+                font-family: 'Nunito', sans-serif;
+                margin-bottom: 8px;
+                font-size: 16px;
+                font-weight: 400;
+                color: var(--text-sec);
+              "
+            >
+              400 — Reserved for future use
+            </div>
+            <div
+              style="
+                font-family: 'Nunito', sans-serif;
+                margin-bottom: 8px;
+                font-size: 16px;
+                font-weight: 600;
+                color: var(--text-sec);
+              "
+            >
+              600 — Body copy
+            </div>
+            <div
+              style="
+                font-family: 'Nunito', sans-serif;
+                margin-bottom: 8px;
+                font-size: 16px;
+                font-weight: 700;
+                color: var(--text-pri);
+              "
+            >
+              700 — Labels &amp; captions
+            </div>
+            <div
+              style="
+                font-family: 'Nunito', sans-serif;
+                margin-bottom: 8px;
+                font-size: 16px;
+                font-weight: 800;
+                color: var(--text-pri);
+              "
+            >
+              800 — Strong UI labels
+            </div>
+            <div
+              style="
+                font-family: 'Nunito', sans-serif;
+                font-size: 16px;
+                font-weight: 900;
+                color: var(--gold);
+              "
+            >
+              900 — Emphasis / warnings
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SPACING -->
+    <section class="section" id="spacing">
+      <div class="inner">
+        <div class="section-label">Layout</div>
+        <div class="section-title">Spacing Scale</div>
+        <div class="section-sub">
+          4px base unit. All spacing is a multiple of 4. Use the named tokens — never raw pixel
+          values in game UI code.
+        </div>
+
+        <div class="two-col">
+          <div class="card">
+            <div id="spacing-table"></div>
+          </div>
+          <div class="card">
+            <h4 class="sub-heading">Usage Rules</h4>
+            <div style="font-size: 13px; color: var(--text-sec); line-height: 2">
+              <div>
+                <strong style="color: var(--text-pri)">space-1 (4px)</strong> — Icon gap, micro
+                padding
+              </div>
+              <div>
+                <strong style="color: var(--text-pri)">space-2 (8px)</strong> — Pill padding, tight
+                labels
+              </div>
+              <div>
+                <strong style="color: var(--text-pri)">space-3 (12px)</strong> — Button internal
+                gap, list item padding
+              </div>
+              <div>
+                <strong style="color: var(--text-pri)">space-4 (16px)</strong> — Card internal
+                padding (small), HUD gap
+              </div>
+              <div>
+                <strong style="color: var(--text-pri)">space-5 (20px)</strong> — Standard element
+                margin
+              </div>
+              <div>
+                <strong style="color: var(--text-pri)">space-6 (24px)</strong> — Card padding
+                (standard)
+              </div>
+              <div>
+                <strong style="color: var(--text-pri)">space-8 (32px)</strong> — Panel gap, section
+                sub-block gap
+              </div>
+              <div>
+                <strong style="color: var(--text-pri)">space-10 (40px)</strong> — Page gutter, modal
+                padding
+              </div>
+              <div>
+                <strong style="color: var(--text-pri)">space-12 (48px)</strong> — Section spacing
+                (tight)
+              </div>
+              <div>
+                <strong style="color: var(--text-pri)">space-16 (64px)</strong> — Section spacing
+                (standard)
+              </div>
+              <div>
+                <strong style="color: var(--text-pri)">space-20 (80px)</strong> — Page section
+                padding (desktop)
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ELEVATION -->
+    <section class="section" id="elevation">
+      <div class="inner">
+        <div class="section-label">Depth System</div>
+        <div class="section-title">Elevation &amp; Surfaces</div>
+        <div class="section-sub">
+          Four surface levels create depth hierarchy. Never skip levels — each layer must be visibly
+          distinct from the one below.
+        </div>
+
+        <div class="two-col">
+          <div>
+            <div class="el-card" style="background: #071120; border: 1px solid #1a3454">
+              <div
+                style="
+                  font-size: 10px;
+                  font-weight: 800;
+                  letter-spacing: 0.15em;
+                  text-transform: uppercase;
+                  color: var(--text-muted);
+                  margin-bottom: 4px;
+                "
+              >
+                Level 0 — Background
+              </div>
+              <div
+                style="
+                  font-family: 'Courier New', monospace;
+                  font-size: 12px;
+                  color: var(--text-sec);
+                "
+              >
+                #071120 · bg-deep
+              </div>
+              <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px">
+                Darkest — behind everything. Game canvas sits here.
+              </div>
+            </div>
+            <div
+              class="el-card"
+              style="background: #0f1e36; border: 1px solid #234870; margin-top: 8px"
+            >
+              <div
+                style="
+                  font-size: 10px;
+                  font-weight: 800;
+                  letter-spacing: 0.15em;
+                  text-transform: uppercase;
+                  color: var(--text-muted);
+                  margin-bottom: 4px;
+                "
+              >
+                Level 1 — Page Background
+              </div>
+              <div
+                style="
+                  font-family: 'Courier New', monospace;
+                  font-size: 12px;
+                  color: var(--text-sec);
+                "
+              >
+                #0f1e36 · bg
+              </div>
+              <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px">
+                Base page/HUD background. Primary canvas for content.
+              </div>
+            </div>
+            <div
+              class="el-card"
+              style="background: #152844; border: 1px solid #234870; margin-top: 8px"
+            >
+              <div
+                style="
+                  font-size: 10px;
+                  font-weight: 800;
+                  letter-spacing: 0.15em;
+                  text-transform: uppercase;
+                  color: var(--text-muted);
+                  margin-bottom: 4px;
+                "
+              >
+                Level 2 — Surface
+              </div>
+              <div
+                style="
+                  font-family: 'Courier New', monospace;
+                  font-size: 12px;
+                  color: var(--text-sec);
+                "
+              >
+                #152844 · surface
+              </div>
+              <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px">
+                Cards, panels, HUD containers. Box-shadow: --shadow-sm.
+              </div>
+            </div>
+            <div
+              class="el-card"
+              style="background: #1c3556; border: 1px solid #2a4870; margin-top: 8px"
+            >
+              <div
+                style="
+                  font-size: 10px;
+                  font-weight: 800;
+                  letter-spacing: 0.15em;
+                  text-transform: uppercase;
+                  color: var(--text-muted);
+                  margin-bottom: 4px;
+                "
+              >
+                Level 3 — Elevated Surface
+              </div>
+              <div
+                style="
+                  font-family: 'Courier New', monospace;
+                  font-size: 12px;
+                  color: var(--text-sec);
+                "
+              >
+                #1c3556 · surface-el
+              </div>
+              <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px">
+                Hover states, nested panels, focused inputs. Box-shadow: --shadow-md.
+              </div>
+            </div>
+            <div
+              class="el-card"
+              style="
+                background: rgba(7, 17, 32, 0.9);
+                border: 1px solid #234870;
+                backdrop-filter: blur(8px);
+                margin-top: 8px;
+              "
+            >
+              <div
+                style="
+                  font-size: 10px;
+                  font-weight: 800;
+                  letter-spacing: 0.15em;
+                  text-transform: uppercase;
+                  color: var(--text-muted);
+                  margin-bottom: 4px;
+                "
+              >
+                Level 4 — Modal / Overlay
+              </div>
+              <div
+                style="
+                  font-family: 'Courier New', monospace;
+                  font-size: 12px;
+                  color: var(--text-sec);
+                "
+              >
+                rgba(7,17,32,.9) + backdrop-filter: blur(8px)
+              </div>
+              <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px">
+                Pause menu, dialogs. Box-shadow: --shadow-lg.
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <h4 class="sub-heading">Shadow Tokens</h4>
+            <div
+              style="
+                font-size: 13px;
+                line-height: 2.2;
+                font-family: 'Courier New', monospace;
+                color: var(--text-sec);
+              "
+            >
+              <div>
+                <span style="color: var(--gold)">--shadow-sm</span>: 0 1px 4px rgba(0,0,0,.4)
+              </div>
+              <div>
+                <span style="color: var(--gold)">--shadow-md</span>: 0 4px 16px rgba(0,0,0,.5)
+              </div>
+              <div>
+                <span style="color: var(--gold)">--shadow-lg</span>: 0 8px 32px rgba(0,0,0,.6)
+              </div>
+              <div>
+                <span style="color: var(--gold)">--shadow-gold</span>: 0 4px 20px
+                rgba(242,182,64,.25)
+              </div>
+              <div style="margin-top: 12px; color: var(--teal)">
+                --shadow-teal: 0 4px 16px rgba(45,212,170,.2)
+              </div>
+              <div>
+                <span style="color: var(--red)">--shadow-red</span>: 0 4px 16px
+                rgba(255,128,128,.25)
+              </div>
+            </div>
+            <div style="margin-top: 20px"></div>
+            <h4 class="sub-heading">Border Tokens</h4>
+            <div
+              style="
+                font-size: 13px;
+                line-height: 2.2;
+                font-family: 'Courier New', monospace;
+                color: var(--text-sec);
+              "
+            >
+              <div>
+                <span style="color: var(--gold)">--border</span>: #234870 — Standard card/panel
+                border
+              </div>
+              <div>
+                <span style="color: var(--gold)">--border-sub</span>: #1a3454 — Subtle row divider
+              </div>
+              <div style="color: rgba(255, 255, 255, 0.1)">
+                rgba(255,255,255,.07) — Nav / micro divider
+              </div>
+            </div>
+            <div style="margin-top: 20px"></div>
+            <h4 class="sub-heading">Border Radius Tokens</h4>
+            <div
+              style="
+                font-size: 13px;
+                line-height: 2.2;
+                font-family: 'Courier New', monospace;
+                color: var(--text-sec);
+              "
+            >
+              <div><span style="color: var(--gold)">--radius-sm</span>: 4px — Ammo slots, tags</div>
+              <div><span style="color: var(--gold)">--radius-md</span>: 8px — Buttons, inputs</div>
+              <div><span style="color: var(--gold)">--radius-lg</span>: 12px — Cards, panels</div>
+              <div><span style="color: var(--gold)">--radius-xl</span>: 16px — Modals</div>
+              <div>
+                <span style="color: var(--gold)">--radius-full</span>: 9999px — Pills, health bars
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- COMPONENTS -->
+    <section class="section" id="components">
+      <div class="inner">
+        <div class="section-label">Component Library</div>
+        <div class="section-title">UI Components</div>
+        <div class="section-sub">
+          Every interactive and display element the game uses. States shown inline.
+        </div>
+
+        <!-- BUTTONS -->
+        <h3 class="card-title" style="margin-bottom: 16px">Buttons</h3>
+        <div class="card" style="margin-bottom: 24px">
+          <h4 class="sub-heading">Primary Button</h4>
+          <div
+            style="
+              display: flex;
+              flex-wrap: wrap;
+              gap: 16px;
+              align-items: center;
+              margin-bottom: 16px;
+            "
+          >
+            <button class="btn-pri">PLAY NOW</button>
+            <button
+              class="btn-pri"
+              style="
+                transform: translateY(-1px);
+                box-shadow:
+                  0 5px 0 #9a6808,
+                  0 8px 24px rgba(210, 140, 20, 0.4);
+                color: #071120;
+              "
+            >
+              HOVER STATE
+            </button>
+            <button class="btn-pri" style="transform: translateY(2px); box-shadow: 0 2px 0 #9a6808">
+              PRESSED
+            </button>
+            <button class="btn-pri" disabled>DISABLED</button>
+          </div>
+          <div
+            style="font-size: 12px; font-family: 'Courier New', monospace; color: var(--text-muted)"
+          >
+            Baloo 2 800 · 17px · padding 12px 28px · gradient(#f2b640 → #d4920e) · text color
+            #071120 (dark navy — 10.4:1 AAA on gold) · box-shadow bottom 4px #9a6808<br />
+            Hover: translateY(-1px) + expanded shadow · Active: translateY(+2px) + compressed shadow
+            · Disabled: opacity .35<br />
+            CRITICAL: Never use white (#fff) text on gold — contrast is only 1.82:1 (hard fail).
+            Always use #071120.
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 24px">
+          <h4 class="sub-heading">Secondary Button</h4>
+          <div
+            style="
+              display: flex;
+              flex-wrap: wrap;
+              gap: 16px;
+              align-items: center;
+              margin-bottom: 16px;
+            "
+          >
+            <button class="btn-sec">SETTINGS</button>
+            <button
+              class="btn-sec"
+              style="
+                border-color: var(--gold);
+                color: var(--gold);
+                background: rgba(242, 182, 64, 0.06);
+              "
+            >
+              HOVER STATE
+            </button>
+            <button class="btn-sec" disabled>DISABLED</button>
+          </div>
+          <div
+            style="font-size: 12px; font-family: 'Courier New', monospace; color: var(--text-muted)"
+          >
+            Baloo 2 700 · 16px · border 2px --border · surface bg · Hover: gold border + gold text
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 32px">
+          <h4 class="sub-heading">Icon Button</h4>
+          <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 16px">
+            <button class="btn-icon">⚙</button>
+            <button class="btn-icon" style="border-color: var(--gold); color: var(--gold)">
+              ✕
+            </button>
+            <button class="btn-icon" style="opacity: 0.35; cursor: not-allowed">🔇</button>
+          </div>
+          <div
+            style="font-size: 12px; font-family: 'Courier New', monospace; color: var(--text-muted)"
+          >
+            40×40px · border 1.5px --border · surface bg · Hover: gold border + gold icon
+          </div>
+        </div>
+
+        <!-- HEALTH BAR -->
+        <h3 class="card-title" style="margin-bottom: 16px">Health Bar</h3>
+        <div class="card" style="margin-bottom: 24px">
+          <div class="two-col">
+            <div>
+              <div class="health-wrap">
+                <div class="health-label" style="color: var(--teal)">HULL — FULL</div>
+                <div class="health-track"><div class="health-fill health-full"></div></div>
+                <div class="health-text">100 / 100</div>
+              </div>
+              <div class="health-wrap">
+                <div class="health-label" style="color: var(--gold)">HULL — DAMAGED</div>
+                <div class="health-track"><div class="health-fill health-damaged"></div></div>
+                <div class="health-text">52 / 100</div>
+              </div>
+              <div class="health-wrap">
+                <div class="health-label" style="color: var(--red)">HULL — CRITICAL</div>
+                <div class="health-track health-flash">
+                  <div class="health-fill health-critical"></div>
+                </div>
+                <div class="health-text" style="color: var(--red)">18 / 100 — ABANDON SHIP</div>
+              </div>
+            </div>
+            <div
+              style="
+                font-size: 12px;
+                font-family: 'Courier New', monospace;
+                color: var(--text-muted);
+                line-height: 2;
+              "
+            >
+              Track: 14px h · bg-deep · border 1px --border-sub · border-radius full<br />
+              Full: gradient(#2dd4aa → #22c4a0)<br />
+              Damaged (≤60%): gradient(#e8b020 → #c8920a)<br />
+              Critical (≤25%): gradient(#ff6060 → #cc2828) + pulse anim<br />
+              Flash: outline 2px #ff8080 on damage hit event<br />
+              Width animates: transition width 0.2s ease-out<br />
+              Label colors follow state: teal / gold / red
+            </div>
+          </div>
+        </div>
+
+        <!-- AMMO / COOLDOWN -->
+        <h3 class="card-title" style="margin-bottom: 16px">Ammo / Cooldown Pill</h3>
+        <div class="card" style="margin-bottom: 24px">
+          <div style="margin-bottom: 12px">
+            <div
+              style="
+                font-size: 10px;
+                font-weight: 800;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                color: var(--gold);
+                margin-bottom: 8px;
+              "
+            >
+              READY (6/6)
+            </div>
+            <div class="ammo-row" id="ammo-full"></div>
+          </div>
+          <div style="margin-bottom: 12px">
+            <div
+              style="
+                font-size: 10px;
+                font-weight: 800;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                color: var(--text-muted);
+                margin-bottom: 8px;
+              "
+            >
+              PARTIAL (3/6)
+            </div>
+            <div class="ammo-row" id="ammo-half"></div>
+          </div>
+          <div>
+            <div
+              style="
+                font-size: 10px;
+                font-weight: 800;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                color: var(--ocean);
+                margin-bottom: 8px;
+              "
+            >
+              RELOADING
+            </div>
+            <div class="ammo-row" id="ammo-reload"></div>
+          </div>
+          <div
+            style="
+              font-size: 12px;
+              font-family: 'Courier New', monospace;
+              color: var(--text-muted);
+              margin-top: 12px;
+            "
+          >
+            Slot: 10×22px · radius 2px · Ready: gradient(#f5c870 → #d89020) · Spent: bg-deep border
+            --border-sub · Reloading: surface pulse anim
+          </div>
+        </div>
+
+        <!-- WAVE INDICATOR -->
+        <h3 class="card-title" style="margin-bottom: 16px">Wave Indicator</h3>
+        <div class="card" style="margin-bottom: 24px">
+          <div style="max-width: 180px">
+            <div class="wave-ind">
+              <div
+                style="
+                  font-size: 10px;
+                  font-weight: 800;
+                  letter-spacing: 0.12em;
+                  text-transform: uppercase;
+                  color: var(--text-muted);
+                  margin-bottom: 4px;
+                "
+              >
+                WAVE
+              </div>
+              <div class="wave-number">7</div>
+              <div class="wave-label">INCOMING</div>
+              <div class="wave-next">Next: 3 enemies + 1 barge</div>
+            </div>
+          </div>
+          <div
+            style="
+              font-size: 12px;
+              font-family: 'Courier New', monospace;
+              color: var(--text-muted);
+              margin-top: 12px;
+            "
+          >
+            Number: Baloo 2 800 / 48px · Label: Nunito 800 caps gold · Next: Nunito 600 text-muted
+          </div>
+        </div>
+
+        <!-- MINIMAP -->
+        <h3 class="card-title" style="margin-bottom: 16px">Minimap</h3>
+        <div class="card" style="margin-bottom: 24px">
+          <div style="display: flex; gap: 24px; align-items: flex-start">
+            <div>
+              <div class="minimap">
+                <div class="mm-dot mm-player"></div>
+                <div class="mm-dot mm-enemy" style="top: 22%; left: 70%"></div>
+                <div class="mm-dot mm-enemy" style="top: 60%; left: 30%"></div>
+                <div class="mm-dot mm-enemy" style="top: 35%; left: 55%"></div>
+              </div>
+              <div
+                style="
+                  font-size: 10px;
+                  color: var(--text-muted);
+                  margin-top: 6px;
+                  text-align: center;
+                "
+              >
+                120×120px stub
+              </div>
+            </div>
+            <div
+              style="
+                font-size: 12px;
+                font-family: 'Courier New', monospace;
+                color: var(--text-muted);
+                line-height: 2;
+              "
+            >
+              Container: bg-deep · border 1.5px --border · radius --radius-md<br />
+              Player dot: 9px · gold · white 2px border · glow shadow<br />
+              Enemy dot: 7px · red · white 1.5px border<br />
+              Scale: world-to-minimap projection, player always centered
+            </div>
+          </div>
+        </div>
+
+        <!-- KILL FEED -->
+        <h3 class="card-title" style="margin-bottom: 16px">Kill Feed</h3>
+        <div class="card" style="margin-bottom: 24px">
+          <div style="max-width: 360px">
+            <div class="killfeed">
+              <div class="kf-row">
+                <span class="kf-you">YOU</span>
+                <span class="kf-verb">sank</span>
+                <span class="kf-enemy">Skiff #4</span>
+                <span class="kf-pts">+150</span>
+              </div>
+              <div class="kf-row">
+                <span class="kf-enemy">Barge #1</span>
+                <span class="kf-verb">hit</span>
+                <span class="kf-you">YOU</span>
+                <span class="kf-pts">-30 HP</span>
+              </div>
+              <div class="kf-row">
+                <span class="kf-you">YOU</span>
+                <span class="kf-verb">sank</span>
+                <span class="kf-enemy">Barge #1</span>
+                <span class="kf-pts">+400 CRIT</span>
+              </div>
+            </div>
+          </div>
+          <div
+            style="
+              font-size: 12px;
+              font-family: 'Courier New', monospace;
+              color: var(--text-muted);
+              margin-top: 12px;
+            "
+          >
+            Container: rgba(7,17,32,.85) · Row: Nunito 700 12px · YOU=gold · enemies=red ·
+            verb=text-muted · pts right-aligned
+          </div>
+        </div>
+
+        <!-- SCORE DISPLAY -->
+        <h3 class="card-title" style="margin-bottom: 16px">Score Display</h3>
+        <div class="card" style="margin-bottom: 24px">
+          <div
+            style="
+              display: flex;
+              gap: 48px;
+              align-items: flex-end;
+              flex-wrap: wrap;
+              margin-bottom: 12px;
+            "
+          >
+            <div>
+              <div class="score-label">SCORE</div>
+              <div class="score-disp">12,450</div>
+            </div>
+            <div>
+              <div class="score-label">HIGH SCORE</div>
+              <div class="score-disp" style="color: var(--teal)">24,800</div>
+            </div>
+            <div>
+              <div class="score-label">KILLS</div>
+              <div class="score-disp" style="font-size: 24px; color: var(--text-pri)">17</div>
+            </div>
+          </div>
+          <div
+            style="font-size: 12px; font-family: 'Courier New', monospace; color: var(--text-muted)"
+          >
+            Score: Baloo 2 800 32px gold · High score: teal · Kills: white 24px · Label: Nunito 700
+            10px caps text-muted
+          </div>
+        </div>
+
+        <!-- DAMAGE NUMBERS -->
+        <h3 class="card-title" style="margin-bottom: 16px">Damage Numbers</h3>
+        <div class="card" style="margin-bottom: 24px">
+          <div
+            style="
+              background: var(--bg-deep);
+              border-radius: var(--radius-md);
+              padding: 32px;
+              display: flex;
+              gap: 32px;
+              align-items: center;
+              flex-wrap: wrap;
+              margin-bottom: 12px;
+            "
+          >
+            <div class="dmg-num dmg-hit">−35</div>
+            <div class="dmg-num dmg-crit">−120 CRIT!</div>
+            <div class="dmg-num dmg-recv">−55</div>
+            <div class="dmg-num dmg-miss" style="font-size: 18px">MISS</div>
+          </div>
+          <div
+            style="
+              font-size: 12px;
+              font-family: 'Courier New', monospace;
+              color: var(--text-muted);
+              line-height: 2;
+            "
+          >
+            Hit (white): Baloo 2 800 28px · shadow 0 2px rgba(0,0,0,.6)<br />
+            Crit (gold): Baloo 2 800 42px · shadow 0 3px gold-dark + glow 20px<br />
+            Recv (red): Baloo 2 800 28px · shadow 0 2px #7a1010<br />
+            Miss (muted): Baloo 2 700 16px italic<br />
+            Animation: float up 60px over 1.2s + fade out last 0.4s · ease-out
+          </div>
+        </div>
+
+        <!-- HIT MARKER -->
+        <h3 class="card-title" style="margin-bottom: 16px">Hit Marker / Crosshair</h3>
+        <div class="card" style="margin-bottom: 24px">
+          <div
+            style="
+              background: var(--bg-deep);
+              border-radius: var(--radius-md);
+              padding: 32px;
+              display: flex;
+              gap: 48px;
+              align-items: center;
+              flex-wrap: wrap;
+              margin-bottom: 12px;
+            "
+          >
+            <div style="text-align: center">
+              <div style="font-size: 10px; color: var(--text-muted); margin-bottom: 8px">IDLE</div>
+              <div style="display: inline-block; width: 32px; height: 32px; position: relative">
+                <div
+                  style="
+                    position: absolute;
+                    left: 50%;
+                    top: 50%;
+                    transform: translate(-50%, -50%);
+                    width: 1.5px;
+                    height: 12px;
+                    background: rgba(255, 255, 255, 0.5);
+                    border-radius: 1px;
+                  "
+                ></div>
+                <div
+                  style="
+                    position: absolute;
+                    left: 50%;
+                    top: 50%;
+                    transform: translate(-50%, -50%);
+                    width: 12px;
+                    height: 1.5px;
+                    background: rgba(255, 255, 255, 0.5);
+                    border-radius: 1px;
+                  "
+                ></div>
+                <div
+                  style="
+                    position: absolute;
+                    left: 50%;
+                    top: 50%;
+                    transform: translate(-50%, -50%) rotate(0deg);
+                    width: 18px;
+                    height: 18px;
+                    border: 1.5px solid rgba(255, 255, 255, 0.4);
+                    border-radius: 50%;
+                  "
+                ></div>
+              </div>
+            </div>
+            <div style="text-align: center">
+              <div style="font-size: 10px; color: var(--text-muted); margin-bottom: 8px">
+                HIT FLASH
+              </div>
+              <div style="display: inline-block; width: 32px; height: 32px; position: relative">
+                <div
+                  style="
+                    position: absolute;
+                    left: 50%;
+                    top: 50%;
+                    transform: translate(-50%, -50%);
+                    width: 2px;
+                    height: 14px;
+                    background: #ff8080;
+                    border-radius: 1px;
+                  "
+                ></div>
+                <div
+                  style="
+                    position: absolute;
+                    left: 50%;
+                    top: 50%;
+                    transform: translate(-50%, -50%);
+                    width: 14px;
+                    height: 2px;
+                    background: #ff8080;
+                    border-radius: 1px;
+                  "
+                ></div>
+                <div
+                  style="
+                    position: absolute;
+                    left: 50%;
+                    top: 50%;
+                    transform: translate(-50%, -50%);
+                    width: 20px;
+                    height: 20px;
+                    border: 2px solid #ff8080;
+                    border-radius: 50%;
+                  "
+                ></div>
+              </div>
+            </div>
+            <div style="text-align: center">
+              <div style="font-size: 10px; color: var(--text-muted); margin-bottom: 8px">
+                CRIT HIT
+              </div>
+              <div style="display: inline-block; width: 32px; height: 32px; position: relative">
+                <div
+                  style="
+                    position: absolute;
+                    left: 50%;
+                    top: 50%;
+                    transform: translate(-50%, -50%);
+                    width: 2px;
+                    height: 14px;
+                    background: var(--gold);
+                    border-radius: 1px;
+                    box-shadow: 0 0 6px var(--gold);
+                  "
+                ></div>
+                <div
+                  style="
+                    position: absolute;
+                    left: 50%;
+                    top: 50%;
+                    transform: translate(-50%, -50%);
+                    width: 14px;
+                    height: 2px;
+                    background: var(--gold);
+                    border-radius: 1px;
+                    box-shadow: 0 0 6px var(--gold);
+                  "
+                ></div>
+                <div
+                  style="
+                    position: absolute;
+                    left: 50%;
+                    top: 50%;
+                    transform: translate(-50%, -50%);
+                    width: 20px;
+                    height: 20px;
+                    border: 2px solid var(--gold);
+                    border-radius: 50%;
+                    box-shadow: 0 0 8px rgba(242, 182, 64, 0.5);
+                  "
+                ></div>
+              </div>
+            </div>
+          </div>
+          <div
+            style="font-size: 12px; font-family: 'Courier New', monospace; color: var(--text-muted)"
+          >
+            Idle: rgba(255,255,255,.5) · Hit flash: red, 0.15s · Crit: gold glow, 0.25s · All
+            crosshair elements use CSS only, no images
+          </div>
+        </div>
+
+        <!-- MODAL -->
+        <h3 class="card-title" style="margin-bottom: 16px">Modal / Pause Menu</h3>
+        <div class="card" style="margin-bottom: 24px">
+          <div style="display: flex; gap: 24px; flex-wrap: wrap">
+            <div class="modal-overlay">
+              <div class="modal-title">Game Paused</div>
+              <div class="modal-sub">The action is frozen. Take a breath.</div>
+              <hr class="modal-divider" />
+              <div class="menu-item active" style="margin-bottom: 4px">
+                <span class="menu-item-icon">▶</span> Resume Game
+              </div>
+              <div class="menu-item" style="margin-bottom: 4px">
+                <span class="menu-item-icon">⚙</span> Settings
+              </div>
+              <div class="menu-item" style="margin-bottom: 4px">
+                <span class="menu-item-icon">↩</span> Main Menu
+              </div>
+              <div class="menu-item disabled">
+                <span class="menu-item-icon">🔒</span> Gallery (locked)
+              </div>
+              <hr class="modal-divider" />
+              <div style="display: flex; gap: 12px">
+                <button class="btn-pri" style="font-size: 14px; padding: 10px 20px">Resume</button>
+                <button class="btn-sec" style="font-size: 14px; padding: 9px 18px">Quit</button>
+              </div>
+            </div>
+            <div
+              style="
+                flex: 1;
+                min-width: 240px;
+                font-size: 12px;
+                font-family: 'Courier New', monospace;
+                color: var(--text-muted);
+                line-height: 2;
+              "
+            >
+              Overlay: rgba(7,17,32,.9) + blur(8px)<br />
+              Border: 1px --border · radius --radius-xl<br />
+              Enter: scale 0.9 → 1.0 over 0.2s ease-out<br />
+              Exit: opacity 1 → 0 over 0.15s ease-in<br />
+              ESC always closes (or resumes)<br />
+              Backdrop click closes non-critical modals
+            </div>
+          </div>
+        </div>
+
+        <!-- TOAST -->
+        <h3 class="card-title" style="margin-bottom: 16px">Toast / Notification</h3>
+        <div class="card" style="margin-bottom: 24px">
+          <div
+            style="
+              display: flex;
+              flex-direction: column;
+              gap: 10px;
+              max-width: 380px;
+              margin-bottom: 12px;
+            "
+          >
+            <div class="toast toast-success">
+              <span class="toast-icon" style="color: var(--teal)">✔</span> Wave 3 complete! +500
+              bonus
+            </div>
+            <div class="toast toast-warn">
+              <span class="toast-icon" style="color: var(--gold)">⚠</span> Hull damage critical —
+              find cover!
+            </div>
+            <div class="toast toast-danger">
+              <span class="toast-icon" style="color: var(--red)">✕</span> Cannon overheated —
+              cooldown 4s
+            </div>
+            <div class="toast">
+              <span class="toast-icon" style="color: var(--text-muted)">ℹ</span> New high score
+              unlocked
+            </div>
+          </div>
+          <div
+            style="font-size: 12px; font-family: 'Courier New', monospace; color: var(--text-muted)"
+          >
+            Slide in from top-right · stay 3s · fade out 0.3s · stack top-down · max 3 visible at
+            once
+          </div>
+        </div>
+
+        <!-- TITLE TREATMENT -->
+        <h3 class="card-title" style="margin-bottom: 16px">Title Screen</h3>
+        <div class="card" style="margin-bottom: 24px">
+          <div class="title-treatment" style="margin-bottom: 12px">
+            <div class="title-glow"></div>
+            <div class="title-game">GUNBOAT<br />RAIDERS</div>
+            <div class="title-tagline">DOMINATE THE HIGH SEAS</div>
+            <button class="title-cta">PLAY NOW</button>
+          </div>
+          <div
+            style="
+              font-size: 12px;
+              font-family: 'Courier New', monospace;
+              color: var(--text-muted);
+              line-height: 2;
+            "
+          >
+            BG: gradient(150deg, #1a3e68, #0f1e36, #071120) · border 1.5px --border<br />
+            Title: Baloo 2 800 clamp(52px,8vw,88px) · white · text-shadow 3px navy + 28px glow<br />
+            Tagline: Nunito 700 15px gold · ls 0.06em<br />
+            CTA: primary button full gradient · box-shadow gold<br />
+            Horizon glow: absolute bottom 40% height, gold opacity .07
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MOTION -->
+    <section class="section" id="motion">
+      <div class="inner">
+        <div class="section-label">Animation</div>
+        <div class="section-title">Motion Principles</div>
+        <div class="section-sub">
+          Fast and purposeful. Animations communicate state, not style. Nothing decorative animates
+          unless it carries information.
+        </div>
+
+        <div class="two-col">
+          <div class="card">
+            <h4 class="sub-heading">Duration Tokens</h4>
+            <div class="motion-row">
+              <span class="motion-name">--dur-instant</span><span class="motion-val">80ms</span
+              ><span class="motion-note">Button active/press feedback</span>
+            </div>
+            <div class="motion-row">
+              <span class="motion-name">--dur-fast</span><span class="motion-val">150ms</span
+              ><span class="motion-note">Hover state transitions</span>
+            </div>
+            <div class="motion-row">
+              <span class="motion-name">--dur-normal</span><span class="motion-val">200ms</span
+              ><span class="motion-note">Health bar fill, menu items</span>
+            </div>
+            <div class="motion-row">
+              <span class="motion-name">--dur-medium</span><span class="motion-val">300ms</span
+              ><span class="motion-note">Modal enter, toast slide-in</span>
+            </div>
+            <div class="motion-row">
+              <span class="motion-name">--dur-slow</span><span class="motion-val">500ms</span
+              ><span class="motion-note">Wave announce, score tally</span>
+            </div>
+            <div class="motion-row">
+              <span class="motion-name">--dur-damage-float</span
+              ><span class="motion-val">1200ms</span
+              ><span class="motion-note">Damage number float + fade</span>
+            </div>
+          </div>
+          <div class="card">
+            <h4 class="sub-heading">Easing Tokens</h4>
+            <div class="motion-row">
+              <span class="motion-name">--ease-out</span><span class="motion-val">ease-out</span
+              ><span class="motion-note">Most UI transitions</span>
+            </div>
+            <div class="motion-row">
+              <span class="motion-name">--ease-in</span><span class="motion-val">ease-in</span
+              ><span class="motion-note">Exits, fades out</span>
+            </div>
+            <div class="motion-row">
+              <span class="motion-name">--ease-spring</span
+              ><span class="motion-val">cubic-bezier(.34,1.56,.64,1)</span
+              ><span class="motion-note">Button press spring, modal enter</span>
+            </div>
+            <div class="motion-row">
+              <span class="motion-name">--ease-linear</span><span class="motion-val">linear</span
+              ><span class="motion-note">Reload pulse animation only</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top: 24px">
+          <h4 class="sub-heading">What Animates — and What Does Not</h4>
+          <div class="two-col">
+            <div>
+              <div
+                style="font-size: 13px; color: var(--teal); font-weight: 800; margin-bottom: 8px"
+              >
+                SHOULD ANIMATE
+              </div>
+              <div style="font-size: 13px; color: var(--text-sec); line-height: 2.2">
+                Health bar width — 0.2s ease-out on change<br />
+                Damage numbers — float up + fade 1.2s<br />
+                Buttons — translateY on hover/press (instant)<br />
+                Modal — scale + fade on enter/exit<br />
+                Toast — slide from right on enter (0.3s)<br />
+                Hit marker — flash 0.15s then fade<br />
+                Critical health bar — pulse loop animation<br />
+                Ammo slot fill — slot fills left-to-right on reload<br />
+                Score — countup tally on wave complete<br />
+                Wave announce — large number scale-in 0.5s spring
+              </div>
+            </div>
+            <div>
+              <div style="font-size: 13px; color: var(--red); font-weight: 800; margin-bottom: 8px">
+                MUST NOT ANIMATE
+              </div>
+              <div style="font-size: 13px; color: var(--text-sec); line-height: 2.2">
+                HUD layout position — never shifts during play<br />
+                Text labels — no wiggle, bounce, or typewriter<br />
+                Background elements — no parallax or drift<br />
+                Static borders and cards — no breathing/pulsing<br />
+                Crosshair idle state — must be perfectly still<br />
+                Score/wave counter during combat — update instantly<br />
+                Nav / minimap — no transitions on updates<br />
+                Disabled states — no animation, just opacity .35
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ICONOGRAPHY -->
+    <section class="section" id="iconography">
+      <div class="inner">
+        <div class="section-label">Visual Language</div>
+        <div class="section-title">Imagery &amp; Iconography</div>
+
+        <div class="three-col">
+          <div class="card">
+            <h4 class="sub-heading">Icon Style</h4>
+            <div style="font-size: 13px; color: var(--text-sec); line-height: 2">
+              <div>
+                <strong style="color: var(--text-pri)">Style:</strong> Outlined, single weight
+              </div>
+              <div>
+                <strong style="color: var(--text-pri)">Stroke weight:</strong> 1.5–2px at 24px
+              </div>
+              <div>
+                <strong style="color: var(--text-pri)">Corner radius:</strong> 2px (rounded, not
+                sharp)
+              </div>
+              <div>
+                <strong style="color: var(--text-pri)">Fill:</strong> Solid fill only for
+                active/selected states
+              </div>
+              <div>
+                <strong style="color: var(--text-pri)">Sizes:</strong> 16px (caption) · 20px (menu)
+                · 24px (HUD) · 32px (large)
+              </div>
+              <div>
+                <strong style="color: var(--text-pri)">Color:</strong> Inherit from text context —
+                never hardcoded unless semantic (red=danger, gold=active, teal=ready)
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <h4 class="sub-heading">Texture / Pattern</h4>
+            <div style="font-size: 13px; color: var(--text-sec); line-height: 2">
+              <div>
+                <strong style="color: var(--text-pri)">HUD panels:</strong> Flat — no texture
+              </div>
+              <div>
+                <strong style="color: var(--text-pri)">Modal overlays:</strong> backdrop-filter
+                blur(8px) only
+              </div>
+              <div>
+                <strong style="color: var(--text-pri)">Gradient use:</strong> Max 1 gradient per
+                surface. Directional only (no radial bursts in UI)
+              </div>
+              <div>
+                <strong style="color: var(--text-pri)">Glow effects:</strong> box-shadow only, never
+                CSS filter:blur on UI elements (performance)
+              </div>
+              <div>
+                <strong style="color: var(--text-pri)">Scanlines / noise:</strong> Not used — keeps
+                feel clean and legible
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <h4 class="sub-heading">3D Asset Integration</h4>
+            <div style="font-size: 13px; color: var(--text-sec); line-height: 2">
+              <div>
+                <strong style="color: var(--text-pri)">Models:</strong> Kenney CC0 — clean, low-poly
+                toon-adjacent
+              </div>
+              <div>
+                <strong style="color: var(--text-pri)">Lighting key:</strong> Gold-tinted
+                directional (dawn angle)
+              </div>
+              <div>
+                <strong style="color: var(--text-pri)">Water:</strong> Gerstner waves, custom shader
+                — navy-to-teal gradient, gold specular highlights
+              </div>
+              <div>
+                <strong style="color: var(--text-pri)">HUD/3D boundary:</strong> HUD is an HTML
+                overlay — never attempt to blend 3D elements into the HUD layer
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- DO / DON'T -->
+    <section class="section" id="dodont">
+      <div class="inner">
+        <div class="section-label">Guardrails</div>
+        <div class="section-title">Do / Don't</div>
+        <div class="section-sub">Common pitfalls. Treat these as hard rules, not suggestions.</div>
+
+        <div class="do-dont" style="margin-bottom: 20px">
+          <div class="do-card">
+            <div class="do-label">DO</div>
+            <div
+              style="font-size: 14px; color: var(--text-pri); font-weight: 700; margin-bottom: 6px"
+            >
+              Use gold for primary labels on dark surface
+            </div>
+            <div
+              style="
+                background: #0f1e36;
+                padding: 10px 14px;
+                border-radius: 6px;
+                font-size: 14px;
+                font-weight: 700;
+                color: #f2b640;
+              "
+            >
+              WAVE 7 · SCORE 12,450
+            </div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 8px">
+              Gold (#f2b640) on navy bg (#0f1e36) — contrast 8.3:1 AAA
+            </div>
+          </div>
+          <div class="dont-card">
+            <div class="dont-label">DON'T</div>
+            <div
+              style="font-size: 14px; color: var(--text-pri); font-weight: 700; margin-bottom: 6px"
+            >
+              Use ocean blue as text on a dark navy background
+            </div>
+            <div
+              style="
+                background: #0f1e36;
+                padding: 10px 14px;
+                border-radius: 6px;
+                font-size: 14px;
+                font-weight: 700;
+                color: #2a5a90;
+              "
+            >
+              WAVE 7 · SCORE 12,450
+            </div>
+            <div style="font-size: 12px; color: var(--red); margin-top: 8px">
+              Ocean (#2a5a90) on navy (#0f1e36) — contrast ~2.1:1 FAIL
+            </div>
+          </div>
+        </div>
+
+        <div class="do-dont" style="margin-bottom: 20px">
+          <div class="do-card">
+            <div class="do-label">DO</div>
+            <div
+              style="font-size: 14px; color: var(--text-pri); font-weight: 700; margin-bottom: 6px"
+            >
+              Use white or text-sec for body labels
+            </div>
+            <div
+              style="
+                background: #152844;
+                padding: 10px 14px;
+                border-radius: 6px;
+                font-size: 14px;
+                font-weight: 600;
+                color: #c8dff0;
+              "
+            >
+              Target the waterline for hull damage bonus
+            </div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 8px">
+              text-sec (#c8dff0) on surface (#152844) — contrast 8.9:1 AAA
+            </div>
+          </div>
+          <div class="dont-card">
+            <div class="dont-label">DON'T</div>
+            <div
+              style="font-size: 14px; color: var(--text-pri); font-weight: 700; margin-bottom: 6px"
+            >
+              Use text-dim or text-muted for body copy
+            </div>
+            <div
+              style="
+                background: #152844;
+                padding: 10px 14px;
+                border-radius: 6px;
+                font-size: 14px;
+                font-weight: 600;
+                color: #4a7090;
+              "
+            >
+              Target the waterline for hull damage bonus
+            </div>
+            <div style="font-size: 12px; color: var(--red); margin-top: 8px">
+              text-dim (#4a7090) on surface (#152844) — contrast ~2.4:1 FAIL for text
+            </div>
+          </div>
+        </div>
+
+        <div class="do-dont" style="margin-bottom: 20px">
+          <div class="do-card">
+            <div class="do-label">DO</div>
+            <div
+              style="font-size: 14px; color: var(--text-pri); font-weight: 700; margin-bottom: 6px"
+            >
+              Keep health bar labels clearly colored by state
+            </div>
+            <div style="background: #0f1e36; padding: 10px 14px; border-radius: 6px">
+              <div
+                style="
+                  font-size: 11px;
+                  font-weight: 800;
+                  letter-spacing: 0.08em;
+                  color: #ff8080;
+                  margin-bottom: 4px;
+                "
+              >
+                HULL — CRITICAL
+              </div>
+              <div style="height: 10px; background: #071120; border-radius: 5px">
+                <div
+                  style="
+                    width: 18%;
+                    height: 100%;
+                    background: linear-gradient(90deg, #ff6060, #cc2828);
+                    border-radius: 5px;
+                  "
+                ></div>
+              </div>
+            </div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 8px">
+              Label color matches bar state. Red label = red bar. Unambiguous.
+            </div>
+          </div>
+          <div class="dont-card">
+            <div class="dont-label">DON'T</div>
+            <div
+              style="font-size: 14px; color: var(--text-pri); font-weight: 700; margin-bottom: 6px"
+            >
+              Use a single static label color for all health states
+            </div>
+            <div style="background: #0f1e36; padding: 10px 14px; border-radius: 6px">
+              <div
+                style="
+                  font-size: 11px;
+                  font-weight: 800;
+                  letter-spacing: 0.08em;
+                  color: #7aaac8;
+                  margin-bottom: 4px;
+                "
+              >
+                HULL — CRITICAL
+              </div>
+              <div style="height: 10px; background: #071120; border-radius: 5px">
+                <div
+                  style="
+                    width: 18%;
+                    height: 100%;
+                    background: linear-gradient(90deg, #ff6060, #cc2828);
+                    border-radius: 5px;
+                  "
+                ></div>
+              </div>
+            </div>
+            <div style="font-size: 12px; color: var(--red); margin-top: 8px">
+              Muted blue label doesn't communicate urgency. Player may not notice critical state.
+            </div>
+          </div>
+        </div>
+
+        <div class="do-dont" style="margin-bottom: 20px">
+          <div class="do-card">
+            <div class="do-label">DO</div>
+            <div
+              style="font-size: 14px; color: var(--text-pri); font-weight: 700; margin-bottom: 6px"
+            >
+              Use two fonts only, as specified
+            </div>
+            <div style="background: #152844; padding: 10px 14px; border-radius: 6px">
+              <div
+                style="
+                  font-family: 'Baloo 2', sans-serif;
+                  font-weight: 800;
+                  font-size: 20px;
+                  color: #fff;
+                "
+              >
+                GUNBOAT RAIDERS
+              </div>
+              <div
+                style="
+                  font-family: 'Nunito', sans-serif;
+                  font-weight: 600;
+                  font-size: 13px;
+                  color: #c8dff0;
+                "
+              >
+                Dominate the high seas
+              </div>
+            </div>
+          </div>
+          <div class="dont-card">
+            <div class="dont-label">DON'T</div>
+            <div
+              style="font-size: 14px; color: var(--text-pri); font-weight: 700; margin-bottom: 6px"
+            >
+              Add a third font for "variety"
+            </div>
+            <div style="background: #152844; padding: 10px 14px; border-radius: 6px">
+              <div
+                style="
+                  font-family: 'Baloo 2', sans-serif;
+                  font-weight: 800;
+                  font-size: 20px;
+                  color: #fff;
+                "
+              >
+                GUNBOAT RAIDERS
+              </div>
+              <div style="font-family: monospace; font-size: 13px; color: #c8dff0">
+                Dominate the high seas
+              </div>
+            </div>
+            <div style="font-size: 12px; color: var(--red); margin-top: 8px">
+              Breaks visual consistency. Nunito covers all body/UI needs.
+            </div>
+          </div>
+        </div>
+
+        <div class="do-dont">
+          <div class="do-card">
+            <div class="do-label">DO</div>
+            <div
+              style="font-size: 14px; color: var(--text-pri); font-weight: 700; margin-bottom: 6px"
+            >
+              Use text-muted only for truly secondary info
+            </div>
+            <div
+              style="
+                background: #0f1e36;
+                padding: 10px 14px;
+                border-radius: 6px;
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.05em;
+                text-transform: uppercase;
+                color: #7aaac8;
+              "
+            >
+              NEXT WAVE IN 12s
+            </div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 8px">
+              text-muted (#7aaac8) on bg (#0f1e36) — contrast 5.4:1 AA. Acceptable for
+              caption/secondary.
+            </div>
+          </div>
+          <div class="dont-card">
+            <div class="dont-label">DON'T</div>
+            <div
+              style="font-size: 14px; color: var(--text-pri); font-weight: 700; margin-bottom: 6px"
+            >
+              Use text-muted for primary action labels
+            </div>
+            <div style="background: #0f1e36; padding: 10px 14px; border-radius: 6px">
+              <button
+                style="
+                  font-family: 'Baloo 2', sans-serif;
+                  font-weight: 800;
+                  font-size: 16px;
+                  padding: 10px 24px;
+                  border-radius: 8px;
+                  background: linear-gradient(135deg, #f2b640, #d4920e);
+                  color: #7aaac8;
+                  border: none;
+                  cursor: pointer;
+                "
+              >
+                PLAY NOW
+              </button>
+            </div>
+            <div style="font-size: 12px; color: var(--red); margin-top: 8px">
+              Never use text-muted on a gold button. Use #fff — this is a primary CTA.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <div
+      style="
+        text-align: center;
+        padding: 48px;
+        color: var(--text-muted);
+        font-size: 12px;
+        border-top: 1px solid var(--border-sub);
+      "
+    >
+      Gunboat Raiders — Harbour Dawn Design System · 2026 · Single source of truth for all UI
+      implementation
+    </div>
+
+    <script>
+      /* ── CONTRAST ENGINE ── */
+      function hexToRgb(hex) {
+        hex = hex.replace(/^#/, '');
+        if (hex.length === 3)
+          hex = hex
+            .split('')
+            .map((c) => c + c)
+            .join('');
+        const n = parseInt(hex, 16);
+        return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+      }
+
+      function linearize(v) {
+        const s = v / 255;
+        return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+      }
+
+      function luminance(hex) {
+        const { r, g, b } = hexToRgb(hex);
+        return 0.2126 * linearize(r) + 0.7152 * linearize(g) + 0.0722 * linearize(b);
+      }
+
+      function contrast(hex1, hex2) {
+        const l1 = luminance(hex1);
+        const l2 = luminance(hex2);
+        const lighter = Math.max(l1, l2);
+        const darker = Math.min(l1, l2);
+        return (lighter + 0.05) / (darker + 0.05);
+      }
+
+      function crBadge(ratio, isNonText) {
+        const r = ratio.toFixed(2);
+        if (isNonText) {
+          if (ratio >= 3.0) return `<span class="badge badge-aa">AA-NT ${r}:1</span>`;
+          return `<span class="badge badge-fail">FAIL ${r}:1</span>`;
+        }
+        if (ratio >= 7) return `<span class="badge badge-aaa">AAA ${r}:1</span>`;
+        if (ratio >= 4.5) return `<span class="badge badge-aa">AA ${r}:1</span>`;
+        return `<span class="badge badge-fail">FAIL ${r}:1</span>`;
+      }
+
+      /* ── PALETTE DATA ── */
+      const bgSwatches = [
+        { hex: '#071120', role: 'bg-deep', label: 'BG Deep / darkest base' },
+        { hex: '#0f1e36', role: 'bg', label: 'Primary background' },
+        { hex: '#152844', role: 'surface', label: 'Card / panel surface' },
+        { hex: '#1c3556', role: 'surface-el', label: 'Elevated surface / hover' },
+        { hex: '#1a3e68', role: 'surface-bright', label: 'Title screen gradient highlight' },
+      ];
+      const accentSwatches = [
+        { hex: '#f2b640', role: 'gold', label: 'Accent primary / score / active' },
+        { hex: '#d4920e', role: 'gold-mid', label: 'Gold gradient end' },
+        { hex: '#9a6808', role: 'gold-dark', label: 'Gold button shadow' },
+        { hex: '#2dd4aa', role: 'teal', label: 'Health / ready / success' },
+        { hex: '#1aaa84', role: 'teal-dark', label: 'Teal dark variant' },
+        { hex: '#ff8080', role: 'red', label: 'Danger / enemy / damage' },
+        { hex: '#cc3333', role: 'red-dark', label: 'Red dark / shadow' },
+        { hex: '#4a8ac4', role: 'ocean', label: 'Mid-accent / reload indicator' },
+      ];
+      const textSwatches = [
+        { hex: '#ffffff', role: 'text-pri', label: 'Primary text / headings' },
+        { hex: '#c8dff0', role: 'text-sec', label: 'Secondary text / body' },
+        { hex: '#7aaac8', role: 'text-muted', label: 'Muted / captions / secondary labels' },
+        { hex: '#4a7090', role: 'text-dim', label: 'Dimmed / disabled / placeholder' },
+      ];
+      const borderSwatches = [
+        { hex: '#234870', role: 'border', label: 'Standard card / panel border' },
+        { hex: '#1a3454', role: 'border-sub', label: 'Subtle divider / inner border' },
+      ];
+
+      function renderSwatches(swatches, containerId, bgForContrast) {
+        const bg = bgForContrast || '#0f1e36';
+        const el = document.getElementById(containerId);
+        if (!el) return;
+        swatches.forEach((sw) => {
+          const cr = contrast(sw.hex, bg);
+          const crClass = cr >= 7 ? 'cr-aaa' : cr >= 4.5 ? 'cr-aa' : 'cr-fail';
+          const crLabel = cr >= 7 ? 'AAA' : cr >= 4.5 ? 'AA' : 'FAIL';
+          el.innerHTML += `
+      <div class="swatch-wrap">
+        <div class="swatch-block" style="background:${sw.hex}"></div>
+        <div class="swatch-hex">${sw.hex}</div>
+        <div class="swatch-role">${sw.role}</div>
+        <div class="swatch-cr ${crClass}">${cr.toFixed(1)}:1 ${crLabel}</div>
+      </div>`;
+        });
+      }
+
+      renderSwatches(bgSwatches, 'palette-bg', '#0f1e36');
+      renderSwatches(accentSwatches, 'palette-accent', '#0f1e36');
+      renderSwatches(textSwatches, 'palette-text', '#0f1e36');
+      renderSwatches(borderSwatches, 'palette-border', '#0f1e36');
+
+      /* ── CONTRAST TABLE DATA ── */
+      const pairsData = [
+        // fg, bg, usage, isNonText
+        ['#ffffff', '#0f1e36', 'Primary headings, title text', false],
+        ['#ffffff', '#152844', 'Card headings, panel titles', false],
+        ['#ffffff', '#1c3556', 'Elevated panel headings', false],
+        ['#c8dff0', '#0f1e36', 'Body copy on page background', false],
+        ['#c8dff0', '#152844', 'Body copy on card surface', false],
+        ['#c8dff0', '#1c3556', 'Body copy on elevated surface', false],
+        ['#f2b640', '#0f1e36', 'Gold labels, score, active state', false],
+        ['#f2b640', '#152844', 'Gold on card surface', false],
+        ['#f2b640', '#1c3556', 'Gold on elevated surface', false],
+        ['#f2b640', '#071120', 'Gold on deep background', false],
+        ['#ffffff', '#071120', 'Text on deepest background', false],
+        ['#2dd4aa', '#0f1e36', 'Teal health labels on bg', false],
+        ['#2dd4aa', '#152844', 'Teal on card surface', false],
+        ['#ff8080', '#0f1e36', 'Red danger labels on bg', false],
+        ['#ff8080', '#152844', 'Red on card surface', false],
+        ['#ff8080', '#071120', 'Red on deep background', false],
+        ['#7aaac8', '#0f1e36', 'Muted captions on bg (secondary info only)', false],
+        ['#7aaac8', '#071120', 'Muted captions on deep bg', false],
+        ['#7aaac8', '#152844', 'Muted captions on surface', false],
+        ['#4a7090', '#0f1e36', 'Dim text — decorative/disabled only (NT)', true],
+        ['#234870', '#0f1e36', 'Border on bg — non-text structural (NT)', true],
+        ['#1a3454', '#0f1e36', 'Sub-border — non-text (NT)', true],
+        ['#4a8ac4', '#0f1e36', 'Ocean accent — non-text UI mark (NT)', true],
+        [
+          '#ffffff',
+          '#f2b640',
+          'White on gold — FORBIDDEN, use #071120 instead (shown for reference)',
+          true,
+        ],
+        ['#ffffff', '#2dd4aa', 'White text on teal (avoid — use dark)', true],
+        ['#071120', '#f2b640', 'Dark text on gold button (alt)', false],
+      ];
+
+      const tbody = document.getElementById('contrast-tbody');
+      pairsData.forEach(([fg, bg, usage, isNT]) => {
+        const cr = contrast(fg, bg);
+        const pass = isNT ? cr >= 3.0 : cr >= 4.5;
+        tbody.innerHTML += `
+    <tr>
+      <td style="font-family:'Courier New',monospace;color:${cr > 1.5 ? '#c8dff0' : '#fff'}">${fg}</td>
+      <td style="font-family:'Courier New',monospace;color:#c8dff0">${bg}</td>
+      <td style="color:#7aaac8;font-size:11px">${usage}${isNT ? ' <span class="badge badge-nt">NT</span>' : ''}</td>
+      <td><span class="ct-preview" style="background:${bg};color:${fg};border:1px solid rgba(255,255,255,.1)">Sample</span></td>
+      <td style="font-family:'Courier New',monospace;color:${cr >= 7 ? '#2dd4aa' : cr >= 4.5 ? '#f2b640' : '#ff8080'}">${cr.toFixed(2)}:1</td>
+      <td>${crBadge(cr, isNT)}</td>
+    </tr>`;
+      });
+
+      /* ── SPACING TABLE ── */
+      const spaces = [
+        ['space-1', '4px', 'Icon gap, micro padding'],
+        ['space-2', '8px', 'Pill / tight label padding'],
+        ['space-3', '12px', 'Button gap, list item'],
+        ['space-4', '16px', 'Small card padding, HUD gap'],
+        ['space-5', '20px', 'Standard element margin'],
+        ['space-6', '24px', 'Card padding (standard)'],
+        ['space-8', '32px', 'Panel gap'],
+        ['space-10', '40px', 'Page gutter, modal padding'],
+        ['space-12', '48px', 'Section spacing (tight)'],
+        ['space-16', '64px', 'Section spacing (standard)'],
+        ['space-20', '80px', 'Page section padding'],
+      ];
+      const spTable = document.getElementById('spacing-table');
+      spTable.innerHTML = '<h4 class="sub-heading">Spacing Tokens</h4>';
+      spaces.forEach(([name, val, note]) => {
+        const px = parseInt(val);
+        const barW = Math.min(px * 1.8, 200);
+        spTable.innerHTML += `
+    <div class="sp-row">
+      <div class="sp-label">${name}</div>
+      <div class="sp-val">${val}</div>
+      <div class="sp-bar-wrap"><div class="sp-bar" style="width:${barW}px"></div></div>
+    </div>`;
+      });
+
+      /* ── AMMO PILLS ── */
+      function renderAmmo(id, ready, total, reloading) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        for (let i = 0; i < total; i++) {
+          const cls = reloading ? 'ammo-reloading' : i < ready ? 'ammo-ready' : 'ammo-spent';
+          el.innerHTML += `<div class="ammo-slot ${cls}"></div>`;
+        }
+      }
+      renderAmmo('ammo-full', 6, 6, false);
+      renderAmmo('ammo-half', 3, 6, false);
+      renderAmmo('ammo-reload', 0, 6, true);
+
+      /* ── INTERACTIVE CHECKER ── */
+      function runChecker() {
+        const fg = document.getElementById('ck-fg').value.trim();
+        const bg = document.getElementById('ck-bg').value.trim();
+        if (!/^#[0-9a-fA-F]{6}$/.test(fg) || !/^#[0-9a-fA-F]{6}$/.test(bg)) {
+          document.getElementById('ck-output').innerHTML =
+            '<div style="color:#ff8080;font-size:13px">Invalid hex. Use format #rrggbb</div>';
+          return;
+        }
+        const cr = contrast(fg, bg);
+        const level =
+          cr >= 7 ? 'AAA' : cr >= 4.5 ? 'AA' : cr >= 3 ? 'AA (large text / NT only)' : 'FAIL';
+        const color = cr >= 7 ? '#2dd4aa' : cr >= 4.5 ? '#f2b640' : '#ff8080';
+        document.getElementById('ck-output').innerHTML = `
+    <div class="checker-preview-box" style="background:${bg};color:${fg}">Sample Text — ${fg} on ${bg}</div>
+    <div class="checker-ratio" style="color:${color}">${cr.toFixed(2)}:1</div>
+    <div class="checker-badges">${crBadge(cr, false)}</div>
+    <div style="font-size:12px;color:#7aaac8;margin-top:8px">Level: ${level}</div>`;
+      }
+      // Run on load with defaults
+      runChecker();
+
+      // Auto-run when inputs change
+      ['ck-fg', 'ck-bg'].forEach((id) => {
+        document.getElementById(id).addEventListener('input', () => {
+          const val = document.getElementById(id).value.trim();
+          if (/^#[0-9a-fA-F]{6}$/.test(val)) runChecker();
+        });
+      });
+    </script>
+  </body>
+</html>
