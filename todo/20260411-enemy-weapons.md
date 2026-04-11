@@ -21,3 +21,14 @@ Two issues combined:
 - `src/entities/EnemyBoat.tsx` — enemy rendering
 - `src/systems/AISystemR3F.tsx` — AI firing trigger
 - `src/systems/WeaponSystemR3F.tsx` — firing pipeline
+
+## Status: PARTIALLY COMPLETE 2026-04-11
+
+**Landed (commit `b613415`):**
+
+- Enemy projectiles now travel and damage the player — the "enemies never fire" issue is resolved. The `EnemyProjectilePool` split fixed the self-collision bug that was killing shots immediately.
+
+**Still open:**
+
+- Loadout parity: enemy boats do not yet have 2 broadsides + 1 frontside (player-equivalent) mount configuration. Current enemy mounts in `boatStats.ts` are a smaller set. This acceptance criterion was not addressed this session.
+- The scenario test for "at least one enemy-owned projectile spawned within 10s" is now more likely to pass but was not explicitly updated/verified for this criterion.

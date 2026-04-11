@@ -23,3 +23,13 @@ The user wants Escape to pause the game AND show a translucent menu over the sti
 - `src/systems/InputSystemR3F.tsx` (or wherever Escape is handled)
 - `src/ui/` — new PauseMenu component
 - `src/App.tsx` — physics `paused` prop on `<Physics>` or equivalent
+
+## Status: COMPLETED 2026-04-11
+
+Pause menu fully implemented across multiple UI overhaul slices:
+
+- `1e3a7e7` — `feat(gameplay): pause-on-pointer-lock-loss + Physics paused prop`
+- `c7a5f08` — `feat(ui): real PauseMenu with Continue/Settings/Exit + ConfirmDialog (R5)` (`c99a5c84`)
+- `2045c84` — `feat(ui): SettingsModal with Audio/Controls/Performance tabs (R6)`
+
+Escape pauses, physics halts via `<Physics paused>`, translucent overlay with backdrop blur, Resume/Settings/Exit buttons, `playing → paused → playing` store transitions. All acceptance criteria met.

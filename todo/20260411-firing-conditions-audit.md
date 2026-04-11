@@ -276,3 +276,7 @@ All of the following drop the firing intent with zero UI feedback, no sound, no 
 8. Gate 14 — Pool exhaustion returns -1, caller ignores, no shot
 9. Gate 15/bodyState null — Intent consumed at line 125, no projectile, no reset
 10. computeFireData empty-array — cooldown resets but no projectile spawns
+
+## Status: SUPERSEDED 2026-04-11
+
+This audit identified 17 gates and ranked suspects. The firing bug was resolved by a different approach than the top suspects here predicted (Gate 12 NaN cooldown, Gate 9 sticky test azimuth). The actual fix — in commit `b613415` — removed the pointer-lock requirement from both the weapon click handler and the camera azimuth computation, which directly addressed the "aim lines disappear when moving away from origin" symptom. The 17-gate analysis remains valuable historical context and identified real issues (pool exhaustion, sticky test bridge state) that informed subsequent work. No action items remain open from this document.

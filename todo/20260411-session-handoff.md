@@ -41,3 +41,7 @@ The following uncommitted files are the pending firing-bug work. They include bo
 - Research agents write findings directly into the relevant todo markdown file, not only to chat.
 - `pnpm.exe` is blocked on this machine by Device Guard. Use `node node_modules/.../bin.js` invocations instead when running tools directly.
 - The dev server is running on `http://localhost:5173` by default. Do not spawn a second one.
+
+## Status: SUPERSEDED 2026-04-11
+
+This handoff document described the start-of-session state for 2026-04-11. The session has now concluded. The firing bug described as the top priority was resolved (commit `b613415` and subsequent commits). The UI overhaul is complete. See individual todo files for detailed status of each work item. The next session's starting point should be derived from reading the current todo files rather than this handoff.

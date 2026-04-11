@@ -40,3 +40,7 @@ The current visual identity of Gunboat Raiders feels like a generic American 60s
 - Do NOT add npm dependencies
 - Use inline SVG / CSS / HTML only — no framework, no bundler
 - Match fonts to the naval combat game vibe; avoid yet another stencil military font
+
+## Status: COMPLETED 2026-04-11
+
+Harbour Dawn art direction locked and applied. HTML mood page delivered at `docs/art-direction/index.html` (commit `221e10a`). Harbour Dawn chosen by Jonathan; design tokens extracted to `src/ui/tokens.ts` (commit `c7d1173`) and fonts loaded via `index.html` (commit `633d288`). The entire Harbour Dawn palette, typography, and component styling drove all subsequent UI work.

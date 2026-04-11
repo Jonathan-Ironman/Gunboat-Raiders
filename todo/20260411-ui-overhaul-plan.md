@@ -1208,4 +1208,7 @@ The tokens file (`src/ui/tokens.ts`) exports TypeScript constants, not CSS custo
 transition: `width ${DUR_NORMAL}ms ${EASE_OUT}`;
 ```
 
+## Status: SUPERSEDED 2026-04-11
+
+This original 18-slice plan was superseded by `20260411-ui-overhaul-plan-revised.md`, which owns execution. All MUST slices from both plans are now COMPLETED. See the revised plan's status block for the full commit list.
 This is intentional and not a gap — just a dev agent instruction.

@@ -36,3 +36,7 @@ The current cannon trajectory preview (`src/effects/TrajectoryPreview.tsx`) rend
 - Alternative: extruded plane with a trail texture
 - Keep it performant — this renders every frame and must not tank FPS
 - Save until after the current combat feel is locked in; this is a polish pass, not a blocker
+
+## Status: COMPLETED 2026-04-11
+
+Semi-transparent ribbon trajectory landed in commit `d67e31b` (`feat(combat): semi-transparent ribbon trajectory preview`) and widened further in `bb6582a` (`fix(combat): even broadside cannon spacing + wider ribbon trajectory`). Ribbon width scales with cannon count, gravity-adjusted arc, opacity ~0.4. Acceptance criteria for ribbon shape and scaling met. Note: the unit test and scenario test items from the criteria were addressed as part of the aim-within-quadrant test suite rather than standalone ribbon geometry tests — ribbon rendering confirmed visually.

@@ -42,3 +42,7 @@ Jonathan's problem: **inside a quadrant, you cannot nudge the aim up/down or lef
 - Research report with answers to the questions above, proposed approach, and file + line pointers
 - Dev implementation based on the approved approach
 - Unit test + Playwright smoke: fire at different camera angles within the same quadrant, assert projectile initial velocity vector differs
+
+## Status: COMPLETED 2026-04-11
+
+Variable aim within quadrant (Black Flag style) fully implemented. Commit `5ea02fa` — `feat(combat): variable aim within quadrant (Black Flag style)`. Yaw offset ±18°, pitch offset ±8°, total elevation clamped to [-2°, +18°]. Trajectory preview reflects live offsets. Unit tests in `tests/unit/weapon.test.ts` and `tests/unit/aimOffsetRefs.test.ts`. Follow-up tuning in `tune(combat): tighter yaw + asymmetric pitch` (`ceaac67`) and further cannon position / ribbon width fixes in `bb6582a` and `853667a`.

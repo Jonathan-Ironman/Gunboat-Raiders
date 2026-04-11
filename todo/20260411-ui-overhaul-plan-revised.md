@@ -193,3 +193,25 @@ Jonathan authorized full autonomy. The 8 open design questions from the planning
 - Multiple save slots.
 - Level 2+.
 - Kill feed, ship naming, quadrant indicator.
+
+## Status: COMPLETED 2026-04-11
+
+All MUST slices (R1–R19) implemented. Key commits:
+
+- `7190794` — design tokens (R1) + store/persistence (R2 partial)
+- `633d288` — font loading (R3)
+- `1e3a7e7` — pause-on-pointer-lock-loss + Physics paused (R4)
+- `c99a5c84` / `2045c84` — PauseMenu + SettingsModal (R5, R6)
+- `9294af1` — MainMenuScene replaces TitleScreen (R7)
+- `ff095d6` + `9b360ce` — ShowcaseBackgroundScene + SaveSystem (R8, R18)
+- `742f9e5` + `c7d1173` — LevelBriefingModal + levels config (R9)
+- `07b9df2` — GameBootstrap + boot smoke test (R10)
+- `437a240` — HealthBar Harbour Dawn + armor shimmer (R11)
+- `2dc60a3` — WaveCounter/ScoreDisplay/EnemiesRemainingCounter (R12)
+- `c439969` — WeaponHeatBar (R13)
+- `5d7c37f` — LowHullWarning vignette (R14)
+- `1b574e0` — GameOverScreen redesign (R15)
+- `4b81d61` — WaveAnnouncement overlay (R16)
+- `432391b` — ControlsOverlay + keybindings module (R17)
+- `4d0cf5c` — HUD composition cleanup (R19)
+- R20 (motion polish): partially landed via button glow fixes (`d0b5c8a`, `1731f3a`, etc.).

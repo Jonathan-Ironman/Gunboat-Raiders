@@ -49,3 +49,12 @@ Previous changes:
 - Consider subtle FOV change at high speed for sense of speed
 - Consider bow-wake VFX when moving fast
 - User is the ultimate judge of "polished" — iterate based on playtest feedback
+
+## Status: PARTIALLY COMPLETE 2026-04-11
+
+Boat physics tuned across multiple commits this session:
+
+- `4423dbe` — player thrust +25%, skiff +75%, barge +50%
+- `1460d3a` — player +10% thrust/+20% turn, enemy turn rates increased
+
+These address the "controls feel slightly faster" direction. However the acceptance criteria include subjective items ("manual playtest rates feel as polished") that have not been formally confirmed by Jonathan. Controls tuning is ongoing — not yet signed off as complete.

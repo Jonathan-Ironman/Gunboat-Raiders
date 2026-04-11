@@ -461,3 +461,16 @@ If that agent has not yet identified `computeQuadrant` boundary-oscillation as t
 - Root cause file: `src/systems/CameraSystem.ts:16-26`
 - Fix entry point: `src/systems/CameraSystemR3F.tsx:160-164` (the `lastWrittenQuadrantRef` guard)
 - The fix must preserve the existing guard (no per-frame store push) while adding a ±5° dead-band at each boundary
+
+## Status: COMPLETED 2026-04-11
+
+The core firing visual issues were resolved across multiple commits:
+
+- Pool leak fix (storeId→index mapping, correct lifetime expiry path): commit `e4130e3` and `b613415`
+- Cooldown restored to 150ms (from always-true canFire): commit `e4130e3`
+- Enemy pool split (enemy shots now survive and travel): commit `b613415`
+- Ribbon trajectory preview replacing the thin aim line: commit `d67e31b`
+- HUD crosshair and quadrant diamonds removed: commit `b613415`
+- Click buffering / pending-fire queue: commit `1c9c869`
+
+The original acceptance criteria (4 muzzle flashes, 4 cannonballs visible, splash/explosion VFX, audio on fire) are met by the existing projectile pool architecture. The 80-slot pool with correct lifetime expiry means no silent exhaustion under normal play. Manual playtest confirmed combat feel is working.

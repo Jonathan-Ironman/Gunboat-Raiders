@@ -58,3 +58,14 @@ Player can currently fire cannonballs indefinitely. This gets replaced with an *
 - Visual feedback when a shot is "dampened" by yellow/red state?
 
 These are decided in the dedicated implementation task, not now.
+
+## Status: COMPLETED 2026-04-11
+
+Overheat mechanic implemented. Store slice with `heat` 0–1, fire-rate bracketing (green/yellow/red), and sticky lockout at 1.0. Conservative tuning as specified. Hold-to-fire also added. Relevant commits:
+
+- `a46bc3a` — `feat(combat): weapon overheat mechanic (conservative)`
+- `c88785c` — `feat(combat): hold-to-fire with cooldown + overheat gating`
+- `c439969` — `feat(ui): WeaponHeatBar HUD component (R13)`
+- `54c65fa` — `feat(ui): HUD bar redesign — segmented heat + split hull/armor`
+
+Heat bar wired to real store data and composited in HUD in `4d0cf5c`. Per-mount heat deferred to a later balance pass as documented.

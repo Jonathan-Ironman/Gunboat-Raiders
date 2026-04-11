@@ -143,3 +143,21 @@ Best practice in comparable games (Unity, Godot, ECS engines): **One explicit cl
 - Consolidate enemy removal: 2 hours
 - DamageSystemR3F map reset: 30 min
 - **Total: ~5 hours**
+
+## Status: PARTIALLY COMPLETE 2026-04-11
+
+**Research complete:** Full audit findings appended above (4 high/medium risk items identified with estimated effort).
+
+**Landed this session:**
+
+- Projectile pool lifetime expiry fixed (storeId→index mapping, correct deactivation path): commits `e4130e3`, `b613415`
+- Pool leak on game-reset via `activeIndicesRef` not cleared: addressed by pool component remount on phase change
+
+**Still open (queued for next session):**
+
+1. Audio Howler instances never disposed — `AudioManager.dispose()` not called on game-over (~1 hour)
+2. Three.js BufferGeometry not explicitly disposed in Explosion, MuzzleFlash, WaterSplash (~1.5 hours)
+3. Enemy removal has duplicate cleanup paths (EnemyBoat.tsx + DamageSystemR3F.tsx) (~2 hours)
+4. DamageSystemR3F module-scope maps not reset on game reset (~30 min)
+
+Total remaining effort: ~5 hours.

@@ -47,6 +47,10 @@ File: `src/utils/boatStats.ts` only.
 
 No changes needed to `PlayerBoat.tsx`; it already iterates `BOAT_STATS.player.weapons.mounts` generically (lines 107, 137-145) and applies the mount offset directly. Fixing the data in `boatStats.ts` is sufficient.
 
+## Status: COMPLETED 2026-04-11
+
+All acceptance criteria checked (checkboxes already marked in file). Front broadside mount Z corrected for even spacing; cannons pulled inward. Unit tests added. Landed in commit `853667a` (`tune(boats): move player cannons inward and lower, raise baseline`) and `bb6582a` (`fix(combat): even broadside cannon spacing + wider ribbon trajectory`). Previous agent also noted completion at bottom of file.
+
 ### Deterministic Test Plan
 
 All tests are pure unit tests (no renderer) and can live in a new file `src/utils/__tests__/boatStats.test.ts`.

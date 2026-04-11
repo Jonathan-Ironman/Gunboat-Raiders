@@ -35,3 +35,7 @@ The splash screen probably uses a hardcoded `font-family` that references a font
 ## Important
 
 The R3 agent only touched `index.html` (font loading). It did NOT modify any component's `font-family`. So any hardcoded fonts that the old `index.html` used to load will now be broken. This is the most likely root cause.
+
+## Status: COMPLETED 2026-04-11
+
+TitleScreen.tsx was deleted in commit `9294af1` (`feat(ui): MainMenuScene replaces TitleScreen`) as part of R7 of the UI overhaul. The broken font-family reference in TitleScreen no longer exists. The new MainMenuScene uses Harbour Dawn tokens and Baloo 2 / Nunito fonts loaded correctly in `index.html`. PointerLockHint.tsx was also deleted. The Comic Sans fallback issue self-resolved when the offending components were replaced. No separate font-family fix was needed.

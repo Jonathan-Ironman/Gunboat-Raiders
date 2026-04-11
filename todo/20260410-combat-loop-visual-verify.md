@@ -52,3 +52,14 @@ Tests that pass:
 - Recommended: add damage flash, hit markers, kill confirms for clarity
 - Recommended: enemies should spawn closer or approach faster for quicker feedback loop
 - Recommended: reduce initial enemy count to 1 for tutorial-like first wave
+
+## Status: PARTIALLY COMPLETE 2026-04-11
+
+The core combat loop is now visually working:
+
+- Enemies approach and engage (confirmed working before this session)
+- Player can fire with visible cannonballs, ribbon trajectory, muzzle flashes
+- Enemy pool split fixed enemy projectiles — enemies now fire back with projectiles that travel and damage
+- Damage pipeline is wired end-to-end
+
+However, the acceptance criteria include "manual playtest confirms the full combat loop works" — Jonathan confirmed score display is working nicely and did observe combat, but the enemy-upside-down game-blocker (separate todo) means a wave can get stuck. Until that blocker is resolved, the loop cannot be called fully confirmed. Mark as partially complete pending enemy-upside-down fix.

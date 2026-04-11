@@ -39,3 +39,28 @@ Do not copy blindly — adapt to this project's conventions — but reuse the te
 - `src/utils/rockPlacement.ts` (if it exists) — placement math
 - `tests/unit/rockPlacement.test.ts` — existing unit tests for rock placement
 - Reference: `D:/Projects/Firefly/` — seed-based placement + cluster code
+
+## Update — playtest 2026-04-11 evening (asset filtering)
+
+Jonathan looked at the rocks in-game and confirmed two things that need fixing together:
+
+1. **Rotation issue (already in this todo):** rocks tilt on all axes. Must only yaw (Y axis), stay level.
+2. **NEW — asset filtering:** the current rock asset pool contains variants that don't look good. Jonathan wants these filtered:
+   - **KEEP:** only the **light grey** rock variants — light grey with brown, plain light grey, and one other grey variant (verify against the actual asset files)
+   - **REMOVE:** the **dark grey or near-black** rock variants — they look wrong, drop them from the pool entirely
+
+Check `public/models/` for the rock `.glb` files and `src/environment/Rocks.tsx` for the current asset list. Remove the dark variants from the asset selection array (don't delete the .glb files themselves — just stop using them in the selection pool).
+
+## Status: PARTIALLY COMPLETE 2026-04-11
+
+**Landed (commit `3857346` — `fix(environment): level rocks + drop dark rock variants`):**
+
+- Rocks are now level — rotation clamped to Y-axis only (roll = 0, pitch = 0)
+- Dark rock variants dropped from asset pool; only light grey variants (rocks-sand-a/b/c) kept
+- Unit tests assert roll = pitch = 0 and Y rotation in [0, 2π) for every placed rock
+
+**Still open:**
+
+- Seed-based scale variation (0.7–1.4× range) — NOT implemented
+- Seed-based clustering (2–4 rocks close together) — NOT implemented
+- These two acceptance criteria remain unaddressed. Scale variation and clustering were described as stretch goals and were explicitly noted in the task description as "parked."

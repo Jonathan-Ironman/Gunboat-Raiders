@@ -208,3 +208,12 @@ ENEMY_PROJECTILE_GROUPS = interactionGroups(COLLISION_GROUPS.ENEMY_PROJECTILE, [
 ```
 
 A simple unit test can import the group constant and assert the filter bitmask does not have the ENEMY bit set. This test would have caught the bug at authoring time if it had existed.
+
+## Status: COMPLETED 2026-04-11
+
+Enemy projectile static bug resolved. Root cause was hardcoded `PLAYER_PROJECTILE` collision group on all pool slots, causing enemy shots to self-collide with the firing enemy's collider and die within 1-2 frames. Fixed by splitting the projectile pool into two components:
+
+- `EnemyProjectilePool.tsx` created with `ENEMY_PROJECTILE` collision groups that exclude ENEMY bodies
+- `AISystemR3F.tsx` updated to use the enemy pool manager
+
+All landed in commit `b613415` (`feat(combat): unblock firing, split enemy pool, clean HUD`). Enemy projectiles now launch with correct velocity, arc under gravity, and reach the player.

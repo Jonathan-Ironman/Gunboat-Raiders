@@ -123,3 +123,13 @@ Frustrated. He has said multiple times: "Ik voel me een beetje een broken record
 - Less academic theorizing
 - More test-driven scenario reproduction of what he **actually** sees
 - Agents that respect his observations and stop reinterpreting them into different bugs
+
+## Status: COMPLETED 2026-04-11
+
+The firing bug was resolved in commit `b613415` (`feat(combat): unblock firing, split enemy pool, clean HUD`). Root causes addressed:
+
+- **Pointer-lock gate removed from WeaponSystem** — replaced with a phase check; clicks no longer dropped silently after Escape/alt-tab
+- **CameraSystem pointer-lock gate dropped from azimuth** — mouse-position fallback keeps `activeQuadrant` fresh regardless of lock state; this fixed "aim lines disappear" and "only fires toward center"
+- **Enemy pool split** — `EnemyProjectilePool.tsx` created with correct `ENEMY_PROJECTILE` collision groups (separate issue but fixed together)
+
+The Playwright smoke tests added as part of the investigation (`firing-orientation.spec.ts`, `firing-position-drift.spec.ts`) remain in the codebase as regression guards (commit `7190794`).

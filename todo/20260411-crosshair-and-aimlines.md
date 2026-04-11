@@ -110,3 +110,11 @@ Uses a headless R3F render test or Playwright screenshot. Asserts that 4 Three.j
 - The firing pointer-lock requirement in `WeaponSystemR3F.tsx` line 28 is a separate concern from trajectory preview visibility. The trajectory line renders regardless of pointer lock state, which is the correct behavior for aiming feedback.
 - `getMeanMountData` in `TrajectoryPreview.tsx` is not exported; if unit tests are needed for it, export it or move it to a shared utility.
 - No changes needed to `WeaponSystemR3F.tsx`, `boatStats.ts`, or any physics/game logic file for this task.
+
+## Status: COMPLETED 2026-04-11
+
+All three items resolved:
+
+1. **Crosshair removed** — `src/ui/Crosshair.tsx` deleted, removed from `HUD.tsx` (commit `b613415`)
+2. **Quadrant indicator diamonds removed** — `src/ui/QuadrantIndicator.tsx` deleted, removed from `HUD.tsx` (commit `b613415`)
+3. **Aim lines** — The investigation confirmed all 4 quadrants have trajectory data; the "only 2 showing" report was a user-perception issue (only active quadrant shown by design). The ribbon trajectory upgrade (commit `d67e31b`) makes the active-quadrant arc much more visible. Aim lines now correctly reflect the variable-aim offsets (commit `5ea02fa`).
