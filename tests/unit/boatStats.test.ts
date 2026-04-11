@@ -4,17 +4,17 @@ import { BOAT_STATS } from '../../src/utils/boatStats';
 describe('BOAT_STATS movement values', () => {
   describe('player', () => {
     const m = BOAT_STATS.player.movement;
-    it('has bumped thrustForce (~25% over old 8000)', () => {
-      expect(m.thrustForce).toBe(10000);
+    it('has bumped thrustForce (+10% to 11000)', () => {
+      expect(m.thrustForce).toBe(11000);
     });
     it('has bumped maxSpeed (~25% over old 22)', () => {
       expect(m.maxSpeed).toBe(28);
     });
-    it('has bumped reverseForce', () => {
-      expect(m.reverseForce).toBe(3000);
+    it('has bumped reverseForce (+10% to 3300)', () => {
+      expect(m.reverseForce).toBe(3300);
     });
-    it('leaves turnTorque unchanged', () => {
-      expect(m.turnTorque).toBe(2000);
+    it('has bumped turnTorque (+20% to 2400)', () => {
+      expect(m.turnTorque).toBe(2400);
     });
   });
 
@@ -143,8 +143,8 @@ describe('BOAT_STATS movement values', () => {
     it('has bumped reverseForce', () => {
       expect(m.reverseForce).toBe(1400);
     });
-    it('leaves turnTorque unchanged', () => {
-      expect(m.turnTorque).toBe(350);
+    it('has bumped turnTorque (+71% to 600)', () => {
+      expect(m.turnTorque).toBe(600);
     });
   });
 
@@ -159,8 +159,8 @@ describe('BOAT_STATS movement values', () => {
     it('has bumped reverseForce', () => {
       expect(m.reverseForce).toBe(750);
     });
-    it('leaves turnTorque unchanged', () => {
-      expect(m.turnTorque).toBe(150);
+    it('has bumped turnTorque (+47% to 220)', () => {
+      expect(m.turnTorque).toBe(220);
     });
   });
 });

@@ -16,12 +16,11 @@ export const BOAT_STATS = {
     health: { armor: 100, armorMax: 100, armorRegenRate: 3, hull: 100, hullMax: 100 },
     // Powerboat feel: high thrust for punchy acceleration, high turn torque so
     // A/D produce clearly visible yaw within ~0.5s. With Rapier angularDamping
-    // = 0.8 and yaw moment of inertia ~2560 kg·m², turnTorque of 2000 N·m
-    // yields a terminal yaw rate of ~0.98 rad/s (~56 deg/s) — comfortably
-    // above the 45 deg/s target, with the first-order response feeling
-    // responsive from the very first frame.
-    // Power bumped ~25% per playtest feedback (felt sluggish).
-    movement: { thrustForce: 10000, reverseForce: 3000, turnTorque: 2000, maxSpeed: 28 },
+    // = 0.8 and yaw moment of inertia ~2560 kg·m², turnTorque of 2400 N·m
+    // yields a terminal yaw rate of ~1.17 rad/s (~67 deg/s) — well above the
+    // 45 deg/s target, feeling noticeably snappier from the first frame.
+    // Thrust/reverse bumped another ~10%, turnTorque bumped ~20% per playtest.
+    movement: { thrustForce: 11000, reverseForce: 3300, turnTorque: 2400, maxSpeed: 28 },
     weapons: {
       cooldown: 0.15,
       damage: 25,
@@ -65,7 +64,8 @@ export const BOAT_STATS = {
     // F / (m * damping) = 3500 / (1000 * 0.8) = 4.375 m/s — fast enough to
     // actually close on and threaten the player.
     // Power bumped ~75% per playtest feedback (enemies were in slow motion).
-    movement: { thrustForce: 3500, reverseForce: 1400, turnTorque: 350, maxSpeed: 32 },
+    // turnTorque bumped +71% (350→600) so skiffs actively chase and circle.
+    movement: { thrustForce: 3500, reverseForce: 1400, turnTorque: 600, maxSpeed: 32 },
     weapons: {
       cooldown: 3.0,
       damage: 15,
@@ -84,7 +84,8 @@ export const BOAT_STATS = {
     // Slower and heavier-feeling than a skiff but still capable of pursuit.
     // Terminal velocity ~= 1800 / (1000 * 0.8) = 2.25 m/s.
     // Power bumped ~50% per playtest feedback (enemies were in slow motion).
-    movement: { thrustForce: 1800, reverseForce: 750, turnTorque: 150, maxSpeed: 12 },
+    // turnTorque bumped +47% (150→220) for more threatening pursuit arcs.
+    movement: { thrustForce: 1800, reverseForce: 750, turnTorque: 220, maxSpeed: 12 },
     weapons: {
       cooldown: 2.5,
       damage: 20,
