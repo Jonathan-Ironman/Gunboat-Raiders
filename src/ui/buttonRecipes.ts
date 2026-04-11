@@ -209,17 +209,21 @@ const secondary: CSSProperties = {
 };
 
 /**
- * Destructive (red) variant — used for irreversible actions such as
- * "Exit to main menu" (when pressed from a live run) or the
- * destructive `Confirm` button inside `ConfirmDialog`.
+ * Destructive variant — rests in the same neutral state as secondary
+ * so the button does not alarm the user before they interact with it.
+ * Only the `:hover` state reveals the danger — the CSS stylesheet
+ * below transitions to a red gradient when the user mouses over.
  *
- * Red gradient fill with the same emboss stack as primary / secondary
- * so the silhouette matches — only the colors read as "danger".
+ * Default state is visually identical to secondary: same background,
+ * same emboss edge color, same text color. This satisfies Jonathan's
+ * request: "in de normale staat mag deze gewoon grijs zijn, zoals de
+ * andere buttons" (in the normal state it should just be grey, like
+ * the other buttons).
  */
 const destructive: CSSProperties = {
-  background: `linear-gradient(135deg, ${RED}, ${RED_DARK})`,
+  background: SURFACE_EL,
   color: TEXT_PRI,
-  boxShadow: embossShadow(DESTRUCTIVE_EDGE, SHARED_DROP_SHADOW),
+  boxShadow: embossShadow(SECONDARY_EDGE, SHARED_DROP_SHADOW),
 };
 
 /**
@@ -249,6 +253,22 @@ export const BUTTON_RECIPE: ButtonRecipe = {
   secondary,
   destructive,
   disabled,
+};
+
+/**
+ * Explicitly-red destructive style for contexts where the danger must
+ * always be visible (e.g. the Confirm button inside `ConfirmDialog`).
+ *
+ * Unlike `BUTTON_RECIPE.destructive` (which rests grey and only turns
+ * red on CSS `:hover`), this variant is always red — use it when the
+ * surrounding UI already provides the "are you sure?" framing and the
+ * button must communicate danger at a glance without any mouse
+ * interaction.
+ */
+export const BUTTON_DESTRUCTIVE_RED: CSSProperties = {
+  background: `linear-gradient(135deg, ${RED}, ${RED_DARK})`,
+  color: TEXT_PRI,
+  boxShadow: embossShadow(DESTRUCTIVE_EDGE, SHARED_DROP_SHADOW),
 };
 
 // ---------------------------------------------------------------------------

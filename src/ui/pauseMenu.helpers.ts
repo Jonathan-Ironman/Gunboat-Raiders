@@ -16,7 +16,7 @@
 
 import type { CSSProperties } from 'react';
 
-import { BUTTON_RECIPE } from './buttonRecipes';
+import { BUTTON_DESTRUCTIVE_RED, BUTTON_RECIPE } from './buttonRecipes';
 import {
   BORDER,
   DUR_NORMAL,
@@ -193,7 +193,7 @@ export const pauseButtonDestructiveStyle: CSSProperties = BUTTON_RECIPE.secondar
  * fill so hovering telegraphs "this will destroy progress" without
  * restructuring the button silhouette.
  */
-export const pauseButtonDestructiveHoverStyle: CSSProperties = BUTTON_RECIPE.destructive;
+export const pauseButtonDestructiveHoverStyle: CSSProperties = BUTTON_DESTRUCTIVE_RED;
 
 /**
  * Run summary line below the button stack —
@@ -300,10 +300,13 @@ export const confirmCancelStyle: CSSProperties = BUTTON_RECIPE.secondary;
 export const confirmPrimaryStyle: CSSProperties = BUTTON_RECIPE.primary;
 
 /**
- * Destructive confirm variant — red gradient. Overrides the primary
- * variant when `destructive === true` on the dialog.
+ * Destructive confirm variant — always-red gradient. Used inside
+ * `ConfirmDialog` where the surrounding context already provides the
+ * "are you sure?" framing so the button must communicate danger at a
+ * glance. Unlike `BUTTON_RECIPE.destructive` (which rests grey and
+ * only turns red on CSS `:hover`), this is persistently red.
  */
-export const confirmDestructiveStyle: CSSProperties = BUTTON_RECIPE.destructive;
+export const confirmDestructiveStyle: CSSProperties = BUTTON_DESTRUCTIVE_RED;
 
 // ---------------------------------------------------------------------------
 // Keyframes — shared fade-in for the pause overlay and confirm dialog

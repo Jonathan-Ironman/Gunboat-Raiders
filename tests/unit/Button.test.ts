@@ -122,12 +122,16 @@ describe('Button — secondary variant style composition', () => {
 // ---------------------------------------------------------------------------
 
 describe('Button — destructive variant style composition', () => {
-  it('uses a red linear-gradient background', () => {
+  /**
+   * Destructive rests as a grey secondary button by default.
+   * Red only appears on CSS :hover (.gbr-btn--destructive:hover).
+   */
+  it('rests with a grey secondary-equivalent background (not red in default state)', () => {
     const html = renderButton({ variant: 'destructive' });
     const style = extractButtonStyleAttr(html);
-    expect(style.toLowerCase()).toContain('linear-gradient');
-    // RED = '#ff8080' — the gradient contains the ff8080 red stop
-    expect(style.toLowerCase()).toContain('ff8080');
+    // No red gradient in the inline style — red lives in the CSS :hover rule only
+    expect(style.toLowerCase()).not.toContain('ff8080');
+    expect(style.toLowerCase()).not.toContain('linear-gradient');
   });
 
   it('applies the gbr-btn and gbr-btn--destructive class names', () => {

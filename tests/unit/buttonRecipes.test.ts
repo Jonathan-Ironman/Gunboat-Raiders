@@ -143,14 +143,31 @@ describe('BUTTON_RECIPE.secondary', () => {
 // ---------------------------------------------------------------------------
 
 describe('BUTTON_RECIPE.destructive', () => {
-  it('uses the red gradient background and primary text color', () => {
-    expect(BUTTON_RECIPE.destructive.background).toContain('linear-gradient');
-    expect(BUTTON_RECIPE.destructive.color).toBe(TEXT_PRI);
+  /**
+   * Destructive rests in the same neutral state as secondary — "in de
+   * normale staat mag deze gewoon grijs zijn, zoals de andere buttons".
+   * Only the CSS :hover rule reveals the red danger state.
+   */
+  it('default background equals secondary background (grey rest state)', () => {
+    expect(BUTTON_RECIPE.destructive.background).toBe(BUTTON_RECIPE.secondary.background);
   });
 
-  it('uses the same emboss shadow shape as primary/secondary with the shared drop-shadow', () => {
-    const expected = __test_embossShadow(__test_edges.destructive, __test_edges.sharedDropShadow);
+  it('default color equals secondary color (shared text color in rest state)', () => {
+    expect(BUTTON_RECIPE.destructive.color).toBe(BUTTON_RECIPE.secondary.color);
+  });
+
+  it('default boxShadow equals secondary boxShadow (same grey emboss edge in rest state)', () => {
+    expect(BUTTON_RECIPE.destructive.boxShadow).toBe(BUTTON_RECIPE.secondary.boxShadow);
+  });
+
+  it('uses the same emboss shadow shape as secondary with the shared drop-shadow', () => {
+    const expected = __test_embossShadow(__test_edges.secondary, __test_edges.sharedDropShadow);
     expect(BUTTON_RECIPE.destructive.boxShadow).toBe(expected);
+  });
+
+  it('uses SURFACE_EL background (same as secondary) not a red gradient', () => {
+    expect(BUTTON_RECIPE.destructive.background).toBe(SURFACE_EL);
+    expect(BUTTON_RECIPE.destructive.background).not.toContain('linear-gradient');
   });
 });
 
