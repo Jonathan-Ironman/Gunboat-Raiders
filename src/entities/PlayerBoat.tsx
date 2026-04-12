@@ -18,7 +18,7 @@ import {
   unregisterBuoyancyBody,
   setPlayerBody,
 } from '../systems/physicsRefs';
-import { BOAT_MASS } from '../utils/constants';
+import { BOAT_MASS, BUOYANCY_STRENGTH } from '../utils/constants';
 import { Box3, Vector3, type Mesh, type Object3D } from 'three';
 
 // Preload models for better loading performance
@@ -51,6 +51,13 @@ const PLAYER_COLLISION_GROUPS = interactionGroups(COLLISION_GROUPS.PLAYER, [
   COLLISION_GROUPS.ENVIRONMENT,
 ]);
 
+// The player boat needs a bit more buoyancy authority than the generic hull
+// setup so it can recover from long planing runs without visually lagging
+// behind the rendered wave surface.
+const PLAYER_BUOYANCY_OVERRIDES = {
+  buoyancyStrength: BUOYANCY_STRENGTH * 1.25,
+} as const;
+
 export function PlayerBoat() {
   const rigidBodyRef = useRef<RapierRigidBody>(null);
   const modelRef = useRef<Object3D>(null);
@@ -59,24 +66,59 @@ export function PlayerBoat() {
   const boatScene = useMemo(() => boatGltf.scene.clone(), [boatGltf.scene]);
   const localHullSamplePoints = useMemo(() => {
     const bounds = new Box3().setFromObject(boatScene);
-    const xInset = (bounds.max.x - bounds.min.x) * 0.15;
-    const zInset = (bounds.max.z - bounds.min.z) * 0.1;
-    const leftX = bounds.min.x + xInset;
-    const rightX = bounds.max.x - xInset;
-    const sternZ = bounds.min.z + zInset;
-    const bowZ = bounds.max.z - zInset;
+    const xInset = (bounds.max.x - bounds.min.x) * 0.08;
+    const zInset = (bounds.max.z - bounds.min.z) * 0.05;
+    const minX = bounds.min.x + xInset;
+    const maxX = bounds.max.x - xInset;
+    const minZ = bounds.min.z + zInset;
+    const maxZ = bounds.max.z - zInset;
     const keelY = bounds.min.y;
+    const lowHullTopY = bounds.min.y + (bounds.max.y - bounds.min.y) * 0.45;
+    const xSteps = 5;
+    const ySteps = 3;
+    const zSteps = 9;
+    const xDenominator = xSteps - 1;
+    const yDenominator = ySteps - 1;
+    const zDenominator = zSteps - 1;
+    const points: Vector3[] = [];
+    const sampleYs = Array.from({ length: ySteps }, (_unused, index) => {
+      const yT = index / yDenominator;
+      return keelY + (lowHullTopY - keelY) * yT;
+    });
 
-    return [
-      new Vector3(0, keelY, bowZ),
-      new Vector3(0, keelY, sternZ),
-      new Vector3(leftX, keelY, 0),
-      new Vector3(rightX, keelY, 0),
-      new Vector3(leftX, keelY, bowZ * 0.7),
-      new Vector3(rightX, keelY, bowZ * 0.7),
-      new Vector3(leftX, keelY, sternZ * 0.7),
-      new Vector3(rightX, keelY, sternZ * 0.7),
-    ];
+    // Bottom surface
+    for (let xi = 0; xi < xSteps; xi += 1) {
+      const xT = xi / xDenominator;
+      const sampleX = minX + (maxX - minX) * xT;
+
+      for (let zi = 0; zi < zSteps; zi += 1) {
+        const zT = zi / zDenominator;
+        const sampleZ = minZ + (maxZ - minZ) * zT;
+        points.push(new Vector3(sampleX, keelY, sampleZ));
+      }
+    }
+
+    // Port / starboard low hull sides
+    for (const sampleY of sampleYs) {
+      for (let zi = 0; zi < zSteps; zi += 1) {
+        const zT = zi / zDenominator;
+        const sampleZ = minZ + (maxZ - minZ) * zT;
+        points.push(new Vector3(minX, sampleY, sampleZ));
+        points.push(new Vector3(maxX, sampleY, sampleZ));
+      }
+    }
+
+    // Bow / stern low hull faces
+    for (const sampleY of sampleYs) {
+      for (let xi = 0; xi < xSteps; xi += 1) {
+        const xT = xi / xDenominator;
+        const sampleX = minX + (maxX - minX) * xT;
+        points.push(new Vector3(sampleX, sampleY, minZ));
+        points.push(new Vector3(sampleX, sampleY, maxZ));
+      }
+    }
+
+    return points;
   }, [boatScene]);
 
   // Register with physics systems on mount; clean up on unmount.
@@ -92,7 +134,7 @@ export function PlayerBoat() {
   // Register rigid body once it's available (after first render with ref set)
   const onRigidBodyReady = (body: RapierRigidBody) => {
     // RigidBody ref callback isn't available, so we use a ref + effect approach
-    registerBuoyancyBody(PLAYER_ID, body, PLAYER_HULL_SAMPLE_POINTS);
+    registerBuoyancyBody(PLAYER_ID, body, PLAYER_HULL_SAMPLE_POINTS, PLAYER_BUOYANCY_OVERRIDES);
     setPlayerBody(body);
   };
 

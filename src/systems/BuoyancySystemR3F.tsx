@@ -80,6 +80,10 @@ export function BuoyancySystemR3F() {
           continue;
         }
 
+        const config = entry.configOverrides
+          ? { ...BUOYANCY_CONFIG, ...entry.configOverrides }
+          : BUOYANCY_CONFIG;
+
         const result = computeBuoyancy(
           {
             bodyPosition: [pos.x, pos.y, pos.z],
@@ -90,7 +94,7 @@ export function BuoyancySystemR3F() {
           },
           (x, z, t) => waterCtx.getWaveHeightAtTime(x, z, t),
           time,
-          BUOYANCY_CONFIG,
+          config,
         );
 
         // Safety: never apply NaN forces to the rigid body

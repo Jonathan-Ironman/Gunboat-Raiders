@@ -36,7 +36,7 @@ import type { RapierRigidBody } from '@react-three/rapier';
 import { Quaternion, Euler } from 'three';
 import { BOAT_STATS } from '@/utils/boatStats';
 import { COLLISION_GROUPS } from '@/utils/collisionGroups';
-import { BOAT_MASS } from '@/utils/constants';
+import { BOAT_MASS, BUOYANCY_STRENGTH } from '@/utils/constants';
 import { PLAYER_HULL_SAMPLE_POINTS } from '@/systems/BuoyancySystem';
 import { registerBuoyancyBody, unregisterBuoyancyBody } from '@/systems/physicsRefs';
 import type { Mesh } from 'three';
@@ -75,6 +75,9 @@ const BOAT_DENSITY = BOAT_MASS / BOAT_COLLIDER_VOLUME;
  * environment props that might slip into the showcase scene later.
  */
 const SHOWCASE_COLLISION_GROUPS = interactionGroups(COLLISION_GROUPS.PLAYER, []);
+const SHOWCASE_BUOYANCY_OVERRIDES = {
+  buoyancyStrength: BUOYANCY_STRENGTH * 1.25,
+} as const;
 
 /** How fast the boat tracks its desired yaw per second (rad/s). */
 const YAW_TRACKING_RATE = 1.0;
@@ -104,7 +107,12 @@ export function ShowcasePlayerBoat({ config }: ShowcasePlayerBoatProps) {
   useEffect(() => {
     const body = rigidBodyRef.current;
     if (body !== null) {
-      registerBuoyancyBody(SHOWCASE_ID, body, PLAYER_HULL_SAMPLE_POINTS);
+      registerBuoyancyBody(
+        SHOWCASE_ID,
+        body,
+        PLAYER_HULL_SAMPLE_POINTS,
+        SHOWCASE_BUOYANCY_OVERRIDES,
+      );
       setShowcaseBoatBody(body);
     }
   });

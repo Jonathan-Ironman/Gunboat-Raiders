@@ -6,6 +6,7 @@
  */
 
 import type { RapierRigidBody } from '@react-three/rapier';
+import type { BuoyancyConfig } from './BuoyancySystem';
 
 // ---- Buoyancy body registry ----
 
@@ -13,6 +14,7 @@ export type HullSamplePoint = readonly [number, number, number];
 
 export interface BuoyancyBodyEntry {
   body: RapierRigidBody;
+  configOverrides?: Partial<BuoyancyConfig>;
   hullSamplePoints?: readonly HullSamplePoint[];
 }
 
@@ -24,8 +26,16 @@ export function registerBuoyancyBody(
   id: string,
   body: RapierRigidBody,
   hullSamplePoints?: readonly HullSamplePoint[],
+  configOverrides?: Partial<BuoyancyConfig>,
 ): void {
-  buoyancyBodies.set(id, hullSamplePoints ? { body, hullSamplePoints } : { body });
+  const entry: BuoyancyBodyEntry = { body };
+  if (hullSamplePoints) {
+    entry.hullSamplePoints = hullSamplePoints;
+  }
+  if (configOverrides) {
+    entry.configOverrides = configOverrides;
+  }
+  buoyancyBodies.set(id, entry);
 }
 
 /** Unregister a rigid body from buoyancy processing. */
