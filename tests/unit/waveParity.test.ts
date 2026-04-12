@@ -33,49 +33,73 @@ function shaderNoise2D(x: number, z: number): number {
 
 function shaderMirrorHeightAndNormal(x: number, z: number, time: number) {
   const waves = SHARED_WAVE_SAMPLING.waves;
-  const noiseX = x * WAVE_MODULATION.noiseScale + time * WAVE_MODULATION.timeScale;
-  const noiseZ = z * WAVE_MODULATION.noiseScale + time * WAVE_MODULATION.timeScale;
-  const modNoise = shaderNoise2D(noiseX, noiseZ);
-  const ampMod = mix(
-    WAVE_MODULATION.minAmplitudeMultiplier,
-    WAVE_MODULATION.maxAmplitudeMultiplier,
-    modNoise,
-  );
+  function sampleSourceDisplacement(sourceX: number, sourceZ: number) {
+    const noiseX = sourceX * WAVE_MODULATION.noiseScale + time * WAVE_MODULATION.timeScale;
+    const noiseZ = sourceZ * WAVE_MODULATION.noiseScale + time * WAVE_MODULATION.timeScale;
+    const modNoise = shaderNoise2D(noiseX, noiseZ);
+    const ampMod = mix(
+      WAVE_MODULATION.minAmplitudeMultiplier,
+      WAVE_MODULATION.maxAmplitudeMultiplier,
+      modNoise,
+    );
 
-  let dy = 0;
-  let dNx = 0;
-  let dNz = 0;
+    let dx = 0;
+    let dy = 0;
+    let dz = 0;
+    let dNx = 0;
+    let dNz = 0;
 
-  for (let i = 0; i < waves.length; i++) {
-    const wave = waves[i];
-    if (!wave) continue;
+    for (let i = 0; i < waves.length; i++) {
+      const wave = waves[i];
+      if (!wave) continue;
 
-    const k = (2 * Math.PI) / wave.wavelength;
-    const amp = i < WAVE_MODULATION.modulatedWaveCount ? wave.amplitude * ampMod : wave.amplitude;
-    const theta =
-      k * (wave.direction[0] * x + wave.direction[1] * z) - wave.speed * k * time + wave.phase;
+      const k = (2 * Math.PI) / wave.wavelength;
+      const amp = i < WAVE_MODULATION.modulatedWaveCount ? wave.amplitude * ampMod : wave.amplitude;
+      const theta =
+        k * (wave.direction[0] * sourceX + wave.direction[1] * sourceZ) -
+        wave.speed * k * time +
+        wave.phase;
 
-    const s = Math.sin(theta);
-    const c = Math.cos(theta);
+      const s = Math.sin(theta);
+      const c = Math.cos(theta);
 
-    dy += amp * s;
-    dNx += wave.direction[0] * k * amp * c;
-    dNz += wave.direction[1] * k * amp * c;
+      dx += wave.direction[0] * amp * c;
+      dz += wave.direction[1] * amp * c;
+      dy += amp * s;
+      dNx += wave.direction[0] * k * amp * c;
+      dNz += wave.direction[1] * k * amp * c;
+    }
+
+    const nx = -dNx;
+    const ny = 1;
+    const nz = -dNz;
+    const len = Math.sqrt(nx * nx + ny * ny + nz * nz);
+
+    return {
+      worldX: sourceX + dx,
+      worldZ: sourceZ + dz,
+      height: dy,
+      normal: [nx / len, ny / len, nz / len] as const,
+    };
   }
 
-  const nx = -dNx;
-  const ny = 1;
-  const nz = -dNz;
-  const len = Math.sqrt(nx * nx + ny * ny + nz * nz);
+  let sourceX = x;
+  let sourceZ = z;
+  for (let i = 0; i < 8; i++) {
+    const displaced = sampleSourceDisplacement(sourceX, sourceZ);
+    sourceX += x - displaced.worldX;
+    sourceZ += z - displaced.worldZ;
+  }
 
+  const resolved = sampleSourceDisplacement(sourceX, sourceZ);
   return {
-    height: dy,
-    normal: [nx / len, ny / len, nz / len] as const,
+    height: resolved.height,
+    normal: resolved.normal,
   };
 }
 
 describe('wave CPU/shader parity', () => {
-  it('matches mirrored shader height + normal across multiple coordinates', () => {
+  it('matches mirrored shader height + normal in world space across multiple coordinates', () => {
     const samples: Array<[number, number, number]> = [
       [0, 0, 0],
       [10.5, -4.25, 1.75],
@@ -88,11 +112,46 @@ describe('wave CPU/shader parity', () => {
       const cpu = getWaveHeight(x, z, time, SHARED_WAVE_SAMPLING.waves);
       const shaderMirror = shaderMirrorHeightAndNormal(x, z, time);
 
-      expect(cpu.height).toBeCloseTo(shaderMirror.height, 10);
-      expect(cpu.normal[0]).toBeCloseTo(shaderMirror.normal[0], 10);
-      expect(cpu.normal[1]).toBeCloseTo(shaderMirror.normal[1], 10);
-      expect(cpu.normal[2]).toBeCloseTo(shaderMirror.normal[2], 10);
+      expect(cpu.height).toBeCloseTo(shaderMirror.height, 6);
+      expect(cpu.normal[0]).toBeCloseTo(shaderMirror.normal[0], 6);
+      expect(cpu.normal[1]).toBeCloseTo(shaderMirror.normal[1], 6);
+      expect(cpu.normal[2]).toBeCloseTo(shaderMirror.normal[2], 6);
     }
+  });
+
+  it('includes world-space horizontal displacement in sampled height', () => {
+    const x = -65;
+    const z = 170;
+    const time = 26;
+
+    const cpu = getWaveHeight(x, z, time, SHARED_WAVE_SAMPLING.waves);
+
+    const sourceSpaceOnly = (() => {
+      const waves = SHARED_WAVE_SAMPLING.waves;
+      const noiseX = x * WAVE_MODULATION.noiseScale + time * WAVE_MODULATION.timeScale;
+      const noiseZ = z * WAVE_MODULATION.noiseScale + time * WAVE_MODULATION.timeScale;
+      const modNoise = shaderNoise2D(noiseX, noiseZ);
+      const ampMod = mix(
+        WAVE_MODULATION.minAmplitudeMultiplier,
+        WAVE_MODULATION.maxAmplitudeMultiplier,
+        modNoise,
+      );
+
+      let dy = 0;
+      for (let i = 0; i < waves.length; i++) {
+        const wave = waves[i];
+        if (!wave) continue;
+        const k = (2 * Math.PI) / wave.wavelength;
+        const amp =
+          i < WAVE_MODULATION.modulatedWaveCount ? wave.amplitude * ampMod : wave.amplitude;
+        const theta =
+          k * (wave.direction[0] * x + wave.direction[1] * z) - wave.speed * k * time + wave.phase;
+        dy += amp * Math.sin(theta);
+      }
+      return dy;
+    })();
+
+    expect(cpu.height).not.toBeCloseTo(sourceSpaceOnly, 3);
   });
 
   it('includes modulation terms in height (first waves are noise-modulated)', () => {

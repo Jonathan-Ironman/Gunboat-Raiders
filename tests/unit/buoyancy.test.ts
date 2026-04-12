@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { computeBuoyancy, HULL_SAMPLE_POINTS } from '@/systems/BuoyancySystem';
+import {
+  computeBuoyancy,
+  HULL_SAMPLE_POINTS,
+  PLAYER_HULL_SAMPLE_POINTS,
+} from '@/systems/BuoyancySystem';
 import type { BuoyancyConfig, BuoyancyInput } from '@/systems/BuoyancySystem';
 import {
   BUOYANCY_STRENGTH,
@@ -181,5 +185,22 @@ describe('BuoyancySystem — computeBuoyancy', () => {
     // Both should produce the same buoyancy because submersion is clamped
     // to maxSubmersion in both cases.
     expect(deepResult.force[1]).toBeCloseTo(moderateResult.force[1], 1);
+  });
+
+  it('deeper player hull sample points float the same body higher on flat water', () => {
+    const generic = computeBuoyancy(
+      { ...makeInput([0, 0, 0]), hullSamplePoints: HULL_SAMPLE_POINTS },
+      flatWater,
+      0,
+      DEFAULT_CONFIG,
+    );
+    const playerHull = computeBuoyancy(
+      { ...makeInput([0, 0, 0]), hullSamplePoints: PLAYER_HULL_SAMPLE_POINTS },
+      flatWater,
+      0,
+      DEFAULT_CONFIG,
+    );
+
+    expect(playerHull.force[1]).toBeGreaterThan(generic.force[1]);
   });
 });

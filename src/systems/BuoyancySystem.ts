@@ -11,7 +11,7 @@ export interface BuoyancyInput {
   bodyRotation: [number, number, number, number]; // quaternion [x, y, z, w]
   bodyLinearVelocity: [number, number, number];
   bodyAngularVelocity: [number, number, number];
-  hullSamplePoints: readonly [number, number, number][]; // local space
+  hullSamplePoints: readonly (readonly [number, number, number])[]; // local space
 }
 
 export interface BuoyancyConfig {
@@ -46,11 +46,28 @@ export const HULL_SAMPLE_POINTS: readonly [number, number, number][] = [
 ];
 
 /**
+ * Player boat samples the underside of its actual collider volume more closely.
+ * The player hull/render root sits noticeably above the collider bottom, so
+ * using the old generic -0.5 Y samples made the rendered hull ride too low
+ * even when buoyancy itself was numerically stable.
+ */
+export const PLAYER_HULL_SAMPLE_POINTS: readonly [number, number, number][] = [
+  [0, -0.75, 2.5], // Bow
+  [0, -0.75, -2.5], // Stern
+  [-1.2, -0.75, 0], // Port
+  [1.2, -0.75, 0], // Starboard
+  [-0.8, -0.75, 1.5], // PortBow
+  [0.8, -0.75, 1.5], // StbdBow
+  [-0.8, -0.75, -1.5], // PortStern
+  [0.8, -0.75, -1.5], // StbdStern
+];
+
+/**
  * Rotate a local-space point by a quaternion [x, y, z, w].
  * Returns the rotated vector (does NOT add position — that's done separately).
  */
 function rotateByQuaternion(
-  point: [number, number, number],
+  point: readonly [number, number, number],
   q: [number, number, number, number],
 ): [number, number, number] {
   const [px, py, pz] = point;

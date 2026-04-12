@@ -9,12 +9,23 @@ import type { RapierRigidBody } from '@react-three/rapier';
 
 // ---- Buoyancy body registry ----
 
+export type HullSamplePoint = readonly [number, number, number];
+
+export interface BuoyancyBodyEntry {
+  body: RapierRigidBody;
+  hullSamplePoints?: readonly HullSamplePoint[];
+}
+
 /** Global registry for boat rigid bodies that need buoyancy. */
-const buoyancyBodies = new Map<string, RapierRigidBody>();
+const buoyancyBodies = new Map<string, BuoyancyBodyEntry>();
 
 /** Register a rigid body for buoyancy processing. */
-export function registerBuoyancyBody(id: string, body: RapierRigidBody): void {
-  buoyancyBodies.set(id, body);
+export function registerBuoyancyBody(
+  id: string,
+  body: RapierRigidBody,
+  hullSamplePoints?: readonly HullSamplePoint[],
+): void {
+  buoyancyBodies.set(id, hullSamplePoints ? { body, hullSamplePoints } : { body });
 }
 
 /** Unregister a rigid body from buoyancy processing. */
@@ -23,7 +34,7 @@ export function unregisterBuoyancyBody(id: string): void {
 }
 
 /** Get all registered buoyancy bodies. */
-export function getBuoyancyBodies(): ReadonlyMap<string, RapierRigidBody> {
+export function getBuoyancyBodies(): ReadonlyMap<string, BuoyancyBodyEntry> {
   return buoyancyBodies;
 }
 

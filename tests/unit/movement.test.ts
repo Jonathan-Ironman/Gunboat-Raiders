@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { computeMovement } from '@/systems/MovementSystem';
+import {
+  clampForwardVelocity,
+  dampHorizontalVelocity,
+  computeMovement,
+  getForwardSpeed,
+  getForwardThrottleScale,
+} from '@/systems/MovementSystem';
 import type { MovementInput, MovementStats } from '@/systems/MovementSystem';
 
 const DEFAULT_STATS: MovementStats = {
@@ -73,5 +79,45 @@ describe('MovementSystem — computeMovement', () => {
     expect(result.force[0]).toBeCloseTo(DEFAULT_STATS.thrustForce, 3);
     expect(result.force[1]).toBeCloseTo(0, 5);
     expect(result.force[2]).toBeCloseTo(0, 3);
+  });
+});
+
+describe('MovementSystem — forward speed limiting helpers', () => {
+  it('projects world velocity onto the boat forward axis', () => {
+    expect(getForwardSpeed([0, 0, 12], 0)).toBeCloseTo(12, 5);
+    expect(getForwardSpeed([12, 0, 0], Math.PI / 2)).toBeCloseTo(12, 5);
+  });
+
+  it('clamps only the forward component, preserving lateral and vertical velocity', () => {
+    const clamped = clampForwardVelocity([30, 4, 5], Math.PI / 2, 20);
+
+    expect(getForwardSpeed(clamped, Math.PI / 2)).toBeCloseTo(20, 5);
+    expect(clamped[1]).toBeCloseTo(4, 5);
+    expect(clamped[2]).toBeCloseTo(5, 5);
+  });
+
+  it('leaves velocity untouched when already under max speed', () => {
+    const velocity: [number, number, number] = [10, -2, 3];
+    expect(clampForwardVelocity(velocity, Math.PI / 2, 20)).toEqual(velocity);
+  });
+
+  it('keeps full throttle until near the configured top speed', () => {
+    expect(getForwardThrottleScale(20, 28)).toBeCloseTo(1, 5);
+  });
+
+  it('fades throttle to zero at or above the configured top speed', () => {
+    expect(getForwardThrottleScale(28, 28)).toBe(0);
+    expect(getForwardThrottleScale(35, 28)).toBe(0);
+    expect(getForwardThrottleScale(26, 28)).toBeGreaterThan(0);
+    expect(getForwardThrottleScale(26, 28)).toBeLessThan(1);
+  });
+
+  it('damps horizontal velocity without affecting vertical bobbing', () => {
+    const damped = dampHorizontalVelocity([10, 3, -5], 0.4, 1);
+    const decay = Math.exp(-0.4);
+
+    expect(damped[0]).toBeCloseTo(10 * decay, 6);
+    expect(damped[1]).toBeCloseTo(3, 6);
+    expect(damped[2]).toBeCloseTo(-5 * decay, 6);
   });
 });

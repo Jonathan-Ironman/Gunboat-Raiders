@@ -7,6 +7,7 @@ import { WAVE_MODULATION } from './waterTunables';
 
 const TWO_PI = 2 * Math.PI;
 const GRAVITY = 9.8;
+const WORLD_SPACE_INVERSION_STEPS = 4;
 
 export interface GerstnerWave {
   direction: [number, number]; // normalized 2D direction (x, z)
@@ -112,9 +113,7 @@ function smoothNoise2D(x: number, z: number): number {
   return mix(mix(a, b, fx), mix(c, d, fx), fz);
 }
 
-function getAmplitudeMultiplier(waveIndex: number, x: number, z: number, time: number): number {
-  if (waveIndex >= WAVE_MODULATION.modulatedWaveCount) return 1;
-
+function getAmplitudeMultiplier(x: number, z: number, time: number): number {
   const noiseX = x * WAVE_MODULATION.noiseScale + time * WAVE_MODULATION.timeScale;
   const noiseZ = z * WAVE_MODULATION.noiseScale + time * WAVE_MODULATION.timeScale;
   const modNoise = smoothNoise2D(noiseX, noiseZ);
@@ -124,6 +123,11 @@ function getAmplitudeMultiplier(waveIndex: number, x: number, z: number, time: n
     WAVE_MODULATION.maxAmplitudeMultiplier,
     modNoise,
   );
+}
+
+interface SourceWaveSample extends WaveSample {
+  worldX: number;
+  worldZ: number;
 }
 
 /**
@@ -164,25 +168,25 @@ export function initWaves(waves: readonly GerstnerWave[]): GerstnerWave[] {
  *
  * Normal is computed from partial derivatives of the displaced surface.
  *
- * NOTE: The GPU shader displaces vertices both horizontally (dx,dz) and vertically (dy),
- * but theta is computed from the ORIGINAL (undisplaced) vertex position in both CPU and GPU.
- * For buoyancy sampling we query "what is the wave height at world position (x,z)?",
- * so we only need the vertical displacement (dy). The horizontal displacement affects
- * WHERE a GPU vertex ends up, but does not change the height at a given world coordinate.
- * Both CPU and GPU use the same theta formula, so the vertical displacement matches.
+ * The shader applies horizontal displacement before the rendered surface lands at a world
+ * coordinate, so world-space sampling must invert that displacement first. We do a short
+ * fixed-point solve from world XZ back to the source XZ used by the shader, then sample
+ * height and normal there.
  */
-export function getWaveHeight(
+function sampleWaveAtSourcePosition(
   x: number,
   z: number,
   time: number,
   waves: readonly GerstnerWave[],
-): WaveSample {
+): SourceWaveSample {
+  let dx = 0;
   let dy = 0;
+  let dz = 0;
 
   // Partial derivative accumulators for normal computation
   let dNx = 0;
   let dNz = 0;
-  const amplitudeMultiplier = getAmplitudeMultiplier(0, x, z, time);
+  const amplitudeMultiplier = getAmplitudeMultiplier(x, z, time);
 
   for (let waveIndex = 0; waveIndex < waves.length; waveIndex++) {
     const wave = waves[waveIndex];
@@ -198,7 +202,9 @@ export function getWaveHeight(
     const sinTheta = Math.sin(theta);
     const cosTheta = Math.cos(theta);
 
+    dx += dirX * amp * cosTheta;
     dy += amp * sinTheta;
+    dz += dirZ * amp * cosTheta;
 
     // Partial derivatives: d(height)/dx and d(height)/dz
     // For the normal: N = (-dH/dx, 1, -dH/dz) then normalized
@@ -215,5 +221,29 @@ export function getWaveHeight(
   return {
     height: dy,
     normal: [nx / len, ny / len, nz / len],
+    worldX: x + dx,
+    worldZ: z + dz,
+  };
+}
+
+export function getWaveHeight(
+  x: number,
+  z: number,
+  time: number,
+  waves: readonly GerstnerWave[],
+): WaveSample {
+  let sourceX = x;
+  let sourceZ = z;
+
+  for (let i = 0; i < WORLD_SPACE_INVERSION_STEPS; i++) {
+    const sample = sampleWaveAtSourcePosition(sourceX, sourceZ, time, waves);
+    sourceX += x - sample.worldX;
+    sourceZ += z - sample.worldZ;
+  }
+
+  const resolved = sampleWaveAtSourcePosition(sourceX, sourceZ, time, waves);
+  return {
+    height: resolved.height,
+    normal: resolved.normal,
   };
 }

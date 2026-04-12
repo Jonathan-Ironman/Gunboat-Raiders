@@ -37,6 +37,7 @@ import { Quaternion, Euler } from 'three';
 import { BOAT_STATS } from '@/utils/boatStats';
 import { COLLISION_GROUPS } from '@/utils/collisionGroups';
 import { BOAT_MASS } from '@/utils/constants';
+import { PLAYER_HULL_SAMPLE_POINTS } from '@/systems/BuoyancySystem';
 import { registerBuoyancyBody, unregisterBuoyancyBody } from '@/systems/physicsRefs';
 import type { Mesh } from 'three';
 import type { ShowcaseBoatConfig } from './showcasePresets';
@@ -103,7 +104,7 @@ export function ShowcasePlayerBoat({ config }: ShowcasePlayerBoatProps) {
   useEffect(() => {
     const body = rigidBodyRef.current;
     if (body !== null) {
-      registerBuoyancyBody(SHOWCASE_ID, body);
+      registerBuoyancyBody(SHOWCASE_ID, body, PLAYER_HULL_SAMPLE_POINTS);
       setShowcaseBoatBody(body);
     }
   });

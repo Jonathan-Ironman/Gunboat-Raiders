@@ -6,19 +6,20 @@
  * this component renders.
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useGLTF } from '@react-three/drei';
 import { RigidBody, CuboidCollider, interactionGroups } from '@react-three/rapier';
 import type { RapierRigidBody } from '@react-three/rapier';
 import { BOAT_STATS } from '../utils/boatStats';
 import { COLLISION_GROUPS } from '../utils/collisionGroups';
+import { PLAYER_HULL_SAMPLE_POINTS } from '../systems/BuoyancySystem';
 import {
   registerBuoyancyBody,
   unregisterBuoyancyBody,
   setPlayerBody,
 } from '../systems/physicsRefs';
 import { BOAT_MASS } from '../utils/constants';
-import type { Mesh } from 'three';
+import { Box3, Vector3, type Mesh, type Object3D } from 'three';
 
 // Preload models for better loading performance
 useGLTF.preload('/models/player-boat.glb');
@@ -52,8 +53,31 @@ const PLAYER_COLLISION_GROUPS = interactionGroups(COLLISION_GROUPS.PLAYER, [
 
 export function PlayerBoat() {
   const rigidBodyRef = useRef<RapierRigidBody>(null);
+  const modelRef = useRef<Object3D>(null);
   const boatGltf = useGLTF('/models/player-boat.glb');
   const cannonGltf = useGLTF('/models/cannon.glb');
+  const boatScene = useMemo(() => boatGltf.scene.clone(), [boatGltf.scene]);
+  const localHullSamplePoints = useMemo(() => {
+    const bounds = new Box3().setFromObject(boatScene);
+    const xInset = (bounds.max.x - bounds.min.x) * 0.15;
+    const zInset = (bounds.max.z - bounds.min.z) * 0.1;
+    const leftX = bounds.min.x + xInset;
+    const rightX = bounds.max.x - xInset;
+    const sternZ = bounds.min.z + zInset;
+    const bowZ = bounds.max.z - zInset;
+    const keelY = bounds.min.y;
+
+    return [
+      new Vector3(0, keelY, bowZ),
+      new Vector3(0, keelY, sternZ),
+      new Vector3(leftX, keelY, 0),
+      new Vector3(rightX, keelY, 0),
+      new Vector3(leftX, keelY, bowZ * 0.7),
+      new Vector3(rightX, keelY, bowZ * 0.7),
+      new Vector3(leftX, keelY, sternZ * 0.7),
+      new Vector3(rightX, keelY, sternZ * 0.7),
+    ];
+  }, [boatScene]);
 
   // Register with physics systems on mount; clean up on unmount.
   // The player entity is created in the store by startGame() before GameEntities
@@ -68,7 +92,7 @@ export function PlayerBoat() {
   // Register rigid body once it's available (after first render with ref set)
   const onRigidBodyReady = (body: RapierRigidBody) => {
     // RigidBody ref callback isn't available, so we use a ref + effect approach
-    registerBuoyancyBody(PLAYER_ID, body);
+    registerBuoyancyBody(PLAYER_ID, body, PLAYER_HULL_SAMPLE_POINTS);
     setPlayerBody(body);
   };
 
@@ -82,7 +106,7 @@ export function PlayerBoat() {
   // Debug: log model bounding box on mount
   useEffect(() => {
     if (import.meta.env.DEV) {
-      const scene = boatGltf.scene;
+      const scene = boatScene;
       scene.traverse((obj) => {
         if ('isMesh' in obj && obj.isMesh === true) {
           const mesh = obj as Mesh;
@@ -100,8 +124,61 @@ export function PlayerBoat() {
           }
         }
       });
+
+      const bounds = new Box3().setFromObject(scene);
+      console.log(
+        '[PlayerBoat] Scene bbox:',
+        JSON.stringify({
+          min: [bounds.min.x, bounds.min.y, bounds.min.z],
+          max: [bounds.max.x, bounds.max.y, bounds.max.z],
+        }),
+      );
     }
-  }, [boatGltf]);
+  }, [boatScene]);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV && import.meta.env.VITE_E2E !== '1') return;
+
+    type TestWindow = Window &
+      typeof globalThis & {
+        __GET_PLAYER_RENDER_BOUNDS__?: () => {
+          min: { x: number; y: number; z: number };
+          max: { x: number; y: number; z: number };
+        } | null;
+        __GET_PLAYER_RENDER_HULL_POINTS__?: () => Array<{ x: number; y: number; z: number }> | null;
+      };
+
+    const w = window as TestWindow;
+    const bounds = new Box3();
+
+    w.__GET_PLAYER_RENDER_BOUNDS__ = () => {
+      const model = modelRef.current;
+      if (!model) return null;
+
+      model.updateWorldMatrix(true, true);
+      bounds.setFromObject(model);
+
+      return {
+        min: { x: bounds.min.x, y: bounds.min.y, z: bounds.min.z },
+        max: { x: bounds.max.x, y: bounds.max.y, z: bounds.max.z },
+      };
+    };
+    w.__GET_PLAYER_RENDER_HULL_POINTS__ = () => {
+      const model = modelRef.current;
+      if (!model) return null;
+
+      model.updateWorldMatrix(true, true);
+      return localHullSamplePoints.map((point) => {
+        const worldPoint = model.localToWorld(point.clone());
+        return { x: worldPoint.x, y: worldPoint.y, z: worldPoint.z };
+      });
+    };
+
+    return () => {
+      delete w.__GET_PLAYER_RENDER_BOUNDS__;
+      delete w.__GET_PLAYER_RENDER_HULL_POINTS__;
+    };
+  }, [localHullSamplePoints]);
 
   // Get weapon mounts from player stats for cannon placement
   const weaponMounts = BOAT_STATS.player.weapons.mounts;
@@ -111,11 +188,9 @@ export function PlayerBoat() {
       ref={rigidBodyRef}
       type="dynamic"
       gravityScale={0}
-      // Low linear damping so the powerboat accelerates crisply and coasts
-      // when the throttle is released (water drag on an actual planing hull
-      // at speed is low). Combined with thrustForce=8000 this gives a
-      // terminal speed of ~53 m/s in open water, but wave resistance and
-      // planing pitch bleed off energy well before that.
+      // Low linear damping keeps the powerboat feeling crisp and lets buoyancy
+      // handle most of the vertical motion. Gameplay top speed is enforced by
+      // MovementSystemR3F via the configured movement.maxSpeed cap.
       linearDamping={0.15}
       // Low angular damping so the boat can freely pitch and roll with the
       // Gerstner wave surface. Buoyancy torque supplies its own velocity
@@ -131,7 +206,7 @@ export function PlayerBoat() {
       />
 
       {/* Player boat model */}
-      <primitive object={boatGltf.scene.clone()} scale={[1, 1, 1]} rotation={[0, 0, 0]} />
+      <primitive ref={modelRef} object={boatScene} scale={[1, 1, 1]} rotation={[0, 0, 0]} />
 
       {/* Cannon models at each weapon mount position, rotated to face outward */}
       {weaponMounts.map((mount, index) => (

@@ -59,8 +59,9 @@ export function BuoyancySystemR3F() {
     const time = state.clock.elapsedTime;
     const bodies = getBuoyancyBodies();
 
-    for (const [, body] of bodies) {
+    for (const [, entry] of bodies) {
       try {
+        const body = entry.body;
         const pos = body.translation();
         const rot = body.rotation();
         const linvel = body.linvel();
@@ -85,7 +86,7 @@ export function BuoyancySystemR3F() {
             bodyRotation: [rot.x, rot.y, rot.z, rot.w],
             bodyLinearVelocity: [linvel.x, linvel.y, linvel.z],
             bodyAngularVelocity: [angvel.x, angvel.y, angvel.z],
-            hullSamplePoints: HULL_SAMPLE_POINTS,
+            hullSamplePoints: entry.hullSamplePoints ?? HULL_SAMPLE_POINTS,
           },
           (x, z, t) => waterCtx.getWaveHeightAtTime(x, z, t),
           time,
