@@ -23,7 +23,7 @@ const WAVE_STRIDE = String(WAVE_UNIFORM_LAYOUT.floatsPerWave);
  *
  * Uniforms:
  *   uTime — elapsed time in seconds
- *   uWaveData — flat array encoding 8 waves:
+ *   uWaveData — flat array encoding the shared initialized waves:
  *     per wave: [dirX, dirZ, steepness, wavelength, amplitude, speed, phase] = 7 floats
  */
 export const vertexShader = /* glsl */ `
@@ -87,7 +87,7 @@ export const vertexShader = /* glsl */ `
       float speed       = uWaveData[base + 5];
       float phase       = uWaveData[base + 6];
 
-      // Modulate amplitude for first 2 waves (primary + secondary swell)
+      // Modulate amplitude for the first configured modulated waves.
       float amp = (i < ${MODULATED_WAVE_COUNT}) ? amplitude * ampMod : amplitude;
 
       float k = TWO_PI / wavelength;

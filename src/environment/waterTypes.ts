@@ -19,12 +19,10 @@ export interface WaveModulationConfig {
 }
 
 /**
- * Contract for all terms that can affect sampled height.
- * Height = sum(base Gerstner waves) + wave-level amplitude modulation.
+ * Shared initialized wave inputs used by CPU and GPU sampling paths.
  */
 export interface WaveSamplingContract {
   waves: readonly GerstnerWave[];
-  modulation: WaveModulationConfig;
 }
 
 export interface WaterContextValue {

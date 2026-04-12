@@ -1,12 +1,11 @@
 import { DEFAULT_WAVES, initWaves } from './gerstnerWaves';
 import type { WaveSamplingContract } from './waterTypes';
-import { WAVE_MODULATION, WAVE_UNIFORM_LAYOUT } from './waterTunables';
+import { WAVE_UNIFORM_LAYOUT } from './waterTunables';
 
 const initializedWaves = initWaves([...DEFAULT_WAVES]);
 
 export const SHARED_WAVE_SAMPLING: WaveSamplingContract = {
   waves: initializedWaves,
-  modulation: WAVE_MODULATION,
 };
 
 /**
