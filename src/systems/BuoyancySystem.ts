@@ -62,6 +62,8 @@ export const PLAYER_HULL_SAMPLE_POINTS: readonly [number, number, number][] = [
   [0.8, -0.75, -1.5], // StbdStern
 ];
 
+const WAVE_VELOCITY_SAMPLE_DT = 1 / 60;
+
 /**
  * Rotate a local-space point by a quaternion [x, y, z, w].
  * Returns the rotated vector (does NOT add position — that's done separately).
@@ -131,6 +133,8 @@ export function computeBuoyancy(
 
   // Per-point buoyancy
   const forcePerPoint = buoyancyStrength / numPoints;
+  const dampingPerPoint = (verticalDamping * boatMass) / numPoints;
+  const halfWaveVelocityDt = WAVE_VELOCITY_SAMPLE_DT * 0.5;
 
   for (const localPoint of hullSamplePoints) {
     // Transform local point to world space
@@ -148,8 +152,25 @@ export function computeBuoyancy(
     const submersion = Math.min(Math.max(rawSubmersion, 0), maxSubmersion);
 
     if (submersion > 0) {
-      // Upward buoyancy force proportional to submersion
-      const pointForce = submersion * forcePerPoint;
+      // Sample the wave's own vertical motion so damping is relative to the
+      // moving water surface instead of the world frame. Damping against
+      // absolute Y velocity made the whole boat lag behind rising/falling waves.
+      const previousWave = getWaveHeight(worldX, worldZ, time - halfWaveVelocityDt);
+      const nextWave = getWaveHeight(worldX, worldZ, time + halfWaveVelocityDt);
+      const waveVerticalVelocity =
+        (nextWave.height - previousWave.height) / WAVE_VELOCITY_SAMPLE_DT;
+
+      // Point vertical velocity = body linear Y velocity plus rotational
+      // contribution from pitch/roll at this hull point.
+      const pointVerticalVelocity =
+        bodyLinearVelocity[1] +
+        bodyAngularVelocity[2] * rotated[0] -
+        bodyAngularVelocity[0] * rotated[2];
+      const relativeVerticalVelocity = pointVerticalVelocity - waveVerticalVelocity;
+
+      // Upward buoyancy force proportional to submersion, with damping based
+      // on velocity relative to the local water motion.
+      const pointForce = submersion * forcePerPoint - relativeVerticalVelocity * dampingPerPoint;
       forceY += pointForce;
 
       // Torque = r x F (standard physics: position offset cross force)
@@ -164,11 +185,6 @@ export function computeBuoyancy(
   // Without this, the 5m bow-to-stern lever arm creates torques that flip the boat.
   torqueX *= torqueScale;
   torqueZ *= torqueScale;
-
-  // Velocity-proportional damping to prevent oscillation.
-  // This acts like water resistance: the faster the boat moves vertically,
-  // the more the water resists it. Critical for stable floating.
-  forceY -= bodyLinearVelocity[1] * verticalDamping * boatMass;
 
   // Angular velocity damping for rotational stability (water resists rolling/pitching)
   torqueX -= bodyAngularVelocity[0] * angularDamping * boatMass;

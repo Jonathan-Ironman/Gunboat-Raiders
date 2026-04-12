@@ -52,6 +52,17 @@ function constantWater(h: number) {
   });
 }
 
+function risingWater(rate: number, baseHeight = 0) {
+  return (
+    _x: number,
+    _z: number,
+    time: number,
+  ): { height: number; normal: [number, number, number] } => ({
+    height: baseHeight + rate * time,
+    normal: [0, 1, 0],
+  });
+}
+
 function makeInput(
   position: [number, number, number] = [0, 0, 0],
   rotation: [number, number, number, number] = IDENTITY_QUAT,
@@ -165,6 +176,33 @@ describe('BuoyancySystem — computeBuoyancy', () => {
 
     expect(stationaryResult.force[1]).toBeGreaterThan(0);
     expect(movingUpResult.force[1]).toBeLessThan(stationaryResult.force[1]);
+  });
+
+  it('vertical damping tracks motion relative to a rising wave surface', () => {
+    const flatStationary = computeBuoyancy(
+      makeInput([0, -1, 0], IDENTITY_QUAT, ZERO_VEL, ZERO_VEL),
+      flatWater,
+      0,
+      DEFAULT_CONFIG,
+    );
+
+    const riseRate = 2;
+    const movingWithWave = computeBuoyancy(
+      makeInput([0, -1, 0], IDENTITY_QUAT, [0, riseRate, 0], ZERO_VEL),
+      risingWater(riseRate),
+      0,
+      DEFAULT_CONFIG,
+    );
+
+    const stationaryUnderRisingWave = computeBuoyancy(
+      makeInput([0, -1, 0], IDENTITY_QUAT, ZERO_VEL, ZERO_VEL),
+      risingWater(riseRate),
+      0,
+      DEFAULT_CONFIG,
+    );
+
+    expect(movingWithWave.force[1]).toBeCloseTo(flatStationary.force[1], 1);
+    expect(stationaryUnderRisingWave.force[1]).toBeGreaterThan(flatStationary.force[1]);
   });
 
   it('submersion is clamped to maxSubmersion', () => {
