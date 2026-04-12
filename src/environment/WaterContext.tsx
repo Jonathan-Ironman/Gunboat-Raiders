@@ -1,7 +1,8 @@
 import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import type { ReactNode } from 'react';
-import { initWaves, getWaveHeight, DEFAULT_WAVES } from './gerstnerWaves';
+import { getWaveHeight } from './gerstnerWaves';
+import { SHARED_WAVE_SAMPLING } from './waterConfig';
 import { WaterCtx } from './waterTypes';
 import type { WaterContextValue } from './waterTypes';
 
@@ -16,7 +17,7 @@ interface WaterProviderProps {
 export function WaterProvider({ children }: WaterProviderProps) {
   const timeRef = useRef(0);
 
-  const waves = useMemo(() => initWaves([...DEFAULT_WAVES]), []);
+  const waves = useMemo(() => SHARED_WAVE_SAMPLING.waves, []);
 
   useFrame((state) => {
     timeRef.current = state.clock.elapsedTime;

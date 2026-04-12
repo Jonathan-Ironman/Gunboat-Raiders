@@ -3,6 +3,8 @@
  * Used for buoyancy sampling and must exactly match the GPU shader.
  */
 
+import { WAVE_MODULATION } from './waterTunables';
+
 const TWO_PI = 2 * Math.PI;
 const GRAVITY = 9.8;
 
@@ -81,6 +83,49 @@ export const DEFAULT_WAVES: readonly GerstnerWave[] = [
   },
 ];
 
+function fract(value: number): number {
+  return value - Math.floor(value);
+}
+
+function mix(a: number, b: number, t: number): number {
+  return a * (1 - t) + b * t;
+}
+
+function hash2D(x: number, z: number): number {
+  const dot = x * 127.1 + z * 311.7;
+  return fract(Math.sin(dot) * 43758.5453123);
+}
+
+function smoothNoise2D(x: number, z: number): number {
+  const ix = Math.floor(x);
+  const iz = Math.floor(z);
+  const fxRaw = fract(x);
+  const fzRaw = fract(z);
+  const fx = fxRaw * fxRaw * (3 - 2 * fxRaw);
+  const fz = fzRaw * fzRaw * (3 - 2 * fzRaw);
+
+  const a = hash2D(ix, iz);
+  const b = hash2D(ix + 1, iz);
+  const c = hash2D(ix, iz + 1);
+  const d = hash2D(ix + 1, iz + 1);
+
+  return mix(mix(a, b, fx), mix(c, d, fx), fz);
+}
+
+function getAmplitudeMultiplier(waveIndex: number, x: number, z: number, time: number): number {
+  if (waveIndex >= WAVE_MODULATION.modulatedWaveCount) return 1;
+
+  const noiseX = x * WAVE_MODULATION.noiseScale + time * WAVE_MODULATION.timeScale;
+  const noiseZ = z * WAVE_MODULATION.noiseScale + time * WAVE_MODULATION.timeScale;
+  const modNoise = smoothNoise2D(noiseX, noiseZ);
+
+  return mix(
+    WAVE_MODULATION.minAmplitudeMultiplier,
+    WAVE_MODULATION.maxAmplitudeMultiplier,
+    modNoise,
+  );
+}
+
 /**
  * Normalize a 2D direction vector in-place (returns a new tuple).
  */
@@ -138,11 +183,14 @@ export function getWaveHeight(
   let dNx = 0;
   let dNz = 0;
 
-  for (const wave of waves) {
+  for (let waveIndex = 0; waveIndex < waves.length; waveIndex++) {
+    const wave = waves[waveIndex];
+    if (!wave) continue;
+
     const dirX = wave.direction[0];
     const dirZ = wave.direction[1];
     const k = TWO_PI / wave.wavelength;
-    const amp = wave.amplitude;
+    const amp = wave.amplitude * getAmplitudeMultiplier(waveIndex, x, z, time);
 
     const theta = k * (dirX * x + dirZ * z) - wave.speed * k * time + wave.phase;
     const sinTheta = Math.sin(theta);
