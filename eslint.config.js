@@ -6,7 +6,16 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   // Global ignores
-  { ignores: ['dist/', 'coverage/', 'playwright-report/', 'node_modules/', '*.cjs'] },
+  {
+    ignores: [
+      'dist/',
+      'coverage/',
+      'playwright-report/',
+      'test-results/',
+      'node_modules/',
+      '*.cjs',
+    ],
+  },
 
   // Plain JS config files — no type-aware linting (they're not in any tsconfig)
   {
