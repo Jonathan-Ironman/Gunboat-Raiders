@@ -34,6 +34,7 @@
  */
 
 import { useRef, useEffect, useMemo, useCallback } from 'react';
+import { useFrame } from '@react-three/fiber';
 import {
   InstancedRigidBodies,
   BallCollider,
@@ -82,11 +83,14 @@ const PLAYER_PROJECTILE_GROUPS = interactionGroups(COLLISION_GROUPS.PLAYER_PROJE
 
 /** Max lifetime for a projectile in seconds */
 const PROJECTILE_MAX_LIFETIME = 8;
+const SHOULD_EXPOSE_PLAYER_PROJECTILE_RENDER_DEBUG =
+  import.meta.env.DEV || import.meta.env.VITE_E2E === '1';
 
 export function ProjectilePool() {
   const rigidBodiesRef = useRef<RapierRigidBody[]>(null);
   const instancedMeshRef = useRef<InstancedMesh>(null);
   const activeIndicesRef = useRef(new Set<number>());
+  const renderedLastFrameRef = useRef(false);
   /** Maps Zustand storeId → pool slot index for O(1) lifetime-expiry lookup. */
   const storeIdToIndexRef = useRef(new Map<string, number>());
 
@@ -350,10 +354,41 @@ export function ProjectilePool() {
   // rigid-body cached state.
   useEffect(() => {
     setPlayerProjectileInstancedMesh(instancedMeshRef.current);
+    const mesh = instancedMeshRef.current;
+    if (!mesh) return;
+    // Instance matrices change every shot, but Three.js does not keep the
+    // instanced mesh bounds in sync with those per-instance translations.
+    // Leaving culling on makes cannonballs disappear once the player fights
+    // far from the origin.
+    mesh.frustumCulled = false;
+    mesh.onAfterRender = () => {
+      renderedLastFrameRef.current = true;
+    };
     return () => {
+      mesh.onAfterRender = () => undefined;
       setPlayerProjectileInstancedMesh(null);
     };
   }, []);
+
+  useFrame(() => {
+    if (!SHOULD_EXPOSE_PLAYER_PROJECTILE_RENDER_DEBUG || typeof window === 'undefined') return;
+    const renderedLastFrame = renderedLastFrameRef.current;
+    renderedLastFrameRef.current = false;
+    (
+      window as Window &
+        typeof globalThis & {
+          __PLAYER_PROJECTILE_RENDER_DEBUG__?: {
+            renderedLastFrame: boolean;
+            frustumCulled: boolean;
+            activeCount: number;
+          };
+        }
+    ).__PLAYER_PROJECTILE_RENDER_DEBUG__ = {
+      renderedLastFrame,
+      frustumCulled: instancedMeshRef.current?.frustumCulled ?? true,
+      activeCount: activeIndicesRef.current.size,
+    };
+  });
 
   // Put all bodies to sleep on mount
   useEffect(() => {

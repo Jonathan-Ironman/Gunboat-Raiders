@@ -100,6 +100,13 @@ export interface BodyStateSnapshot {
   angvel: { x: number; y: number; z: number };
 }
 
+export interface BodyStatePatch {
+  position?: { x: number; y: number; z: number };
+  rotation?: { x: number; y: number; z: number; w: number };
+  linvel?: { x: number; y: number; z: number };
+  angvel?: { x: number; y: number; z: number };
+}
+
 let playerBodyState: BodyStateSnapshot | null = null;
 const enemyBodyStates = new Map<string, BodyStateSnapshot>();
 const projectileBodyStates = new Map<number, BodyStateSnapshot>();
@@ -130,6 +137,31 @@ export function syncPlayerBodyState(): void {
 /** Get the cached player body state (safe to call in useFrame). */
 export function getPlayerBodyState(): BodyStateSnapshot | null {
   return playerBodyState;
+}
+
+/**
+ * Test-only helper: imperatively patch the player's rigid body state.
+ * Returns false when the player body is not currently registered.
+ */
+export function patchPlayerBodyState(patch: BodyStatePatch): boolean {
+  if (!playerBodyRef) return false;
+  try {
+    if (patch.position) {
+      playerBodyRef.setTranslation(patch.position, true);
+    }
+    if (patch.rotation) {
+      playerBodyRef.setRotation(patch.rotation, true);
+    }
+    if (patch.linvel) {
+      playerBodyRef.setLinvel(patch.linvel, true);
+    }
+    if (patch.angvel) {
+      playerBodyRef.setAngvel(patch.angvel, true);
+    }
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** Update cached enemy body states. Safe to call from useFrame. */

@@ -25,6 +25,7 @@ import { computeQuadrant } from './CameraSystem';
 import { useGameStore, type FiringQuadrant } from '@/store/gameStore';
 import { setAimOffset, MAX_PITCH_OFFSET_UP, MAX_PITCH_OFFSET_DOWN } from './aimOffsetRefs';
 import { setIsPointerLocked, resetPointerLockRefs } from './pointerLockRefs';
+import { getForcedAzimuth } from './cameraTestBridge';
 
 /** Camera orbit configuration */
 const CAMERA_RADIUS = 15;
@@ -261,7 +262,11 @@ export function CameraSystemR3F() {
       return;
     }
 
-    const azimuth = azimuthRef.current;
+    const forcedAzimuth = getForcedAzimuth();
+    if (forcedAzimuth !== null) {
+      azimuthRef.current = forcedAzimuth;
+    }
+    const azimuth = forcedAzimuth ?? azimuthRef.current;
     const elevation = elevationRef.current;
     const cosElev = Math.cos(elevation);
     const sinElev = Math.sin(elevation);

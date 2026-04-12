@@ -62,9 +62,21 @@ function publishAimLineDebug(visible: boolean, quadrant: FiringQuadrant | null):
   if (!SHOULD_EXPOSE_AIM_LINE_DEBUG) return;
   const w = window as Window &
     typeof globalThis & {
-      __AIM_LINE_VISIBLE__?: { visible: boolean; quadrant: FiringQuadrant | null };
+      __AIM_LINE_VISIBLE__?: {
+        visible: boolean;
+        quadrant: FiringQuadrant | null;
+        activeSteps: number;
+        frustumCulled: boolean;
+        renderedLastFrame: boolean;
+      };
     };
-  w.__AIM_LINE_VISIBLE__ = { visible, quadrant };
+  w.__AIM_LINE_VISIBLE__ = {
+    visible,
+    quadrant,
+    activeSteps: 0,
+    frustumCulled: false,
+    renderedLastFrame: false,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -165,6 +177,7 @@ function rotateVec(
 export function TrajectoryPreview() {
   // Max vertices = (TRAJECTORY_STEPS + 1) cross-sections × 2 verts each
   const maxVerts = (TRAJECTORY_STEPS + 1) * 2;
+  const renderedLastFrameRef = useRef(false);
 
   const meshObj = useMemo(() => {
     const positions = new Float32Array(maxVerts * 3);
@@ -189,6 +202,13 @@ export function TrajectoryPreview() {
     const mesh = new Mesh(geometry, material);
     // Ensure ribbon renders above water without z-fighting
     mesh.renderOrder = 1;
+    // Positions are mutated every frame; static frustum bounds would cause the
+    // ribbon to disappear once the player moves away from where the geometry
+    // was first seen.
+    mesh.frustumCulled = false;
+    mesh.onAfterRender = () => {
+      renderedLastFrameRef.current = true;
+    };
 
     return mesh;
   }, [maxVerts]);
@@ -198,6 +218,8 @@ export function TrajectoryPreview() {
 
   useFrame(() => {
     const mesh = meshRef.current;
+    const renderedLastFrame = renderedLastFrameRef.current;
+    renderedLastFrameRef.current = false;
 
     // Hide the ribbon during the async window before pointer lock is
     // confirmed — same gate as WeaponSystemR3F so the aim arc never
@@ -291,6 +313,11 @@ export function TrajectoryPreview() {
     posAttr.setXYZ(1, _pos.x + _right.x * halfWidth, _pos.y, _pos.z + _right.z * halfWidth);
 
     let activeSteps = TRAJECTORY_STEPS;
+    // If the muzzle starts below the flat water plane, don't immediately kill
+    // the preview. Real projectiles still fly out of that pose, so the preview
+    // should wait until the simulated arc has actually emerged once before
+    // treating a later descent as "water impact".
+    let hasExitedWater = _pos.y >= 0;
 
     // ------------------------------------------------------------------
     // Steps 1..TRAJECTORY_STEPS
@@ -316,8 +343,14 @@ export function TrajectoryPreview() {
         _pos.z + _right.z * halfWidth,
       );
 
-      // Stop at water level
-      if (_pos.y < 0) {
+      if (_pos.y >= 0) {
+        hasExitedWater = true;
+      }
+
+      // Stop once the simulated arc has risen out of the water and then
+      // falls back below the surface. This keeps low-start poses from
+      // collapsing to a 1-step ribbon while still clipping the arc on impact.
+      if (hasExitedWater && _pos.y < 0) {
         activeSteps = i;
         break;
       }
@@ -326,7 +359,25 @@ export function TrajectoryPreview() {
     // Each quad between cross-sections i and i+1 = 6 indices (2 triangles)
     mesh.geometry.setDrawRange(0, activeSteps * 6);
     posAttr.needsUpdate = true;
-    publishAimLineDebug(activeSteps > 0, activeQuadrant);
+    const w = window as Window &
+      typeof globalThis & {
+        __AIM_LINE_VISIBLE__?: {
+          visible: boolean;
+          quadrant: FiringQuadrant | null;
+          activeSteps: number;
+          frustumCulled: boolean;
+          renderedLastFrame: boolean;
+        };
+      };
+    if (SHOULD_EXPOSE_AIM_LINE_DEBUG) {
+      w.__AIM_LINE_VISIBLE__ = {
+        visible: activeSteps > 0,
+        quadrant: activeQuadrant,
+        activeSteps,
+        frustumCulled: mesh.frustumCulled,
+        renderedLastFrame,
+      };
+    }
   });
 
   return <primitive object={meshObj} />;
