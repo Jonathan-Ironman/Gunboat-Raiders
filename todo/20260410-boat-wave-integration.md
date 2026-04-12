@@ -70,3 +70,40 @@ Quick directions to investigate before doing anything dramatic:
 - Verify HULL_SAMPLE_POINTS still match the player boat hull dimensions after the recent boat tuning.
 
 **This is one of the two top blockers for the 2026-04-13 session.** It is a competition-critical visual — the judge is a Three.js water expert.
+
+## Update - 2026-04-13 branch review and user verdict
+
+What landed on PR #4 during the follow-up investigation:
+
+- CPU/GPU wave sampling parity work, with shared wave config and explicit parity tests
+- Whole-boat Playwright smoke coverage for visual waterline drift and phase-band widening after long drives and steering-heavy routes
+- Buoyancy damping change so the boat damps relative to the local moving water surface instead of absolute world Y motion
+- Player-side buoyancy tuning and render/debug bridges that made the problem measurably testable
+
+Formal status on the branch:
+
+- The automated parity, unit, and Playwright smoke checks now demonstrate a real improvement versus `main`
+- The branch is worth keeping because it gives us much better instrumentation and catches regressions the old test suite could not see
+
+User verdict on 2026-04-13 remains the authority:
+
+> "Ik heb het idee dat het wel beter is, maar het is nog steeds niet helemaal opgelost."
+
+What is still reported after the formal fixes:
+
+- The player boat can still end up visibly under the waves in some locations
+- The player boat can still end up visibly out of sync even after coming to rest
+- Enemy boats can also still disappear under the waves
+
+Current review conclusion:
+
+- Treat PR #4 as a partial improvement, not as a full resolution of this todo
+- If we merge PR #4, do it because the branch materially improves player-side behavior and adds much stronger regression coverage
+- Do not mark this todo done on merge
+- Manual playtest authority overrides the automated green signal when the two disagree
+
+Most likely next follow-up work:
+
+- Add enemy-specific visual reproduction and formal smoke coverage; the current smoke suite only exercises the player boat
+- Compare enemy buoyancy registration/tuning with the newer player path; `src/entities/EnemyBoat.tsx` still registers through the generic buoyancy setup
+- Keep investigating the remaining whole-boat phase drift cases that still appear after travel and at rest
