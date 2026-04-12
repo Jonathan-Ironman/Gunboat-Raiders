@@ -291,6 +291,12 @@ export function EnemyProjectilePool() {
   // instance matrices. See the equivalent hook in ProjectilePool.tsx.
   useEffect(() => {
     setEnemyProjectileInstancedMesh(instancedMeshRef.current);
+    const mesh = instancedMeshRef.current;
+    if (mesh) {
+      // Same issue as the player projectile pool: instance matrices move every
+      // shot, but Three.js keeps stale bounds for the instanced mesh.
+      mesh.frustumCulled = false;
+    }
     return () => {
       setEnemyProjectileInstancedMesh(null);
     };

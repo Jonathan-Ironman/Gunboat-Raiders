@@ -10,6 +10,7 @@ import { requestTestAzimuth } from './systems/cameraTestBridge';
 import {
   getPlayerBodyState,
   getPlayerBody,
+  patchPlayerBodyState,
   getAllEnemyBodyStates,
   getEnemyBodyState,
   getAllProjectileBodyStates,
@@ -39,6 +40,7 @@ if (import.meta.env.DEV || import.meta.env.VITE_E2E === '1') {
       __SET_CAMERA_AZIMUTH__: typeof requestTestAzimuth;
       __GET_PLAYER_BODY_STATE__: typeof getPlayerBodyState;
       __GET_PLAYER_BODY__: typeof getPlayerBody;
+      __TEST_PATCH_PLAYER_BODY_STATE__: typeof patchPlayerBodyState;
       __GET_ALL_ENEMY_BODY_STATES__: typeof getAllEnemyBodyStates;
       __GET_ENEMY_BODY_STATE__: typeof getEnemyBodyState;
       __GET_ALL_PROJECTILE_BODY_STATES__: typeof getAllProjectileBodyStates;
@@ -81,6 +83,7 @@ if (import.meta.env.DEV || import.meta.env.VITE_E2E === '1') {
   // Expose physics body state cache and raw body accessor so tests can read positions.
   w.__GET_PLAYER_BODY_STATE__ = getPlayerBodyState;
   w.__GET_PLAYER_BODY__ = getPlayerBody;
+  w.__TEST_PATCH_PLAYER_BODY_STATE__ = patchPlayerBodyState;
   w.__GET_ALL_ENEMY_BODY_STATES__ = getAllEnemyBodyStates;
   w.__GET_ENEMY_BODY_STATE__ = getEnemyBodyState;
   w.__GET_ALL_PROJECTILE_BODY_STATES__ = getAllProjectileBodyStates;
