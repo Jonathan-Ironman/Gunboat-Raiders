@@ -1,4 +1,4 @@
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import type { ReactNode } from 'react';
 import { initWaves, getWaveHeight, DEFAULT_WAVES } from './gerstnerWaves';
@@ -34,6 +34,29 @@ export function WaterProvider({ children }: WaterProviderProps) {
     }),
     [waves],
   );
+
+  useEffect(() => {
+    if (!import.meta.env.DEV && import.meta.env.VITE_E2E !== '1') return;
+
+    type TestWindow = Window &
+      typeof globalThis & {
+        __TEST_GET_WAVE_SAMPLE__?: (
+          x: number,
+          z: number,
+        ) => { height: number; normal: [number, number, number]; time: number };
+      };
+
+    const w = window as TestWindow;
+    w.__TEST_GET_WAVE_SAMPLE__ = (x: number, z: number) => {
+      const time = timeRef.current;
+      const sample = getWaveHeight(x, z, time, waves);
+      return { ...sample, time };
+    };
+
+    return () => {
+      delete w.__TEST_GET_WAVE_SAMPLE__;
+    };
+  }, [waves]);
 
   return <WaterCtx.Provider value={value}>{children}</WaterCtx.Provider>;
 }

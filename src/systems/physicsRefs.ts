@@ -52,6 +52,11 @@ export function getEnemyBody(id: string): RapierRigidBody | undefined {
   return enemyBodies.get(id);
 }
 
+/** Get all registered enemy rigid bodies (raw Rapier refs). */
+export function getAllEnemyBodies(): ReadonlyMap<string, RapierRigidBody> {
+  return enemyBodies;
+}
+
 /**
  * Reverse-lookup: find an enemy's store id from a Rapier rigid body.
  * Compares by Rapier handle (integer), which is stable for the body's lifetime.

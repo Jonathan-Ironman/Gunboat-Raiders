@@ -12,6 +12,7 @@ import {
   getPlayerBody,
   getAllEnemyBodyStates,
   getEnemyBodyState,
+  getEnemyBody,
   getAllProjectileBodyStates,
 } from './systems/physicsRefs';
 import {
@@ -41,6 +42,7 @@ if (import.meta.env.DEV || import.meta.env.VITE_E2E === '1') {
       __GET_PLAYER_BODY__: typeof getPlayerBody;
       __GET_ALL_ENEMY_BODY_STATES__: typeof getAllEnemyBodyStates;
       __GET_ENEMY_BODY_STATE__: typeof getEnemyBodyState;
+      __GET_ENEMY_BODY__: typeof getEnemyBody;
       __GET_ALL_PROJECTILE_BODY_STATES__: typeof getAllProjectileBodyStates;
       __GET_PROJECTILE_INSTANCE_TRANSLATION__: typeof getProjectileInstanceTranslation;
       /**
@@ -83,6 +85,7 @@ if (import.meta.env.DEV || import.meta.env.VITE_E2E === '1') {
   w.__GET_PLAYER_BODY__ = getPlayerBody;
   w.__GET_ALL_ENEMY_BODY_STATES__ = getAllEnemyBodyStates;
   w.__GET_ENEMY_BODY_STATE__ = getEnemyBodyState;
+  w.__GET_ENEMY_BODY__ = getEnemyBody;
   w.__GET_ALL_PROJECTILE_BODY_STATES__ = getAllProjectileBodyStates;
   w.__GET_PROJECTILE_INSTANCE_TRANSLATION__ = getProjectileInstanceTranslation;
   w.__TEST_QUEUE_PROJECTILE_DEACTIVATION__ = (pool, index): void => {
