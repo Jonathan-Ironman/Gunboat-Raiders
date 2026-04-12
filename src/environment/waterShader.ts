@@ -2,9 +2,15 @@
  * GLSL vertex + fragment shader strings for Gerstner wave ocean rendering.
  * The vertex shader applies the same Gerstner formula as gerstnerWaves.ts (CPU mirror).
  */
+import { AMPLITUDE_MODULATION } from './gerstnerWaves';
 
 const NUM_WAVES = '8';
 const WAVE_DATA_LENGTH = '56'; // 8 waves * 7 floats per wave
+const MOD_SPATIAL_SCALE = String(AMPLITUDE_MODULATION.spatialScale);
+const MOD_TIME_SCALE = String(AMPLITUDE_MODULATION.timeScale);
+const MOD_MIN = String(AMPLITUDE_MODULATION.min);
+const MOD_MAX = String(AMPLITUDE_MODULATION.max);
+const MOD_WAVE_COUNT = String(AMPLITUDE_MODULATION.modulatedWaveCount);
 
 /**
  * Vertex shader: displaces a subdivided XZ plane using Gerstner waves.
@@ -60,8 +66,13 @@ export const vertexShader = /* glsl */ `
     float jacobian = 1.0;
 
     // Spatial amplitude modulation — drifting patches of calmer/rougher water
-    float modNoise = vertNoise(vec2(gridX * 0.005, gridZ * 0.005) + uTime * 0.01);
-    float ampMod = mix(0.6, 1.2, modNoise);
+    float modNoise = vertNoise(
+      vec2(
+        gridX * ${MOD_SPATIAL_SCALE},
+        gridZ * ${MOD_SPATIAL_SCALE}
+      ) + uTime * ${MOD_TIME_SCALE}
+    );
+    float ampMod = mix(${MOD_MIN}, ${MOD_MAX}, modNoise);
 
     for (int i = 0; i < NUM_WAVES; i++) {
       int base = i * 7;
@@ -73,8 +84,8 @@ export const vertexShader = /* glsl */ `
       float speed       = uWaveData[base + 5];
       float phase       = uWaveData[base + 6];
 
-      // Modulate amplitude for first 2 waves (primary + secondary swell)
-      float amp = (i < 2) ? amplitude * ampMod : amplitude;
+      // Modulate amplitude for primary + secondary swell (mirrored in CPU buoyancy sampling).
+      float amp = (i < ${MOD_WAVE_COUNT}) ? amplitude * ampMod : amplitude;
 
       float k = TWO_PI / wavelength;
       float theta = k * (dirX * gridX + dirZ * gridZ) - speed * k * uTime + phase;

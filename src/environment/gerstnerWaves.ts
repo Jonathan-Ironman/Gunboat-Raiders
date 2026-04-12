@@ -5,6 +5,11 @@
 
 const TWO_PI = 2 * Math.PI;
 const GRAVITY = 9.8;
+const MODULATION_SPATIAL_SCALE = 0.005;
+const MODULATION_TIME_SCALE = 0.01;
+const MODULATION_MIN = 0.6;
+const MODULATION_MAX = 1.2;
+const MODULATED_WAVE_COUNT = 2;
 
 export interface GerstnerWave {
   direction: [number, number]; // normalized 2D direction (x, z)
@@ -19,6 +24,14 @@ export interface WaveSample {
   height: number;
   normal: [number, number, number];
 }
+
+export const AMPLITUDE_MODULATION = {
+  spatialScale: MODULATION_SPATIAL_SCALE,
+  timeScale: MODULATION_TIME_SCALE,
+  min: MODULATION_MIN,
+  max: MODULATION_MAX,
+  modulatedWaveCount: MODULATED_WAVE_COUNT,
+} as const;
 
 export const DEFAULT_WAVES: readonly GerstnerWave[] = [
   // Primary swell — large, slow, dramatic rolling waves
@@ -90,6 +103,43 @@ function normalize2D(dir: [number, number]): [number, number] {
   return [dir[0] / len, dir[1] / len];
 }
 
+function fract(value: number): number {
+  return value - Math.floor(value);
+}
+
+function mix(a: number, b: number, t: number): number {
+  return a * (1 - t) + b * t;
+}
+
+function vertHash(x: number, z: number): number {
+  return fract(Math.sin(x * 127.1 + z * 311.7) * 43758.5453123);
+}
+
+function vertNoise(x: number, z: number): number {
+  const ix = Math.floor(x);
+  const iz = Math.floor(z);
+  let fx = fract(x);
+  let fz = fract(z);
+
+  fx = fx * fx * (3 - 2 * fx);
+  fz = fz * fz * (3 - 2 * fz);
+
+  const a = vertHash(ix, iz);
+  const b = vertHash(ix + 1, iz);
+  const c = vertHash(ix, iz + 1);
+  const d = vertHash(ix + 1, iz + 1);
+
+  return mix(mix(a, b, fx), mix(c, d, fx), fz);
+}
+
+export function getAmplitudeModulation(x: number, z: number, time: number): number {
+  const noise = vertNoise(
+    x * MODULATION_SPATIAL_SCALE + time * MODULATION_TIME_SCALE,
+    z * MODULATION_SPATIAL_SCALE + time * MODULATION_TIME_SCALE,
+  );
+  return mix(MODULATION_MIN, MODULATION_MAX, noise);
+}
+
 /**
  * Compute derived amplitude and speed fields for each wave.
  * k = 2*PI / wavelength
@@ -137,12 +187,14 @@ export function getWaveHeight(
   // Partial derivative accumulators for normal computation
   let dNx = 0;
   let dNz = 0;
+  const amplitudeModulation = getAmplitudeModulation(x, z, time);
 
-  for (const wave of waves) {
+  for (const [i, wave] of waves.entries()) {
     const dirX = wave.direction[0];
     const dirZ = wave.direction[1];
     const k = TWO_PI / wave.wavelength;
-    const amp = wave.amplitude;
+    const ampMod = i < MODULATED_WAVE_COUNT ? amplitudeModulation : 1;
+    const amp = wave.amplitude * ampMod;
 
     const theta = k * (dirX * x + dirZ * z) - wave.speed * k * time + wave.phase;
     const sinTheta = Math.sin(theta);
