@@ -57,26 +57,39 @@ const _tangent = new Vector3();
 const _right = new Vector3();
 const _up = new Vector3(0, 1, 0);
 const SHOULD_EXPOSE_AIM_LINE_DEBUG = import.meta.env.DEV || import.meta.env.VITE_E2E === '1';
+type AimLineDebugState = {
+  visible: boolean;
+  quadrant: FiringQuadrant | null;
+  activeSteps: number;
+  frustumCulled: boolean;
+  renderedLastFrame: boolean;
+};
+const _aimLineDebug: AimLineDebugState = {
+  visible: false,
+  quadrant: null,
+  activeSteps: 0,
+  frustumCulled: false,
+  renderedLastFrame: false,
+};
 
-function publishAimLineDebug(visible: boolean, quadrant: FiringQuadrant | null): void {
+function publishAimLineDebug(
+  visible: boolean,
+  quadrant: FiringQuadrant | null,
+  activeSteps = 0,
+  frustumCulled = false,
+  renderedLastFrame = false,
+): void {
   if (!SHOULD_EXPOSE_AIM_LINE_DEBUG) return;
   const w = window as Window &
     typeof globalThis & {
-      __AIM_LINE_VISIBLE__?: {
-        visible: boolean;
-        quadrant: FiringQuadrant | null;
-        activeSteps: number;
-        frustumCulled: boolean;
-        renderedLastFrame: boolean;
-      };
+      __AIM_LINE_VISIBLE__?: AimLineDebugState;
     };
-  w.__AIM_LINE_VISIBLE__ = {
-    visible,
-    quadrant,
-    activeSteps: 0,
-    frustumCulled: false,
-    renderedLastFrame: false,
-  };
+  _aimLineDebug.visible = visible;
+  _aimLineDebug.quadrant = quadrant;
+  _aimLineDebug.activeSteps = activeSteps;
+  _aimLineDebug.frustumCulled = frustumCulled;
+  _aimLineDebug.renderedLastFrame = renderedLastFrame;
+  w.__AIM_LINE_VISIBLE__ = _aimLineDebug;
 }
 
 // ---------------------------------------------------------------------------
@@ -359,25 +372,13 @@ export function TrajectoryPreview() {
     // Each quad between cross-sections i and i+1 = 6 indices (2 triangles)
     mesh.geometry.setDrawRange(0, activeSteps * 6);
     posAttr.needsUpdate = true;
-    const w = window as Window &
-      typeof globalThis & {
-        __AIM_LINE_VISIBLE__?: {
-          visible: boolean;
-          quadrant: FiringQuadrant | null;
-          activeSteps: number;
-          frustumCulled: boolean;
-          renderedLastFrame: boolean;
-        };
-      };
-    if (SHOULD_EXPOSE_AIM_LINE_DEBUG) {
-      w.__AIM_LINE_VISIBLE__ = {
-        visible: activeSteps > 0,
-        quadrant: activeQuadrant,
-        activeSteps,
-        frustumCulled: mesh.frustumCulled,
-        renderedLastFrame,
-      };
-    }
+    publishAimLineDebug(
+      activeSteps > 0,
+      activeQuadrant,
+      activeSteps,
+      mesh.frustumCulled,
+      renderedLastFrame,
+    );
   });
 
   return <primitive object={meshObj} />;

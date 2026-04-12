@@ -85,6 +85,16 @@ const PLAYER_PROJECTILE_GROUPS = interactionGroups(COLLISION_GROUPS.PLAYER_PROJE
 const PROJECTILE_MAX_LIFETIME = 8;
 const SHOULD_EXPOSE_PLAYER_PROJECTILE_RENDER_DEBUG =
   import.meta.env.DEV || import.meta.env.VITE_E2E === '1';
+type ProjectileRenderDebugState = {
+  renderedLastFrame: boolean;
+  frustumCulled: boolean;
+  activeCount: number;
+};
+const _projectileRenderDebug: ProjectileRenderDebugState = {
+  renderedLastFrame: false,
+  frustumCulled: true,
+  activeCount: 0,
+};
 
 export function ProjectilePool() {
   const rigidBodiesRef = useRef<RapierRigidBody[]>(null);
@@ -377,17 +387,12 @@ export function ProjectilePool() {
     (
       window as Window &
         typeof globalThis & {
-          __PLAYER_PROJECTILE_RENDER_DEBUG__?: {
-            renderedLastFrame: boolean;
-            frustumCulled: boolean;
-            activeCount: number;
-          };
+          __PLAYER_PROJECTILE_RENDER_DEBUG__?: ProjectileRenderDebugState;
         }
-    ).__PLAYER_PROJECTILE_RENDER_DEBUG__ = {
-      renderedLastFrame,
-      frustumCulled: instancedMeshRef.current?.frustumCulled ?? true,
-      activeCount: activeIndicesRef.current.size,
-    };
+    ).__PLAYER_PROJECTILE_RENDER_DEBUG__ = _projectileRenderDebug;
+    _projectileRenderDebug.renderedLastFrame = renderedLastFrame;
+    _projectileRenderDebug.frustumCulled = instancedMeshRef.current?.frustumCulled ?? true;
+    _projectileRenderDebug.activeCount = activeIndicesRef.current.size;
   });
 
   // Put all bodies to sleep on mount

@@ -90,9 +90,11 @@ async function startPlaying(page: Page): Promise<void> {
 
   await waitForPhase(page, 'playing', 15_000);
   await page.waitForFunction(
-    () =>
-      (window as { __GET_PLAYER_BODY_STATE__?: () => unknown }).__GET_PLAYER_BODY_STATE__?.() !==
-      null,
+    () => {
+      const getPlayerBodyState = (window as { __GET_PLAYER_BODY_STATE__?: () => unknown })
+        .__GET_PLAYER_BODY_STATE__;
+      return typeof getPlayerBodyState === 'function' && getPlayerBodyState() != null;
+    },
     undefined,
     { timeout: 15_000 },
   );
@@ -102,6 +104,14 @@ async function setCameraAzimuth(page: Page, azimuth: number): Promise<void> {
   await page.evaluate((az: number) => {
     (window as { __SET_CAMERA_AZIMUTH__?: (a: number) => void }).__SET_CAMERA_AZIMUTH__?.(az);
   }, azimuth);
+  await page.waitForFunction(
+    (expectedAzimuth: number) => {
+      const aim = (window as { __AIM_DEBUG__?: AimDebugSnapshot }).__AIM_DEBUG__;
+      return aim !== undefined && Math.abs(aim.cameraAzimuth - expectedAzimuth) < 1e-6;
+    },
+    azimuth,
+    { timeout: 5_000 },
+  );
 }
 
 async function patchPlayerBodyState(page: Page, patch: BodyStatePatch): Promise<void> {
@@ -477,7 +487,6 @@ test.describe('aim quadrant stability after real thrust drift', () => {
 
     // Keep camera input fixed for the full scenario.
     await setCameraAzimuth(page, Math.PI);
-    await page.waitForTimeout(200);
 
     const beforeDrift = await captureDebug(page);
     expect(
@@ -575,7 +584,6 @@ test.describe('aim quadrant stability after real thrust drift', () => {
 
     await acquirePointerLock(page);
     await setCameraAzimuth(page, Math.PI);
-    await page.waitForTimeout(200);
 
     await patchPlayerBodyState(page, FORE_LINE_REPRO_POSE);
     await page.waitForTimeout(50);
@@ -668,12 +676,7 @@ test.describe('aim quadrant stability after real thrust drift', () => {
     await startPlaying(page);
     await page.waitForTimeout(1_000);
     await acquirePointerLock(page);
-    await page.evaluate(() => {
-      (window as { __SET_CAMERA_AZIMUTH__?: (a: number) => void }).__SET_CAMERA_AZIMUTH__?.(
-        Math.PI,
-      );
-    });
-    await page.waitForTimeout(200);
+    await setCameraAzimuth(page, Math.PI);
     await page.keyboard.down('w');
     await page.waitForTimeout(3_000);
     await page.keyboard.up('w');
@@ -685,12 +688,7 @@ test.describe('aim quadrant stability after real thrust drift', () => {
     await startPlaying(page);
     await page.waitForTimeout(1_000);
     await acquirePointerLock(page);
-    await page.evaluate(() => {
-      (window as { __SET_CAMERA_AZIMUTH__?: (a: number) => void }).__SET_CAMERA_AZIMUTH__?.(
-        Math.PI,
-      );
-    });
-    await page.waitForTimeout(200);
+    await setCameraAzimuth(page, Math.PI);
     await patchPlayerBodyState(page, FORE_LINE_REPRO_POSE);
     await page.waitForTimeout(100);
     for (const quadrant of quadrants) {

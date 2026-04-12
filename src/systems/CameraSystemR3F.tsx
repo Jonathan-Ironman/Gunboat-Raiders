@@ -131,6 +131,54 @@ const _target = new Vector3();
 const _cameraPos = new Vector3();
 const _lookDir = new Vector3();
 const SHOULD_EXPOSE_AIM_DEBUG = import.meta.env.DEV || import.meta.env.VITE_E2E === '1';
+type AimDebugState = {
+  boatWorldPosition: { x: number; y: number; z: number };
+  boatHeading: number;
+  pointerLocked: boolean;
+  cameraAzimuth: number;
+  cameraElevation: number;
+  cameraAngle: number;
+  aimRelative: number;
+  activeQuadrant: FiringQuadrant;
+};
+const _aimDebug: AimDebugState = {
+  boatWorldPosition: { x: 0, y: 0, z: 0 },
+  boatHeading: 0,
+  pointerLocked: false,
+  cameraAzimuth: 0,
+  cameraElevation: 0,
+  cameraAngle: 0,
+  aimRelative: 0,
+  activeQuadrant: 'fore',
+};
+
+function publishAimDebug(
+  position: { x: number; y: number; z: number },
+  boatHeading: number,
+  pointerLocked: boolean,
+  cameraAzimuth: number,
+  cameraElevation: number,
+  cameraAngle: number,
+  aimRelative: number,
+  activeQuadrant: FiringQuadrant,
+): void {
+  if (!SHOULD_EXPOSE_AIM_DEBUG) return;
+  const w = window as Window &
+    typeof globalThis & {
+      __AIM_DEBUG__?: AimDebugState;
+    };
+  _aimDebug.boatWorldPosition.x = position.x;
+  _aimDebug.boatWorldPosition.y = position.y;
+  _aimDebug.boatWorldPosition.z = position.z;
+  _aimDebug.boatHeading = boatHeading;
+  _aimDebug.pointerLocked = pointerLocked;
+  _aimDebug.cameraAzimuth = cameraAzimuth;
+  _aimDebug.cameraElevation = cameraElevation;
+  _aimDebug.cameraAngle = cameraAngle;
+  _aimDebug.aimRelative = aimRelative;
+  _aimDebug.activeQuadrant = activeQuadrant;
+  w.__AIM_DEBUG__ = _aimDebug;
+}
 
 export function CameraSystemR3F() {
   const gl = useThree((state) => state.gl);
@@ -365,31 +413,16 @@ export function CameraSystemR3F() {
       rawPitchDelta < minPitch ? minPitch : rawPitchDelta > maxPitch ? maxPitch : rawPitchDelta;
     setAimOffset(yawDelta, pitchDelta);
 
-    if (SHOULD_EXPOSE_AIM_DEBUG) {
-      const w = window as Window &
-        typeof globalThis & {
-          __AIM_DEBUG__?: {
-            boatWorldPosition: { x: number; y: number; z: number };
-            boatHeading: number;
-            pointerLocked: boolean;
-            cameraAzimuth: number;
-            cameraElevation: number;
-            cameraAngle: number;
-            aimRelative: number;
-            activeQuadrant: ReturnType<typeof computeQuadrant>;
-          };
-        };
-      w.__AIM_DEBUG__ = {
-        boatWorldPosition: { x: pos.x, y: pos.y, z: pos.z },
-        boatHeading,
-        pointerLocked: isPointerLockedRef.current,
-        cameraAzimuth: azimuth,
-        cameraElevation: elevation,
-        cameraAngle,
-        aimRelative,
-        activeQuadrant: quadrant,
-      };
-    }
+    publishAimDebug(
+      pos,
+      boatHeading,
+      isPointerLockedRef.current,
+      azimuth,
+      elevation,
+      cameraAngle,
+      aimRelative,
+      quadrant,
+    );
   }, -1);
 
   return null;
