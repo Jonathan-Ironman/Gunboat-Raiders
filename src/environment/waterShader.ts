@@ -16,6 +16,7 @@ const NUM_WAVES = String(SHARED_WAVE_SAMPLING.waves.length);
 const WAVE_DATA_LENGTH = String(
   SHARED_WAVE_SAMPLING.waves.length * WAVE_UNIFORM_LAYOUT.floatsPerWave,
 );
+const WAVE_STRIDE = String(WAVE_UNIFORM_LAYOUT.floatsPerWave);
 
 /**
  * Vertex shader: displaces a subdivided XZ plane using Gerstner waves.
@@ -77,7 +78,7 @@ export const vertexShader = /* glsl */ `
     // IMPORTANT: Any visual change below that alters height (dy) or amplitude modulation
     // MUST be mirrored in src/environment/gerstnerWaves.ts buoyancy sampling math.
     for (int i = 0; i < NUM_WAVES; i++) {
-      int base = i * 7;
+      int base = i * ${WAVE_STRIDE};
       float dirX       = uWaveData[base + 0];
       float dirZ       = uWaveData[base + 1];
       float steepness  = uWaveData[base + 2];

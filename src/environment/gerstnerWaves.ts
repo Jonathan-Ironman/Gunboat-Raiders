@@ -182,6 +182,7 @@ export function getWaveHeight(
   // Partial derivative accumulators for normal computation
   let dNx = 0;
   let dNz = 0;
+  const amplitudeMultiplier = getAmplitudeMultiplier(0, x, z, time);
 
   for (let waveIndex = 0; waveIndex < waves.length; waveIndex++) {
     const wave = waves[waveIndex];
@@ -190,7 +191,8 @@ export function getWaveHeight(
     const dirX = wave.direction[0];
     const dirZ = wave.direction[1];
     const k = TWO_PI / wave.wavelength;
-    const amp = wave.amplitude * getAmplitudeMultiplier(waveIndex, x, z, time);
+    const amp =
+      wave.amplitude * (waveIndex < WAVE_MODULATION.modulatedWaveCount ? amplitudeMultiplier : 1);
 
     const theta = k * (dirX * x + dirZ * z) - wave.speed * k * time + wave.phase;
     const sinTheta = Math.sin(theta);
