@@ -7,6 +7,7 @@ import {
   MAX_PITCH_OFFSET_UP,
   MAX_PITCH_OFFSET_DOWN,
 } from '@/systems/aimOffsetRefs';
+import { BOAT_STATS } from '@/utils/boatStats';
 
 describe('aimOffsetRefs', () => {
   beforeEach(() => {
@@ -87,5 +88,11 @@ describe('aimOffsetRefs', () => {
   it('MAX_PITCH_OFFSET_DOWN stays within a physically reasonable cannon arc', () => {
     expect(MAX_PITCH_OFFSET_DOWN).toBeGreaterThan(0);
     expect(MAX_PITCH_OFFSET_DOWN).toBeLessThan(Math.PI / 4);
+  });
+
+  it('player minimum total elevation stays just above horizontal for close-range shots', () => {
+    const minTotalElevation = BOAT_STATS.player.weapons.elevationAngle - MAX_PITCH_OFFSET_DOWN;
+    expect(minTotalElevation).toBeGreaterThan(0);
+    expect(minTotalElevation).toBeLessThan((2 * Math.PI) / 180);
   });
 });
