@@ -129,6 +129,7 @@ const _euler = new Euler();
 const _target = new Vector3();
 const _cameraPos = new Vector3();
 const _lookDir = new Vector3();
+const SHOULD_EXPOSE_AIM_DEBUG = import.meta.env.DEV || import.meta.env.VITE_E2E === '1';
 
 export function CameraSystemR3F() {
   const gl = useThree((state) => state.gl);
@@ -358,6 +359,32 @@ export function CameraSystemR3F() {
     const pitchDelta =
       rawPitchDelta < minPitch ? minPitch : rawPitchDelta > maxPitch ? maxPitch : rawPitchDelta;
     setAimOffset(yawDelta, pitchDelta);
+
+    if (SHOULD_EXPOSE_AIM_DEBUG) {
+      const w = window as Window &
+        typeof globalThis & {
+          __AIM_DEBUG__?: {
+            boatWorldPosition: { x: number; y: number; z: number };
+            boatHeading: number;
+            pointerLocked: boolean;
+            cameraAzimuth: number;
+            cameraElevation: number;
+            cameraAngle: number;
+            aimRelative: number;
+            activeQuadrant: ReturnType<typeof computeQuadrant>;
+          };
+        };
+      w.__AIM_DEBUG__ = {
+        boatWorldPosition: { x: pos.x, y: pos.y, z: pos.z },
+        boatHeading,
+        pointerLocked: isPointerLockedRef.current,
+        cameraAzimuth: azimuth,
+        cameraElevation: elevation,
+        cameraAngle,
+        aimRelative,
+        activeQuadrant: quadrant,
+      };
+    }
   }, -1);
 
   return null;

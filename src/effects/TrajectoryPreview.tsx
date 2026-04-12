@@ -56,6 +56,16 @@ const _vel = new Vector3();
 const _tangent = new Vector3();
 const _right = new Vector3();
 const _up = new Vector3(0, 1, 0);
+const SHOULD_EXPOSE_AIM_LINE_DEBUG = import.meta.env.DEV || import.meta.env.VITE_E2E === '1';
+
+function publishAimLineDebug(visible: boolean, quadrant: FiringQuadrant | null): void {
+  if (!SHOULD_EXPOSE_AIM_LINE_DEBUG) return;
+  const w = window as Window &
+    typeof globalThis & {
+      __AIM_LINE_VISIBLE__?: { visible: boolean; quadrant: FiringQuadrant | null };
+    };
+  w.__AIM_LINE_VISIBLE__ = { visible, quadrant };
+}
 
 // ---------------------------------------------------------------------------
 // Geometry helpers
@@ -194,12 +204,14 @@ export function TrajectoryPreview() {
     // appears for a shot that cannot be fired.
     if (!getIsPointerLocked()) {
       mesh.geometry.setDrawRange(0, 0);
+      publishAimLineDebug(false, useGameStore.getState().activeQuadrant);
       return;
     }
 
     const bodyState = getPlayerBodyState();
     if (!bodyState) {
       mesh.geometry.setDrawRange(0, 0);
+      publishAimLineDebug(false, useGameStore.getState().activeQuadrant);
       return;
     }
 
@@ -207,12 +219,14 @@ export function TrajectoryPreview() {
     const { player, activeQuadrant } = store;
     if (!player) {
       mesh.geometry.setDrawRange(0, 0);
+      publishAimLineDebug(false, activeQuadrant);
       return;
     }
 
     const mountData = getMeanMountData(player.weapons.mounts, activeQuadrant);
     if (!mountData) {
       mesh.geometry.setDrawRange(0, 0);
+      publishAimLineDebug(false, activeQuadrant);
       return;
     }
 
@@ -312,6 +326,7 @@ export function TrajectoryPreview() {
     // Each quad between cross-sections i and i+1 = 6 indices (2 triangles)
     mesh.geometry.setDrawRange(0, activeSteps * 6);
     posAttr.needsUpdate = true;
+    publishAimLineDebug(activeSteps > 0, activeQuadrant);
   });
 
   return <primitive object={meshObj} />;
