@@ -25,6 +25,7 @@ import { computeQuadrant } from './CameraSystem';
 import { useGameStore, type FiringQuadrant } from '@/store/gameStore';
 import { setAimOffset, MAX_PITCH_OFFSET_UP, MAX_PITCH_OFFSET_DOWN } from './aimOffsetRefs';
 import { setIsPointerLocked, resetPointerLockRefs } from './pointerLockRefs';
+import { getForcedAzimuth } from './cameraTestBridge';
 
 /** Camera orbit configuration */
 const CAMERA_RADIUS = 15;
@@ -129,6 +130,55 @@ const _euler = new Euler();
 const _target = new Vector3();
 const _cameraPos = new Vector3();
 const _lookDir = new Vector3();
+const SHOULD_EXPOSE_AIM_DEBUG = import.meta.env.DEV || import.meta.env.VITE_E2E === '1';
+type AimDebugState = {
+  boatWorldPosition: { x: number; y: number; z: number };
+  boatHeading: number;
+  pointerLocked: boolean;
+  cameraAzimuth: number;
+  cameraElevation: number;
+  cameraAngle: number;
+  aimRelative: number;
+  activeQuadrant: FiringQuadrant;
+};
+const _aimDebug: AimDebugState = {
+  boatWorldPosition: { x: 0, y: 0, z: 0 },
+  boatHeading: 0,
+  pointerLocked: false,
+  cameraAzimuth: 0,
+  cameraElevation: 0,
+  cameraAngle: 0,
+  aimRelative: 0,
+  activeQuadrant: 'fore',
+};
+
+function publishAimDebug(
+  position: { x: number; y: number; z: number },
+  boatHeading: number,
+  pointerLocked: boolean,
+  cameraAzimuth: number,
+  cameraElevation: number,
+  cameraAngle: number,
+  aimRelative: number,
+  activeQuadrant: FiringQuadrant,
+): void {
+  if (!SHOULD_EXPOSE_AIM_DEBUG) return;
+  const w = window as Window &
+    typeof globalThis & {
+      __AIM_DEBUG__?: AimDebugState;
+    };
+  _aimDebug.boatWorldPosition.x = position.x;
+  _aimDebug.boatWorldPosition.y = position.y;
+  _aimDebug.boatWorldPosition.z = position.z;
+  _aimDebug.boatHeading = boatHeading;
+  _aimDebug.pointerLocked = pointerLocked;
+  _aimDebug.cameraAzimuth = cameraAzimuth;
+  _aimDebug.cameraElevation = cameraElevation;
+  _aimDebug.cameraAngle = cameraAngle;
+  _aimDebug.aimRelative = aimRelative;
+  _aimDebug.activeQuadrant = activeQuadrant;
+  w.__AIM_DEBUG__ = _aimDebug;
+}
 
 export function CameraSystemR3F() {
   const gl = useThree((state) => state.gl);
@@ -260,7 +310,11 @@ export function CameraSystemR3F() {
       return;
     }
 
-    const azimuth = azimuthRef.current;
+    const forcedAzimuth = getForcedAzimuth();
+    if (forcedAzimuth !== null) {
+      azimuthRef.current = forcedAzimuth;
+    }
+    const azimuth = forcedAzimuth ?? azimuthRef.current;
     const elevation = elevationRef.current;
     const cosElev = Math.cos(elevation);
     const sinElev = Math.sin(elevation);
@@ -358,6 +412,17 @@ export function CameraSystemR3F() {
     const pitchDelta =
       rawPitchDelta < minPitch ? minPitch : rawPitchDelta > maxPitch ? maxPitch : rawPitchDelta;
     setAimOffset(yawDelta, pitchDelta);
+
+    publishAimDebug(
+      pos,
+      boatHeading,
+      isPointerLockedRef.current,
+      azimuth,
+      elevation,
+      cameraAngle,
+      aimRelative,
+      quadrant,
+    );
   }, -1);
 
   return null;
