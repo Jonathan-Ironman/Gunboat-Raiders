@@ -13,6 +13,11 @@
  * clicking after lock loss always fires into a stale, potentially-cooldown-blocked
  * quadrant.
  *
+ * Test-only override: if `cameraTestBridge.getForcedAzimuth()` returns a
+ * number, that azimuth is used for both camera position and quadrant
+ * derivation every frame, bypassing pointer-lock/cursor branching until
+ * cleared with `__SET_CAMERA_AZIMUTH__(null)`.
+ *
  * Includes a position guard to prevent the camera from following the player
  * body to extreme positions during initial physics stabilization.
  */
@@ -22,6 +27,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { Euler, Quaternion, Vector3 } from 'three';
 import { getPlayerBodyState } from './physicsRefs';
 import { computeQuadrant } from './CameraSystem';
+import { getForcedAzimuth } from './cameraTestBridge';
 import { useGameStore, type FiringQuadrant } from '@/store/gameStore';
 import { setAimOffset, MAX_PITCH_OFFSET_UP, MAX_PITCH_OFFSET_DOWN } from './aimOffsetRefs';
 import { setIsPointerLocked, resetPointerLockRefs } from './pointerLockRefs';
@@ -260,7 +266,10 @@ export function CameraSystemR3F() {
       return;
     }
 
-    const azimuth = azimuthRef.current;
+    // Test bridge override: when set, drive camera position + quadrant from
+    // the forced azimuth and bypass pointer-lock/cursor input branches.
+    const forced = getForcedAzimuth();
+    const azimuth = forced ?? azimuthRef.current;
     const elevation = elevationRef.current;
     const cosElev = Math.cos(elevation);
     const sinElev = Math.sin(elevation);
@@ -291,8 +300,11 @@ export function CameraSystemR3F() {
     // Determine the active quadrant AND the camera-relative angle used to
     // derive the fine-aim yaw offset below.
     //
-    // When pointer lock is active: use the camera orbit azimuth (accurate,
-    // reflects actual camera orientation from pointer deltas).
+    // When a test-forced azimuth is active: always use the real camera orbit
+    // look direction derived from that forced azimuth.
+    //
+    // Otherwise when pointer lock is active: use the camera orbit azimuth
+    // (accurate, reflects actual camera orientation from pointer deltas).
     //
     // When pointer lock is NOT active: the azimuth is frozen (movementX/Y are
     // unreliable without lock). Fall back to computing the quadrant from the
@@ -304,7 +316,7 @@ export function CameraSystemR3F() {
     // (−π..π, 0 = fore). Used for both quadrant selection and yaw-offset
     // computation so the two reads are guaranteed to agree.
     let aimRelative: number;
-    if (isPointerLockedRef.current) {
+    if (forced !== null || isPointerLockedRef.current) {
       aimRelative = normalizeAngle(cameraAngle - boatHeading);
       quadrant = computeQuadrant(cameraAngle, boatHeading);
     } else {

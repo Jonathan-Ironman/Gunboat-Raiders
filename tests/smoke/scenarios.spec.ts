@@ -749,5 +749,34 @@ test.describe('End-to-end gameplay scenarios', () => {
       `Mouse at top-center of canvas (no pointer lock) should yield 'fore'. ` +
         `Got: '${quadrantAfterTopMove}'`,
     ).toBe('fore');
+
+    // Dev test bridge override should deterministically control the computed
+    // active quadrant regardless of cursor position while lock is absent.
+    await page.evaluate(() => {
+      const w = window as unknown as { __SET_CAMERA_AZIMUTH__?: (a: number | null) => void };
+      w.__SET_CAMERA_AZIMUTH__?.(Math.PI);
+    });
+    await page.waitForTimeout(150);
+    await page.mouse.move(bbox.x + bbox.width * 0.9, bbox.y + bbox.height * 0.9);
+    await page.waitForTimeout(150);
+
+    const forcedQuadrant = await page.evaluate<string>(() => {
+      const w = window as unknown as {
+        __ZUSTAND_STORE__?: { getState: () => { activeQuadrant: string } };
+      };
+      return w.__ZUSTAND_STORE__?.getState().activeQuadrant ?? 'unknown';
+    });
+
+    expect(
+      forcedQuadrant,
+      `With __SET_CAMERA_AZIMUTH__(Math.PI), activeQuadrant should deterministically be 'fore'. ` +
+        `Got: '${forcedQuadrant}'`,
+    ).toBe('fore');
+
+    // Cleanup so later smoke tests return to normal camera input behavior.
+    await page.evaluate(() => {
+      const w = window as unknown as { __SET_CAMERA_AZIMUTH__?: (a: number | null) => void };
+      w.__SET_CAMERA_AZIMUTH__?.(null);
+    });
   });
 });

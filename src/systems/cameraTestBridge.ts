@@ -8,12 +8,11 @@
  * Usage from tests:
  *   await page.evaluate((a) => window.__SET_CAMERA_AZIMUTH__(a), azimuth);
  *
- * The bridge is *sticky*: once a test sets an azimuth, the camera system
- * continues using that azimuth on every subsequent frame (and bypasses the
- * cursor-position fallback that kicks in when pointer lock is absent) until
- * the test explicitly clears it with `__SET_CAMERA_AZIMUTH__(null)`. Without
- * this stickiness, any frame between test bridge calls would fall back to
- * the cursor-position quadrant and clobber the test's intended aim.
+ * The bridge is *sticky*: once a test sets an azimuth, CameraSystemR3F uses
+ * that value for both orbit positioning and active-quadrant derivation on
+ * every subsequent frame until cleared with `__SET_CAMERA_AZIMUTH__(null)`.
+ * While forced, the camera system bypasses pointer-lock/cursor quadrant
+ * branching and does not mutate pointer-lock state.
  *
  * Kept in a separate module from CameraSystemR3F.tsx to satisfy
  * react-refresh's "component files only export components" rule.
