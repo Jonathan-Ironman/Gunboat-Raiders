@@ -90,9 +90,9 @@ describe('aimOffsetRefs', () => {
     expect(MAX_PITCH_OFFSET_DOWN).toBeLessThan(Math.PI / 4);
   });
 
-  it('player minimum total elevation stays just above horizontal for close-range shots', () => {
+  it('player minimum total elevation dips only slightly below horizontal for close-range shots', () => {
     const minTotalElevation = BOAT_STATS.player.weapons.elevationAngle - MAX_PITCH_OFFSET_DOWN;
-    expect(minTotalElevation).toBeGreaterThan(0);
-    expect(minTotalElevation).toBeLessThan((2 * Math.PI) / 180);
+    expect(minTotalElevation).toBeLessThan(0);
+    expect(minTotalElevation).toBeGreaterThan((-1 * Math.PI) / 180);
   });
 });

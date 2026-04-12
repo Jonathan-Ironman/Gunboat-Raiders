@@ -97,9 +97,9 @@ const PLAYER_BASE_ELEVATION = 0.1;
  * The upward and downward ranges are ASYMMETRIC:
  *   upward:   MAX_PITCH_OFFSET_UP   (+8°) — generous upward reach preserved
  *             from playtest feedback.
- *   downward: MAX_PITCH_OFFSET_DOWN (-5°) — slightly wider downward reach so
+ *   downward: MAX_PITCH_OFFSET_DOWN (-6°) — slightly wider downward reach so
  *             close-range shots can still land after the higher-riding boat tuning,
- *             while remaining above the waterline.
+ *             without relying on the harder anti-water safety floor.
  *
  * The total elevation is hard-clamped by the caller to
  * [TOTAL_ELEVATION_MIN, TOTAL_ELEVATION_MAX] as a second safety net.
@@ -392,7 +392,7 @@ export function CameraSystemR3F() {
     // The quadrant acts as a 90° gate — the weapon system snaps the shot to
     // whichever quadrant the camera (or cursor, in lock-absent mode) is
     // pointing into — and on top of that the player gets a ±12° yaw /
-    // (+8°/-5°) asymmetric pitch cone of fine aim. The yaw delta is the signed angular distance
+    // (+8°/-6°) asymmetric pitch cone of fine aim. The yaw delta is the signed angular distance
     // between the player's boat-local aim direction (`aimRelative`) and the
     // centre of the current quadrant; setAimOffset() clamps both axes to
     // their allowed range so the aim can never leak into the adjacent

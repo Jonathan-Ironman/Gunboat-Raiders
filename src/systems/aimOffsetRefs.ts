@@ -3,7 +3,7 @@
  * active firing quadrant. Black Flag-style variable aim: the quadrant is
  * still selected by camera azimuth (fore / aft / port / starboard), but
  * within each 90° slice the player gets a ±12° yaw window and an
- * asymmetric pitch window (+8° up / -5° down) layered on top of the mount direction.
+ * asymmetric pitch window (+8° up / -6° down) layered on top of the mount direction.
  *
  * The refs are written once per frame by `CameraSystemR3F` (priority -1,
  * before the weapon system) and read every time a shot is fired or the
@@ -45,13 +45,14 @@ export const MAX_YAW_OFFSET = (12 * Math.PI) / 180;
 export const MAX_PITCH_OFFSET_UP = (8 * Math.PI) / 180;
 
 /**
- * Maximum downward pitch offset (radians). -5° layered on top of the player's
- * base `elevationAngle` (~5.7°) gives an effective min elevation of ~0.7°:
- * slightly flatter for close-range shots after the boat started riding
- * higher on the waves, while still staying just above the waterline.
+ * Maximum downward pitch offset (radians). -6° layered on top of the player's
+ * base `elevationAngle` (~5.7°) gives an effective min elevation of about -0.3°:
+ * slightly below horizontal for closer targets after the boat started riding
+ * higher on the waves, while still staying far above the camera system's
+ * harder anti-water safety floor.
  * Still tighter than the upward range so the cannon cannot dip sharply down.
  */
-export const MAX_PITCH_OFFSET_DOWN = (5 * Math.PI) / 180;
+export const MAX_PITCH_OFFSET_DOWN = (6 * Math.PI) / 180;
 
 // Module-scope singleton. Mutated in place every frame by CameraSystemR3F
 // and read by WeaponSystemR3F + TrajectoryPreview. A single shared object
