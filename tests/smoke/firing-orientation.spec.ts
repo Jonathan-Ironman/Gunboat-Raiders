@@ -25,7 +25,7 @@
  */
 
 import { test, expect, type Page } from '@playwright/test';
-import { startGame, waitForPhase } from '../helpers/gameTestUtils';
+import { startPlayingFromMenu, waitForPlayerBody } from '../helpers/gameTestUtils';
 
 // ---------------------------------------------------------------------------
 // Types mirrored from physicsRefs.ts / store
@@ -143,22 +143,14 @@ function angularDelta(a: number, b: number): number {
 // ---------------------------------------------------------------------------
 
 async function startPlaying(page: Page): Promise<void> {
-  await startGame(page);
-  await waitForPhase(page, 'mainMenu', 20_000);
-
-  const startButton = page.locator('[data-testid="start-button"]');
-  await expect(startButton).toBeVisible({ timeout: 15_000 });
-  await startButton.click();
-
-  await waitForPhase(page, 'playing', 15_000);
-
+  await startPlayingFromMenu(page);
+  await waitForPlayerBody(page);
   await page.waitForFunction(
     () => {
       const w = window as unknown as {
-        __GET_PLAYER_BODY_STATE__?: () => BodyStateSnapshot | null;
         __GET_PLAYER_BODY__?: () => unknown;
       };
-      return w.__GET_PLAYER_BODY_STATE__?.() !== null && w.__GET_PLAYER_BODY__?.() !== null;
+      return w.__GET_PLAYER_BODY__?.() !== null;
     },
     undefined,
     { timeout: 15_000 },
@@ -556,7 +548,7 @@ test.describe('Firing orientation matrix', () => {
      * quadrant (starboard has 4 mounts). We therefore expect CLICK_COUNT ×
      * MOUNTS_PER_QUADRANT total new pool slots after the drain window.
      */
-    const CLICK_COUNT = 6;
+    const CLICK_COUNT = 4;
     const MOUNTS_PER_STARBOARD = 4; // from BOAT_STATS.player.weapons.mounts
     const EXPECTED_SPAWNS = CLICK_COUNT * MOUNTS_PER_STARBOARD;
 

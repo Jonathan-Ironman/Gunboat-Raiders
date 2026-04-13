@@ -9,7 +9,13 @@
  */
 
 import { test, expect, type Page } from '@playwright/test';
-import { startGame, getGameState, getGameErrors, waitForPhase } from '../helpers/gameTestUtils';
+import {
+  startGame,
+  getGameState,
+  getGameErrors,
+  startPlayingFromMenu,
+  waitForPhase,
+} from '../helpers/gameTestUtils';
 
 // ---------------------------------------------------------------------------
 // Known error patterns
@@ -45,14 +51,7 @@ function filterKnownErrors(errors: string[]): string[] {
  * the game phase transitions to 'playing'.
  */
 async function startPlaying(page: Page): Promise<void> {
-  await startGame(page);
-  await waitForPhase(page, 'mainMenu', 20_000);
-
-  const startButton = page.locator('[data-testid="start-button"]');
-  await expect(startButton).toBeVisible({ timeout: 15_000 });
-  await startButton.click();
-
-  await waitForPhase(page, 'playing', 15_000);
+  await startPlayingFromMenu(page);
 }
 
 /**
@@ -103,10 +102,15 @@ test.describe('Gameplay scenarios', () => {
     // Phase should be 'mainMenu' on initial load
     await waitForPhase(page, 'mainMenu', 20_000);
 
-    // Click START GAME
-    const startButton = page.locator('[data-testid="start-button"]');
-    await expect(startButton).toBeVisible({ timeout: 15_000 });
-    await startButton.click();
+    const newGameButton = page.locator('[data-testid="main-menu-new-game-btn"]');
+    await expect(newGameButton).toBeVisible({ timeout: 15_000 });
+    await newGameButton.click();
+
+    await waitForPhase(page, 'briefing', 15_000);
+
+    const briefingStartButton = page.locator('[data-testid="briefing-start-btn"]');
+    await expect(briefingStartButton).toBeVisible({ timeout: 15_000 });
+    await briefingStartButton.click();
 
     // Phase should transition to 'playing'
     await waitForPhase(page, 'playing', 15_000);

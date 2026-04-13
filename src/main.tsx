@@ -7,12 +7,14 @@ import { installPerfMonitor } from './utils/perfMonitor';
 import { useGameStore } from './store/gameStore';
 import { requestTestFire } from './systems/weaponTestBridge';
 import { requestTestAzimuth } from './systems/cameraTestBridge';
+import { requestTestAimOffset } from './systems/aimOffsetRefs';
 import {
   getPlayerBodyState,
   getPlayerBody,
   patchPlayerBodyState,
   getAllEnemyBodyStates,
   getEnemyBodyState,
+  patchEnemyBodyState,
   getAllProjectileBodyStates,
 } from './systems/physicsRefs';
 import {
@@ -38,9 +40,11 @@ if (import.meta.env.DEV || import.meta.env.VITE_E2E === '1') {
       __ZUSTAND_STORE__: typeof useGameStore;
       __TEST_REQUEST_FIRE__: typeof requestTestFire;
       __SET_CAMERA_AZIMUTH__: typeof requestTestAzimuth;
+      __SET_TEST_AIM_OFFSET__: typeof requestTestAimOffset;
       __GET_PLAYER_BODY_STATE__: typeof getPlayerBodyState;
       __GET_PLAYER_BODY__: typeof getPlayerBody;
       __TEST_PATCH_PLAYER_BODY_STATE__: typeof patchPlayerBodyState;
+      __TEST_PATCH_ENEMY_BODY_STATE__: typeof patchEnemyBodyState;
       __GET_ALL_ENEMY_BODY_STATES__: typeof getAllEnemyBodyStates;
       __GET_ENEMY_BODY_STATE__: typeof getEnemyBodyState;
       __GET_ALL_PROJECTILE_BODY_STATES__: typeof getAllProjectileBodyStates;
@@ -79,11 +83,13 @@ if (import.meta.env.DEV || import.meta.env.VITE_E2E === '1') {
   // Expose camera azimuth setter so tests can drive the orbit angle without
   // simulating pointer-lock mouse deltas.
   w.__SET_CAMERA_AZIMUTH__ = requestTestAzimuth;
+  w.__SET_TEST_AIM_OFFSET__ = requestTestAimOffset;
 
   // Expose physics body state cache and raw body accessor so tests can read positions.
   w.__GET_PLAYER_BODY_STATE__ = getPlayerBodyState;
   w.__GET_PLAYER_BODY__ = getPlayerBody;
   w.__TEST_PATCH_PLAYER_BODY_STATE__ = patchPlayerBodyState;
+  w.__TEST_PATCH_ENEMY_BODY_STATE__ = patchEnemyBodyState;
   w.__GET_ALL_ENEMY_BODY_STATES__ = getAllEnemyBodyStates;
   w.__GET_ENEMY_BODY_STATE__ = getEnemyBodyState;
   w.__GET_ALL_PROJECTILE_BODY_STATES__ = getAllProjectileBodyStates;

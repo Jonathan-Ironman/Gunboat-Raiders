@@ -60,7 +60,7 @@ import {
   isFireAllowedByHeat,
   type HeatState,
 } from './WeaponSystem';
-import { consumeTestFireRequest } from './weaponTestBridge';
+import { consumeTestFireRequests } from './weaponTestBridge';
 import { getAimOffset } from './aimOffsetRefs';
 import { getIsPointerLocked } from './pointerLockRefs';
 import { emitVfxEvent } from '@/effects/vfxEvents';
@@ -73,13 +73,15 @@ import { emitVfxEvent } from '@/effects/vfxEvents';
 const PENDING_FIRE_CAP = 4;
 
 export function WeaponSystemR3F() {
-  // Counter of pending fire requests waiting for a ready quadrant. Each
-  // mouse click or test-bridge request increments this (up to the cap);
-  // each successful fire decrements it by one.
-  const pendingFiresRef = useRef(0);
+  // Separate queues for real mouse clicks vs dev-only test-bridge clicks.
+  // Real mouse intents are cleared on pointer-lock loss; test-bridge intents
+  // are allowed to drain unlocked so Playwright can drive the full firing
+  // pipeline headlessly.
+  const pendingMouseFiresRef = useRef(0);
+  const pendingBridgeFiresRef = useRef(0);
 
   // True while the player is holding the left mouse button. While held the
-  // frame tick tops up `pendingFiresRef` each frame (subject to cap + both
+  // frame tick tops up the mouse queue each frame (subject to cap + both
   // gates), which produces continuous fire at the cooldown-limited rate
   // without duplicating any of the gating logic. Tap-to-fire still works
   // because `onMouseDown` also queues one immediate intent.
@@ -95,8 +97,8 @@ export function WeaponSystemR3F() {
   const onMouseDown = useCallback((e: MouseEvent) => {
     if (e.button === 0 && useGameStore.getState().phase === 'playing' && getIsPointerLocked()) {
       mouseHeldRef.current = true;
-      if (pendingFiresRef.current < PENDING_FIRE_CAP) {
-        pendingFiresRef.current += 1;
+      if (pendingMouseFiresRef.current + pendingBridgeFiresRef.current < PENDING_FIRE_CAP) {
+        pendingMouseFiresRef.current += 1;
       }
     }
   }, []);
@@ -144,7 +146,7 @@ export function WeaponSystemR3F() {
     // which sets phase → 'paused', but that Zustand write is not
     // synchronous within this frame so we check the flag here too.
     if (!getIsPointerLocked()) {
-      pendingFiresRef.current = 0;
+      pendingMouseFiresRef.current = 0;
       mouseHeldRef.current = false;
     }
 
@@ -170,9 +172,15 @@ export function WeaponSystemR3F() {
     );
 
     // Drain any test-bridge fire requests (dev-only, used by Playwright).
-    // Each test request is equivalent to one mouse click.
-    if (consumeTestFireRequest() && pendingFiresRef.current < PENDING_FIRE_CAP) {
-      pendingFiresRef.current += 1;
+    // Each request is equivalent to one mouse click, so preserve the full
+    // count rather than collapsing multiple clicks into one boolean frame flag.
+    const pendingTestFires = consumeTestFireRequests();
+    if (pendingTestFires > 0) {
+      const availableSlots =
+        PENDING_FIRE_CAP - (pendingMouseFiresRef.current + pendingBridgeFiresRef.current);
+      if (availableSlots > 0) {
+        pendingBridgeFiresRef.current += Math.min(availableSlots, pendingTestFires);
+      }
     }
 
     // Hold-to-fire: while the left mouse button is held, top up the pending
@@ -181,13 +189,16 @@ export function WeaponSystemR3F() {
     // only when the active quadrant is ready AND heat allows AND the cap
     // has room — so held fire naturally respects the same two gates as
     // tap fire and never bypasses PENDING_FIRE_CAP.
-    if (mouseHeldRef.current && pendingFiresRef.current < PENDING_FIRE_CAP) {
+    if (
+      mouseHeldRef.current &&
+      pendingMouseFiresRef.current + pendingBridgeFiresRef.current < PENDING_FIRE_CAP
+    ) {
       const heldQuadrantReady = canFire(
         { cooldown: player.weapons.cooldown, cooldownRemaining: updatedCooldowns },
         store.activeQuadrant,
       );
       if (heldQuadrantReady && isFireAllowedByHeat(heatState)) {
-        pendingFiresRef.current += 1;
+        pendingMouseFiresRef.current += 1;
       }
     }
 
@@ -211,7 +222,7 @@ export function WeaponSystemR3F() {
 
     // If nothing is pending, push the decayed heat + cooldowns so the UI
     // and other systems see them progressing.
-    if (pendingFiresRef.current === 0) {
+    if (pendingMouseFiresRef.current + pendingBridgeFiresRef.current === 0) {
       commit(updatedCooldowns);
       return;
     }
@@ -234,7 +245,14 @@ export function WeaponSystemR3F() {
     }
 
     // Consume one pending intent and fire.
-    pendingFiresRef.current -= 1;
+    if (pendingMouseFiresRef.current > 0) {
+      pendingMouseFiresRef.current -= 1;
+    } else if (pendingBridgeFiresRef.current > 0) {
+      pendingBridgeFiresRef.current -= 1;
+    } else {
+      commit(updatedCooldowns);
+      return;
+    }
 
     // Read from cached body state (safe during useFrame).
     const bodyState = getPlayerBodyState();

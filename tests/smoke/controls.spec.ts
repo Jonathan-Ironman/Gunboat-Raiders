@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { startPlayingFromMenu, waitForPlayerBody } from '../helpers/gameTestUtils';
 
 /**
  * Smoke test for WASD keyboard controls.
@@ -9,23 +10,8 @@ import { test, expect } from '@playwright/test';
  */
 test.describe('WASD controls', () => {
   test('pressing W moves the boat forward', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
-
-    // Click START GAME
-    const startButton = page.getByTestId('start-button');
-    await expect(startButton).toBeVisible({ timeout: 15_000 });
-    await startButton.click();
-
-    // Wait for physics to initialize and boat to register
-    await page.waitForFunction(
-      () => {
-        const getState = (window as unknown as { __GET_PLAYER_BODY_STATE__?: () => unknown })
-          .__GET_PLAYER_BODY_STATE__;
-        return getState && getState() !== null;
-      },
-      { timeout: 10_000 },
-    );
+    await startPlayingFromMenu(page);
+    await waitForPlayerBody(page, 10_000);
 
     // Wait for buoyancy to stabilize (boat settling on water)
     await page.waitForTimeout(2000);

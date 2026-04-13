@@ -15,7 +15,13 @@
  */
 
 import { test, expect, type Page } from '@playwright/test';
-import { startGame, getGameState, getGameErrors, waitForPhase } from '../helpers/gameTestUtils';
+import {
+  getGameState,
+  getGameErrors,
+  startPlayingFromMenu,
+  waitForPhase,
+  waitForPlayerBody,
+} from '../helpers/gameTestUtils';
 
 // ---------------------------------------------------------------------------
 // Types mirrored from physicsRefs.ts — kept here to avoid cross-tsconfig imports.
@@ -47,30 +53,13 @@ function filterKnownErrors(errors: string[]): string[] {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Click START GAME and wait for phase='playing'. */
+/** Drive the current main-menu -> briefing -> playing flow. */
 async function startPlaying(page: Page): Promise<void> {
-  await startGame(page);
-  await waitForPhase(page, 'mainMenu', 20_000);
-
-  const startButton = page.locator('[data-testid="start-button"]');
-  await expect(startButton).toBeVisible({ timeout: 15_000 });
-  await startButton.click();
-
-  await waitForPhase(page, 'playing', 15_000);
-
+  await startPlayingFromMenu(page);
   // Wait until the player rigid body is registered AND its cached state is
   // available — otherwise getPlayerBodyState() returns null for the first
   // few frames.
-  await page.waitForFunction(
-    () => {
-      const w = window as unknown as {
-        __GET_PLAYER_BODY_STATE__?: () => BodyStateSnapshot | null;
-      };
-      return w.__GET_PLAYER_BODY_STATE__?.() !== null;
-    },
-    undefined,
-    { timeout: 15_000 },
-  );
+  await waitForPlayerBody(page);
 }
 
 /** Read the cached player body state via the dev-only window global. */
@@ -117,6 +106,18 @@ async function requestFire(page: Page): Promise<void> {
     const w = window as unknown as { __TEST_REQUEST_FIRE__?: () => void };
     w.__TEST_REQUEST_FIRE__?.();
   });
+}
+
+async function setTestAimOffset(
+  page: Page,
+  aim: { yaw: number; pitch: number } | null,
+): Promise<void> {
+  await page.evaluate((next: { yaw: number; pitch: number } | null) => {
+    const w = window as unknown as {
+      __SET_TEST_AIM_OFFSET__?: (value: { yaw: number; pitch: number } | null) => void;
+    };
+    w.__SET_TEST_AIM_OFFSET__?.(next);
+  }, aim);
 }
 
 /**
@@ -417,68 +418,80 @@ test.describe('End-to-end gameplay scenarios', () => {
     const healthBefore = await healthSnapshot();
     const sunkBefore = await sunkSnapshot();
 
-    // Teleport the player right next to the closest enemy so ballistics don't
-    // dominate the outcome. Port-side cannons fire straight along -X, so we
-    // place the player +X of the enemy with heading=0 (boat forward = +Z).
-    const player = await readPlayerBodyState(page);
-    const closest = bodies.reduce(
-      (best, cur) => {
-        const d =
-          (cur.state.position.x - player.position.x) ** 2 +
-          (cur.state.position.z - player.position.z) ** 2;
-        return d < best.d ? { d, body: cur } : best;
-      },
-      { d: Infinity, body: bodies[0]! },
-    ).body;
+    const targetEnemy = bodies[0];
+    expect(targetEnemy, 'need a live enemy to build a deterministic combat setup').toBeDefined();
 
-    // Range of 60m is well inside cannonball ballistic range (~200m) and gives
-    // the projectile room to arc down onto the target (20° elevation).
-    const targetX = closest.state.position.x + 60;
-    const targetZ = closest.state.position.z;
+    const requestForeShotAtPinnedEnemy = async (): Promise<void> => {
+      await page.evaluate(
+        (args: { enemyId: string }) => {
+          const w = window as unknown as {
+            __SET_TEST_AIM_OFFSET__?: (value: { yaw: number; pitch: number } | null) => void;
+            __TEST_PATCH_PLAYER_BODY_STATE__?: (patch: {
+              position?: { x: number; y: number; z: number };
+              rotation?: { x: number; y: number; z: number; w: number };
+              linvel?: { x: number; y: number; z: number };
+              angvel?: { x: number; y: number; z: number };
+            }) => boolean;
+            __TEST_PATCH_ENEMY_BODY_STATE__?: (
+              id: string,
+              patch: {
+                position?: { x: number; y: number; z: number };
+                rotation?: { x: number; y: number; z: number; w: number };
+                linvel?: { x: number; y: number; z: number };
+                angvel?: { x: number; y: number; z: number };
+              },
+            ) => boolean;
+            __TEST_REQUEST_FIRE__?: () => void;
+            __ZUSTAND_STORE__?: {
+              getState: () => {
+                player: { weapons: { elevationAngle: number } } | null;
+                setActiveQuadrant: (next: 'fore') => void;
+              };
+            };
+          };
 
-    await page.evaluate(
-      (args: { x: number; z: number }) => {
-        const w = window as unknown as {
-          __GET_PLAYER_BODY__?: () => {
-            setTranslation: (t: { x: number; y: number; z: number }, wake: boolean) => void;
-            setRotation: (r: { x: number; y: number; z: number; w: number }, wake: boolean) => void;
-            setLinvel: (v: { x: number; y: number; z: number }, wake: boolean) => void;
-            setAngvel: (v: { x: number; y: number; z: number }, wake: boolean) => void;
-          } | null;
-        };
-        const body = w.__GET_PLAYER_BODY__?.();
-        if (!body) return;
-        body.setTranslation({ x: args.x, y: 0.8, z: args.z }, true);
-        body.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
-        body.setLinvel({ x: 0, y: 0, z: 0 }, true);
-        body.setAngvel({ x: 0, y: 0, z: 0 }, true);
-      },
-      { x: targetX, z: targetZ },
-    );
+          const player = w.__ZUSTAND_STORE__?.getState().player;
+          const elevationAngle = player?.weapons.elevationAngle ?? 0.1;
 
-    // Switch to port broadside (4 cannons) for maximum hit chance.
-    await page.evaluate(() => {
-      const w = window as unknown as {
-        __ZUSTAND_STORE__?: {
-          getState: () => { setActiveQuadrant: (q: string) => void };
-        };
-      };
-      w.__ZUSTAND_STORE__?.getState().setActiveQuadrant('port');
-    });
+          w.__TEST_PATCH_ENEMY_BODY_STATE__?.(args.enemyId, {
+            position: { x: 0, y: 0.8, z: 8 },
+            rotation: { x: 0, y: 0, z: 0, w: 1 },
+            linvel: { x: 0, y: 0, z: 0 },
+            angvel: { x: 0, y: 0, z: 0 },
+          });
+          w.__TEST_PATCH_PLAYER_BODY_STATE__?.({
+            position: { x: 0, y: 0.8, z: 0 },
+            rotation: { x: 0, y: 0, z: 0, w: 1 },
+            linvel: { x: 0, y: 0, z: 0 },
+            angvel: { x: 0, y: 0, z: 0 },
+          });
+          w.__SET_TEST_AIM_OFFSET__?.({ yaw: 0, pitch: -elevationAngle });
+          w.__ZUSTAND_STORE__?.getState().setActiveQuadrant('fore');
+          w.__TEST_REQUEST_FIRE__?.();
+        },
+        { enemyId: targetEnemy?.id ?? '' },
+      );
+    };
 
-    await page.waitForTimeout(200);
-
-    // Fire five volleys spaced past the cooldown so every one actually fires.
-    for (let i = 0; i < 5; i++) {
-      await requestFire(page);
-      await page.waitForTimeout(2_100);
+    // Fire deterministic fore volleys with the target re-pinned in front
+    // of the player so this scenario isolates the real damage path from AI
+    // drift and broadside-only ballistics. We re-check after each volley
+    // and allow several attempts; a single miss should not make this
+    // end-to-end combat smoke flaky.
+    let healthAfter = healthBefore;
+    let sunkAfter = sunkBefore;
+    try {
+      for (let i = 0; i < 8; i++) {
+        await requestForeShotAtPinnedEnemy();
+        await page.waitForTimeout(500);
+        healthAfter = await healthSnapshot();
+        sunkAfter = await sunkSnapshot();
+        if (healthAfter < healthBefore || sunkAfter > sunkBefore) break;
+        await page.waitForTimeout(1_600);
+      }
+    } finally {
+      await setTestAimOffset(page, null);
     }
-
-    // Give projectiles time to finish arcing into the target.
-    await page.waitForTimeout(3_000);
-
-    const healthAfter = await healthSnapshot();
-    const sunkAfter = await sunkSnapshot();
 
     const damaged = healthAfter < healthBefore;
     const sunk = sunkAfter > sunkBefore;

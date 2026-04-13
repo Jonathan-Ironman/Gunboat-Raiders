@@ -7,27 +7,25 @@
  * Usage from tests:
  *   await page.evaluate(() => window.__TEST_REQUEST_FIRE__());
  *
- * The WeaponSystemR3F component polls `consumeTestFireRequest()` each frame
- * and triggers a fire if a request is pending. Kept separate from
+ * The WeaponSystemR3F component polls `consumeTestFireRequests()` each frame
+ * and drains however many test clicks landed since the previous frame. Kept separate from
  * WeaponSystemR3F.tsx to satisfy react-refresh (component files must only
  * export React components).
  */
 
-let testFireRequested = false;
+let pendingTestFireRequests = 0;
 
 /** Called by tests (via a window global) to request a fire next frame. */
 export function requestTestFire(): void {
-  testFireRequested = true;
+  pendingTestFireRequests += 1;
 }
 
 /**
- * Consume the pending fire request (if any). Returns true if a fire was
- * requested since the last call.
+ * Consume and clear all pending fire requests since the last call.
+ * Returns the exact number of clicks the test bridge received.
  */
-export function consumeTestFireRequest(): boolean {
-  if (testFireRequested) {
-    testFireRequested = false;
-    return true;
-  }
-  return false;
+export function consumeTestFireRequests(): number {
+  const count = pendingTestFireRequests;
+  pendingTestFireRequests = 0;
+  return count;
 }

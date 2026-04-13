@@ -58,6 +58,8 @@ export const MAX_PITCH_OFFSET_DOWN = (6 * Math.PI) / 180;
 // and read by WeaponSystemR3F + TrajectoryPreview. A single shared object
 // is returned from `getAimOffset()` so hot-path readers don't allocate.
 const _aimOffset: AimOffset = { yaw: 0, pitch: 0 };
+const _forcedAimOffset: AimOffset = { yaw: 0, pitch: 0 };
+let hasForcedAimOffset = false;
 
 /**
  * Write the current aim offset. Clamps both axes to the allowed range
@@ -70,18 +72,37 @@ export function setAimOffset(yaw: number, pitch: number): void {
 }
 
 /**
+ * Test-only sticky aim override. Lets Playwright hold a deterministic
+ * yaw/pitch across frames without racing CameraSystemR3F's live writes.
+ * Pass null to release the override and return to normal camera-driven aim.
+ */
+export function requestTestAimOffset(next: AimOffset | null): void {
+  if (next === null) {
+    hasForcedAimOffset = false;
+    _forcedAimOffset.yaw = 0;
+    _forcedAimOffset.pitch = 0;
+    return;
+  }
+
+  hasForcedAimOffset = true;
+  _forcedAimOffset.yaw = clamp(next.yaw, -MAX_YAW_OFFSET, MAX_YAW_OFFSET);
+  _forcedAimOffset.pitch = clamp(next.pitch, -MAX_PITCH_OFFSET_DOWN, MAX_PITCH_OFFSET_UP);
+}
+
+/**
  * Read the current aim offset. Returns the module-scope singleton — do
  * not mutate the returned object. If you need to capture a snapshot
  * (e.g. for a queued fire intent) copy the `yaw` / `pitch` scalars.
  */
 export function getAimOffset(): Readonly<AimOffset> {
-  return _aimOffset;
+  return hasForcedAimOffset ? _forcedAimOffset : _aimOffset;
 }
 
 /** Reset the offset back to zero. Used by tests / scene unmount. */
 export function resetAimOffset(): void {
   _aimOffset.yaw = 0;
   _aimOffset.pitch = 0;
+  requestTestAimOffset(null);
 }
 
 function clamp(value: number, min: number, max: number): number {

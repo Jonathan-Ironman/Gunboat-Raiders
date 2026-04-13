@@ -359,7 +359,7 @@ export function CameraSystemR3F() {
     // (−π..π, 0 = fore). Used for both quadrant selection and yaw-offset
     // computation so the two reads are guaranteed to agree.
     let aimRelative: number;
-    if (isPointerLockedRef.current) {
+    if (isPointerLockedRef.current || forcedAzimuth !== null) {
       aimRelative = normalizeAngle(cameraAngle - boatHeading);
       quadrant = computeQuadrant(cameraAngle, boatHeading);
     } else {

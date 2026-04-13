@@ -185,6 +185,32 @@ export function patchPlayerBodyState(patch: BodyStatePatch): boolean {
   }
 }
 
+/**
+ * Test-only helper: imperatively patch a specific enemy rigid body state.
+ * Returns false when the enemy body is not currently registered.
+ */
+export function patchEnemyBodyState(id: string, patch: BodyStatePatch): boolean {
+  const body = enemyBodies.get(id);
+  if (!body) return false;
+  try {
+    if (patch.position) {
+      body.setTranslation(patch.position, true);
+    }
+    if (patch.rotation) {
+      body.setRotation(patch.rotation, true);
+    }
+    if (patch.linvel) {
+      body.setLinvel(patch.linvel, true);
+    }
+    if (patch.angvel) {
+      body.setAngvel(patch.angvel, true);
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Update cached enemy body states. Safe to call from useFrame. */
 export function syncEnemyBodyStates(): void {
   // Remove stale entries
