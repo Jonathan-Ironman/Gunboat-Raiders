@@ -20,9 +20,16 @@
 
 import { useKeyboardControls } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
-import { computeMovement } from './MovementSystem';
+import {
+  clampForwardVelocity,
+  computeMovement,
+  dampHorizontalVelocity,
+  getForwardSpeed,
+  getForwardThrottleScale,
+} from './MovementSystem';
 import { getPlayerBody } from './physicsRefs';
 import { useGameStore } from '../store/gameStore';
+import { WATER_LINEAR_DRAG } from '../utils/constants';
 import { Euler, Quaternion, Vector3 } from 'three';
 
 /** Keyboard control names matching the KeyboardControls map in App.tsx. */
@@ -58,7 +65,7 @@ export function MovementSystemR3F() {
   // Get the transient keyboard accessor (non-reactive polling)
   const [, getKeys] = useKeyboardControls<Controls>();
 
-  useFrame(() => {
+  useFrame((_state, delta) => {
     // R4: skip input→force translation while paused. Otherwise a held WASD
     // key would queue forces all through the pause, and they'd snap the
     // boat forward the moment we resume.
@@ -97,17 +104,43 @@ export function MovementSystemR3F() {
         },
       );
 
+      const linvel = body.linvel();
+      const clampedVelocity = clampForwardVelocity(
+        [linvel.x, linvel.y, linvel.z],
+        boatHeading,
+        player.movement.maxSpeed,
+      );
+
+      if (
+        clampedVelocity[0] !== linvel.x ||
+        clampedVelocity[1] !== linvel.y ||
+        clampedVelocity[2] !== linvel.z
+      ) {
+        body.setLinvel(
+          { x: clampedVelocity[0], y: clampedVelocity[1], z: clampedVelocity[2] },
+          true,
+        );
+      }
+
       // Split the combined thrust into forward and reverse components so we
       // can apply them at different points. computeMovement returned a
       // signed world-space force along the heading; its sign encodes whether
       // the dominant input was forward or reverse.
       const sinH = Math.sin(boatHeading);
       const cosH = Math.cos(boatHeading);
+      const forwardSpeed = getForwardSpeed(clampedVelocity, boatHeading);
 
       // The scalar thrust magnitude along the boat's local +Z axis. Positive
       // when moving forward, negative when reversing. Recovered from the
       // world-space force by projecting onto the heading unit vector.
-      const localThrust = result.force[0] * sinH + result.force[2] * cosH;
+      const requestedLocalThrust = result.force[0] * sinH + result.force[2] * cosH;
+      const forwardThrottleScale =
+        requestedLocalThrust > 0
+          ? getForwardThrottleScale(forwardSpeed, player.movement.maxSpeed)
+          : 1;
+      const appliedForceX = result.force[0] * forwardThrottleScale;
+      const appliedForceZ = result.force[2] * forwardThrottleScale;
+      const localThrust = appliedForceX * sinH + appliedForceZ * cosH;
 
       if (localThrust > 0) {
         // Forward throttle: apply the world-space thrust at an offset below
@@ -116,7 +149,7 @@ export function MovementSystemR3F() {
         // space because addForceAtPoint takes world coordinates.
         _worldOffset.copy(THRUST_APPLICATION_OFFSET).applyQuaternion(_quat);
         body.addForceAtPoint(
-          { x: result.force[0], y: result.force[1], z: result.force[2] },
+          { x: appliedForceX, y: result.force[1], z: appliedForceZ },
           {
             x: pos.x + _worldOffset.x,
             y: pos.y + _worldOffset.y,
@@ -127,7 +160,12 @@ export function MovementSystemR3F() {
       } else if (localThrust < 0) {
         // Reverse: apply at centre of mass — no planing effect when backing
         // up. Real powerboats squat at the stern in reverse anyway.
-        body.addForce({ x: result.force[0], y: result.force[1], z: result.force[2] }, true);
+        body.addForce({ x: appliedForceX, y: result.force[1], z: appliedForceZ }, true);
+      }
+
+      if (!keys.forward && !keys.backward) {
+        const dampedVelocity = dampHorizontalVelocity(clampedVelocity, WATER_LINEAR_DRAG, delta);
+        body.setLinvel({ x: dampedVelocity[0], y: dampedVelocity[1], z: dampedVelocity[2] }, true);
       }
 
       body.addTorque({ x: result.torque[0], y: result.torque[1], z: result.torque[2] }, true);

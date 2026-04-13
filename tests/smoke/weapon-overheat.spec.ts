@@ -19,7 +19,7 @@
  */
 
 import { test, expect, type Page } from '@playwright/test';
-import { startGame, waitForPhase } from '../helpers/gameTestUtils';
+import { startPlayingFromMenu, waitForPlayerBody } from '../helpers/gameTestUtils';
 
 interface WeaponsSnapshot {
   heat: number;
@@ -46,25 +46,8 @@ async function readWeaponsSnapshot(page: Page): Promise<WeaponsSnapshot> {
 }
 
 async function startPlaying(page: Page): Promise<void> {
-  await startGame(page);
-  await waitForPhase(page, 'mainMenu', 20_000);
-
-  const startButton = page.locator('[data-testid="start-button"]');
-  await expect(startButton).toBeVisible({ timeout: 15_000 });
-  await startButton.click();
-
-  await waitForPhase(page, 'playing', 15_000);
-
-  await page.waitForFunction(
-    () => {
-      const w = window as unknown as {
-        __GET_PLAYER_BODY_STATE__?: () => unknown;
-      };
-      return w.__GET_PLAYER_BODY_STATE__?.() !== null;
-    },
-    undefined,
-    { timeout: 15_000 },
-  );
+  await startPlayingFromMenu(page);
+  await waitForPlayerBody(page);
 }
 
 test.describe('Weapon overheat', () => {

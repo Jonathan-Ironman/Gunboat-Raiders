@@ -11,7 +11,7 @@ export interface BuoyancyInput {
   bodyRotation: [number, number, number, number]; // quaternion [x, y, z, w]
   bodyLinearVelocity: [number, number, number];
   bodyAngularVelocity: [number, number, number];
-  hullSamplePoints: readonly [number, number, number][]; // local space
+  hullSamplePoints: readonly (readonly [number, number, number])[]; // local space
 }
 
 export interface BuoyancyConfig {
@@ -46,11 +46,30 @@ export const HULL_SAMPLE_POINTS: readonly [number, number, number][] = [
 ];
 
 /**
+ * Player boat samples the underside of its actual collider volume more closely.
+ * The player hull/render root sits noticeably above the collider bottom, so
+ * using the old generic -0.5 Y samples made the rendered hull ride too low
+ * even when buoyancy itself was numerically stable.
+ */
+export const PLAYER_HULL_SAMPLE_POINTS: readonly [number, number, number][] = [
+  [0, -0.75, 2.5], // Bow
+  [0, -0.75, -2.5], // Stern
+  [-1.2, -0.75, 0], // Port
+  [1.2, -0.75, 0], // Starboard
+  [-0.8, -0.75, 1.5], // PortBow
+  [0.8, -0.75, 1.5], // StbdBow
+  [-0.8, -0.75, -1.5], // PortStern
+  [0.8, -0.75, -1.5], // StbdStern
+];
+
+const WAVE_VELOCITY_SAMPLE_DT = 1 / 60;
+
+/**
  * Rotate a local-space point by a quaternion [x, y, z, w].
  * Returns the rotated vector (does NOT add position — that's done separately).
  */
 function rotateByQuaternion(
-  point: [number, number, number],
+  point: readonly [number, number, number],
   q: [number, number, number, number],
 ): [number, number, number] {
   const [px, py, pz] = point;
@@ -114,6 +133,8 @@ export function computeBuoyancy(
 
   // Per-point buoyancy
   const forcePerPoint = buoyancyStrength / numPoints;
+  const dampingPerPoint = (verticalDamping * boatMass) / numPoints;
+  const halfWaveVelocityDt = WAVE_VELOCITY_SAMPLE_DT * 0.5;
 
   for (const localPoint of hullSamplePoints) {
     // Transform local point to world space
@@ -131,8 +152,25 @@ export function computeBuoyancy(
     const submersion = Math.min(Math.max(rawSubmersion, 0), maxSubmersion);
 
     if (submersion > 0) {
-      // Upward buoyancy force proportional to submersion
-      const pointForce = submersion * forcePerPoint;
+      // Sample the wave's own vertical motion so damping is relative to the
+      // moving water surface instead of the world frame. Damping against
+      // absolute Y velocity made the whole boat lag behind rising/falling waves.
+      const previousWave = getWaveHeight(worldX, worldZ, time - halfWaveVelocityDt);
+      const nextWave = getWaveHeight(worldX, worldZ, time + halfWaveVelocityDt);
+      const waveVerticalVelocity =
+        (nextWave.height - previousWave.height) / WAVE_VELOCITY_SAMPLE_DT;
+
+      // Point vertical velocity = body linear Y velocity plus rotational
+      // contribution from pitch/roll at this hull point.
+      const pointVerticalVelocity =
+        bodyLinearVelocity[1] +
+        bodyAngularVelocity[2] * rotated[0] -
+        bodyAngularVelocity[0] * rotated[2];
+      const relativeVerticalVelocity = pointVerticalVelocity - waveVerticalVelocity;
+
+      // Upward buoyancy force proportional to submersion, with damping based
+      // on velocity relative to the local water motion.
+      const pointForce = submersion * forcePerPoint - relativeVerticalVelocity * dampingPerPoint;
       forceY += pointForce;
 
       // Torque = r x F (standard physics: position offset cross force)
@@ -147,11 +185,6 @@ export function computeBuoyancy(
   // Without this, the 5m bow-to-stern lever arm creates torques that flip the boat.
   torqueX *= torqueScale;
   torqueZ *= torqueScale;
-
-  // Velocity-proportional damping to prevent oscillation.
-  // This acts like water resistance: the faster the boat moves vertically,
-  // the more the water resists it. Critical for stable floating.
-  forceY -= bodyLinearVelocity[1] * verticalDamping * boatMass;
 
   // Angular velocity damping for rotational stability (water resists rolling/pitching)
   torqueX -= bodyAngularVelocity[0] * angularDamping * boatMass;

@@ -3,8 +3,11 @@
  * Used for buoyancy sampling and must exactly match the GPU shader.
  */
 
+import { WAVE_MODULATION } from './waterTunables';
+
 const TWO_PI = 2 * Math.PI;
 const GRAVITY = 9.8;
+const WORLD_SPACE_INVERSION_STEPS = 4;
 
 export interface GerstnerWave {
   direction: [number, number]; // normalized 2D direction (x, z)
@@ -81,6 +84,52 @@ export const DEFAULT_WAVES: readonly GerstnerWave[] = [
   },
 ];
 
+function fract(value: number): number {
+  return value - Math.floor(value);
+}
+
+function mix(a: number, b: number, t: number): number {
+  return a * (1 - t) + b * t;
+}
+
+function hash2D(x: number, z: number): number {
+  const dot = x * 127.1 + z * 311.7;
+  return fract(Math.sin(dot) * 43758.5453123);
+}
+
+function smoothNoise2D(x: number, z: number): number {
+  const ix = Math.floor(x);
+  const iz = Math.floor(z);
+  const fxRaw = fract(x);
+  const fzRaw = fract(z);
+  const fx = fxRaw * fxRaw * (3 - 2 * fxRaw);
+  const fz = fzRaw * fzRaw * (3 - 2 * fzRaw);
+
+  const a = hash2D(ix, iz);
+  const b = hash2D(ix + 1, iz);
+  const c = hash2D(ix, iz + 1);
+  const d = hash2D(ix + 1, iz + 1);
+
+  return mix(mix(a, b, fx), mix(c, d, fx), fz);
+}
+
+function getAmplitudeMultiplier(x: number, z: number, time: number): number {
+  const noiseX = x * WAVE_MODULATION.noiseScale + time * WAVE_MODULATION.timeScale;
+  const noiseZ = z * WAVE_MODULATION.noiseScale + time * WAVE_MODULATION.timeScale;
+  const modNoise = smoothNoise2D(noiseX, noiseZ);
+
+  return mix(
+    WAVE_MODULATION.minAmplitudeMultiplier,
+    WAVE_MODULATION.maxAmplitudeMultiplier,
+    modNoise,
+  );
+}
+
+interface SourceWaveSample extends WaveSample {
+  worldX: number;
+  worldZ: number;
+}
+
 /**
  * Normalize a 2D direction vector in-place (returns a new tuple).
  */
@@ -119,36 +168,43 @@ export function initWaves(waves: readonly GerstnerWave[]): GerstnerWave[] {
  *
  * Normal is computed from partial derivatives of the displaced surface.
  *
- * NOTE: The GPU shader displaces vertices both horizontally (dx,dz) and vertically (dy),
- * but theta is computed from the ORIGINAL (undisplaced) vertex position in both CPU and GPU.
- * For buoyancy sampling we query "what is the wave height at world position (x,z)?",
- * so we only need the vertical displacement (dy). The horizontal displacement affects
- * WHERE a GPU vertex ends up, but does not change the height at a given world coordinate.
- * Both CPU and GPU use the same theta formula, so the vertical displacement matches.
+ * The shader applies horizontal displacement before the rendered surface lands at a world
+ * coordinate, so world-space sampling must invert that displacement first. We do a short
+ * fixed-point solve from world XZ back to the source XZ used by the shader, then sample
+ * height and normal there.
  */
-export function getWaveHeight(
+function sampleWaveAtSourcePosition(
   x: number,
   z: number,
   time: number,
   waves: readonly GerstnerWave[],
-): WaveSample {
+): SourceWaveSample {
+  let dx = 0;
   let dy = 0;
+  let dz = 0;
 
   // Partial derivative accumulators for normal computation
   let dNx = 0;
   let dNz = 0;
+  const amplitudeMultiplier = getAmplitudeMultiplier(x, z, time);
 
-  for (const wave of waves) {
+  for (let waveIndex = 0; waveIndex < waves.length; waveIndex++) {
+    const wave = waves[waveIndex];
+    if (!wave) continue;
+
     const dirX = wave.direction[0];
     const dirZ = wave.direction[1];
     const k = TWO_PI / wave.wavelength;
-    const amp = wave.amplitude;
+    const amp =
+      wave.amplitude * (waveIndex < WAVE_MODULATION.modulatedWaveCount ? amplitudeMultiplier : 1);
 
     const theta = k * (dirX * x + dirZ * z) - wave.speed * k * time + wave.phase;
     const sinTheta = Math.sin(theta);
     const cosTheta = Math.cos(theta);
 
+    dx += dirX * amp * cosTheta;
     dy += amp * sinTheta;
+    dz += dirZ * amp * cosTheta;
 
     // Partial derivatives: d(height)/dx and d(height)/dz
     // For the normal: N = (-dH/dx, 1, -dH/dz) then normalized
@@ -165,5 +221,29 @@ export function getWaveHeight(
   return {
     height: dy,
     normal: [nx / len, ny / len, nz / len],
+    worldX: x + dx,
+    worldZ: z + dz,
+  };
+}
+
+export function getWaveHeight(
+  x: number,
+  z: number,
+  time: number,
+  waves: readonly GerstnerWave[],
+): WaveSample {
+  let sourceX = x;
+  let sourceZ = z;
+
+  for (let i = 0; i < WORLD_SPACE_INVERSION_STEPS; i++) {
+    const sample = sampleWaveAtSourcePosition(sourceX, sourceZ, time, waves);
+    sourceX += x - sample.worldX;
+    sourceZ += z - sample.worldZ;
+  }
+
+  const resolved = sampleWaveAtSourcePosition(sourceX, sourceZ, time, waves);
+  return {
+    height: resolved.height,
+    normal: resolved.normal,
   };
 }

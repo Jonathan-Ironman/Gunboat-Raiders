@@ -3,15 +3,27 @@
  * The vertex shader applies the same Gerstner formula as gerstnerWaves.ts (CPU mirror).
  */
 
-const NUM_WAVES = '8';
-const WAVE_DATA_LENGTH = '56'; // 8 waves * 7 floats per wave
+import { SHARED_WAVE_SAMPLING } from './waterConfig';
+import { WAVE_MODULATION, WAVE_UNIFORM_LAYOUT } from './waterTunables';
+
+const MODULATED_WAVE_COUNT = String(WAVE_MODULATION.modulatedWaveCount);
+const MOD_NOISE_SCALE = WAVE_MODULATION.noiseScale.toFixed(6);
+const MOD_TIME_SCALE = WAVE_MODULATION.timeScale.toFixed(6);
+const MOD_MIN = WAVE_MODULATION.minAmplitudeMultiplier.toFixed(6);
+const MOD_MAX = WAVE_MODULATION.maxAmplitudeMultiplier.toFixed(6);
+
+const NUM_WAVES = String(SHARED_WAVE_SAMPLING.waves.length);
+const WAVE_DATA_LENGTH = String(
+  SHARED_WAVE_SAMPLING.waves.length * WAVE_UNIFORM_LAYOUT.floatsPerWave,
+);
+const WAVE_STRIDE = String(WAVE_UNIFORM_LAYOUT.floatsPerWave);
 
 /**
  * Vertex shader: displaces a subdivided XZ plane using Gerstner waves.
  *
  * Uniforms:
  *   uTime — elapsed time in seconds
- *   uWaveData — flat array encoding 8 waves:
+ *   uWaveData — flat array encoding the shared initialized waves:
  *     per wave: [dirX, dirZ, steepness, wavelength, amplitude, speed, phase] = 7 floats
  */
 export const vertexShader = /* glsl */ `
@@ -60,11 +72,13 @@ export const vertexShader = /* glsl */ `
     float jacobian = 1.0;
 
     // Spatial amplitude modulation — drifting patches of calmer/rougher water
-    float modNoise = vertNoise(vec2(gridX * 0.005, gridZ * 0.005) + uTime * 0.01);
-    float ampMod = mix(0.6, 1.2, modNoise);
+    float modNoise = vertNoise(vec2(gridX * ${MOD_NOISE_SCALE}, gridZ * ${MOD_NOISE_SCALE}) + uTime * ${MOD_TIME_SCALE});
+    float ampMod = mix(${MOD_MIN}, ${MOD_MAX}, modNoise);
 
+    // IMPORTANT: Any visual change below that alters height (dy) or amplitude modulation
+    // MUST be mirrored in src/environment/gerstnerWaves.ts buoyancy sampling math.
     for (int i = 0; i < NUM_WAVES; i++) {
-      int base = i * 7;
+      int base = i * ${WAVE_STRIDE};
       float dirX       = uWaveData[base + 0];
       float dirZ       = uWaveData[base + 1];
       float steepness  = uWaveData[base + 2];
@@ -73,8 +87,8 @@ export const vertexShader = /* glsl */ `
       float speed       = uWaveData[base + 5];
       float phase       = uWaveData[base + 6];
 
-      // Modulate amplitude for first 2 waves (primary + secondary swell)
-      float amp = (i < 2) ? amplitude * ampMod : amplitude;
+      // Modulate amplitude for the first configured modulated waves.
+      float amp = (i < ${MODULATED_WAVE_COUNT}) ? amplitude * ampMod : amplitude;
 
       float k = TWO_PI / wavelength;
       float theta = k * (dirX * gridX + dirZ * gridZ) - speed * k * uTime + phase;

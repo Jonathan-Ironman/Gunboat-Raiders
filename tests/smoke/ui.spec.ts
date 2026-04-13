@@ -1,78 +1,65 @@
 import { test, expect } from '@playwright/test';
+import { startPlayingFromMenu, startGame, waitForPhase } from '../helpers/gameTestUtils';
 
 test.describe('UI smoke tests', () => {
-  test('title screen is visible on page load', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
+  test('main menu is visible on page load', async ({ page }) => {
+    await startGame(page);
+    await waitForPhase(page, 'mainMenu', 20_000);
 
-    const titleScreen = page.locator('[data-testid="title-screen"]');
-    await expect(titleScreen).toBeVisible({ timeout: 15_000 });
+    const mainMenu = page.locator('[data-testid="main-menu-scene"]');
+    await expect(mainMenu).toBeVisible({ timeout: 15_000 });
   });
 
-  test('title screen shows "GUNBOAT RAIDERS" text', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
+  test('main menu shows "GUNBOAT RAIDERS" text', async ({ page }) => {
+    await startGame(page);
+    await waitForPhase(page, 'mainMenu', 20_000);
 
-    const titleScreen = page.locator('[data-testid="title-screen"]');
-    await expect(titleScreen).toBeVisible({ timeout: 15_000 });
-    await expect(titleScreen).toContainText('GUNBOAT RAIDERS');
+    const mainMenu = page.locator('[data-testid="main-menu-scene"]');
+    await expect(mainMenu).toBeVisible({ timeout: 15_000 });
+    await expect(mainMenu).toContainText('GUNBOAT RAIDERS');
   });
 
-  test('clicking start game hides title screen', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
+  test('clicking New Game hides the main menu', async ({ page }) => {
+    await startGame(page);
+    await waitForPhase(page, 'mainMenu', 20_000);
 
-    const startButton = page.locator('[data-testid="start-button"]');
-    await expect(startButton).toBeVisible({ timeout: 15_000 });
-    await startButton.click();
+    const newGameButton = page.locator('[data-testid="main-menu-new-game-btn"]');
+    await expect(newGameButton).toBeVisible({ timeout: 15_000 });
+    await newGameButton.click();
+    await waitForPhase(page, 'briefing', 15_000);
 
-    const titleScreen = page.locator('[data-testid="title-screen"]');
-    await expect(titleScreen).not.toBeVisible({ timeout: 5_000 });
+    const mainMenu = page.locator('[data-testid="main-menu-scene"]');
+    await expect(mainMenu).toHaveCount(0);
   });
 
   test('HUD elements appear after starting game', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
-
-    const startButton = page.locator('[data-testid="start-button"]');
-    await expect(startButton).toBeVisible({ timeout: 15_000 });
-    await startButton.click();
+    await startPlayingFromMenu(page);
 
     const hud = page.locator('[data-testid="hud"]');
-    await expect(hud).toBeVisible({ timeout: 5_000 });
+    await expect(hud).toBeVisible({ timeout: 15_000 });
 
     const healthBar = page.locator('[data-testid="health-bar"]');
-    await expect(healthBar).toBeVisible({ timeout: 5_000 });
+    await expect(healthBar).toBeVisible({ timeout: 15_000 });
 
     const scoreDisplay = page.locator('[data-testid="score-display"]');
-    await expect(scoreDisplay).toBeVisible({ timeout: 5_000 });
+    await expect(scoreDisplay).toBeVisible({ timeout: 15_000 });
   });
 
   test('crosshair is not rendered during gameplay', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
-
-    const startButton = page.locator('[data-testid="start-button"]');
-    await expect(startButton).toBeVisible({ timeout: 15_000 });
-    await startButton.click();
+    await startPlayingFromMenu(page);
 
     const hud = page.locator('[data-testid="hud"]');
-    await expect(hud).toBeVisible({ timeout: 5_000 });
+    await expect(hud).toBeVisible({ timeout: 15_000 });
 
     // Crosshair must be absent — trajectory lines serve as the aiming cue
     await expect(page.locator('[data-testid="crosshair"]')).toHaveCount(0);
   });
 
   test('quadrant indicator is not rendered during gameplay', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
-
-    const startButton = page.locator('[data-testid="start-button"]');
-    await expect(startButton).toBeVisible({ timeout: 15_000 });
-    await startButton.click();
+    await startPlayingFromMenu(page);
 
     const hud = page.locator('[data-testid="hud"]');
-    await expect(hud).toBeVisible({ timeout: 5_000 });
+    await expect(hud).toBeVisible({ timeout: 15_000 });
 
     // Quadrant indicator diamonds must be absent
     await expect(page.locator('[data-testid="quadrant-indicator"]')).toHaveCount(0);

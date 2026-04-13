@@ -21,7 +21,7 @@ import {
   HULL_HEALTHY_THRESHOLD,
   ARMOR_SHIMMER_CLASS,
   HULL_PULSE_CLASS,
-} from '@/ui/HealthBar';
+} from '@/ui/HealthBar.helpers';
 import {
   ARMOR_CRITICAL_GRADIENT,
   ARMOR_DAMAGED_GRADIENT,

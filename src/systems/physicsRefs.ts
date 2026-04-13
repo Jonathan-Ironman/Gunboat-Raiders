@@ -6,15 +6,36 @@
  */
 
 import type { RapierRigidBody } from '@react-three/rapier';
+import type { BuoyancyConfig } from './BuoyancySystem';
 
 // ---- Buoyancy body registry ----
 
+export type HullSamplePoint = readonly [number, number, number];
+
+export interface BuoyancyBodyEntry {
+  body: RapierRigidBody;
+  configOverrides?: Partial<BuoyancyConfig>;
+  hullSamplePoints?: readonly HullSamplePoint[];
+}
+
 /** Global registry for boat rigid bodies that need buoyancy. */
-const buoyancyBodies = new Map<string, RapierRigidBody>();
+const buoyancyBodies = new Map<string, BuoyancyBodyEntry>();
 
 /** Register a rigid body for buoyancy processing. */
-export function registerBuoyancyBody(id: string, body: RapierRigidBody): void {
-  buoyancyBodies.set(id, body);
+export function registerBuoyancyBody(
+  id: string,
+  body: RapierRigidBody,
+  hullSamplePoints?: readonly HullSamplePoint[],
+  configOverrides?: Partial<BuoyancyConfig>,
+): void {
+  const entry: BuoyancyBodyEntry = { body };
+  if (hullSamplePoints) {
+    entry.hullSamplePoints = hullSamplePoints;
+  }
+  if (configOverrides) {
+    entry.configOverrides = configOverrides;
+  }
+  buoyancyBodies.set(id, entry);
 }
 
 /** Unregister a rigid body from buoyancy processing. */
@@ -23,7 +44,7 @@ export function unregisterBuoyancyBody(id: string): void {
 }
 
 /** Get all registered buoyancy bodies. */
-export function getBuoyancyBodies(): ReadonlyMap<string, RapierRigidBody> {
+export function getBuoyancyBodies(): ReadonlyMap<string, BuoyancyBodyEntry> {
   return buoyancyBodies;
 }
 
@@ -157,6 +178,32 @@ export function patchPlayerBodyState(patch: BodyStatePatch): boolean {
     }
     if (patch.angvel) {
       playerBodyRef.setAngvel(patch.angvel, true);
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Test-only helper: imperatively patch a specific enemy rigid body state.
+ * Returns false when the enemy body is not currently registered.
+ */
+export function patchEnemyBodyState(id: string, patch: BodyStatePatch): boolean {
+  const body = enemyBodies.get(id);
+  if (!body) return false;
+  try {
+    if (patch.position) {
+      body.setTranslation(patch.position, true);
+    }
+    if (patch.rotation) {
+      body.setRotation(patch.rotation, true);
+    }
+    if (patch.linvel) {
+      body.setLinvel(patch.linvel, true);
+    }
+    if (patch.angvel) {
+      body.setAngvel(patch.angvel, true);
     }
     return true;
   } catch {
