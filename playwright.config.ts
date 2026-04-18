@@ -10,6 +10,7 @@ export default defineConfig({
   // Global per-test timeout — generous to accommodate Rapier WASM init and
   // shader compilation on first load (can take 10–15 s).
   timeout: 45_000,
+  globalTeardown: './tests/smoke/global-teardown.ts',
   use: {
     baseURL: 'http://localhost:5173',
     screenshot: 'only-on-failure',

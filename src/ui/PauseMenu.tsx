@@ -41,6 +41,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { useGameStore } from '../store/gameStore';
 import { useGamePhase, useHasSave, useScore, useWaveNumber } from '../store/selectors';
+import { isE2E } from '../utils/e2e';
 import { Button } from './Button';
 import { ConfirmDialog } from './ConfirmDialog';
 import {
@@ -69,7 +70,10 @@ type PauseView = 'menu' | 'settings';
  */
 function handleContinueClick(): void {
   const canvas = document.querySelector('canvas');
-  if (canvas !== null) {
+  // Skip the pointer-lock request under E2E (VITE_E2E env or ?e2e=1 URL
+  // param) to avoid leaking Windows ClipCursor state onto the host desktop
+  // when Chromium is torn down mid-lock by Playwright / MCP automation.
+  if (canvas !== null && !isE2E()) {
     // `requestPointerLock` returns a promise in modern browsers; we
     // intentionally discard it — failures surface as a browser
     // console warning and must not block the resume.

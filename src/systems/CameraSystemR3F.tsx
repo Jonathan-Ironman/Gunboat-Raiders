@@ -26,6 +26,7 @@ import { useGameStore, type FiringQuadrant } from '@/store/gameStore';
 import { setAimOffset, MAX_PITCH_OFFSET_UP, MAX_PITCH_OFFSET_DOWN } from './aimOffsetRefs';
 import { setIsPointerLocked, resetPointerLockRefs } from './pointerLockRefs';
 import { getForcedAzimuth } from './cameraTestBridge';
+import { isE2E } from '@/utils/e2e';
 
 /** Camera orbit configuration */
 const CAMERA_RADIUS = 15;
@@ -256,20 +257,65 @@ export function CameraSystemR3F() {
     // included because the wave-transition overlay leaves gameplay
     // input fully active (see R4 pause flow).
     if (isPointerLockedRef.current) return;
+    // Skip under E2E (VITE_E2E env or ?e2e=1 URL param) to avoid leaking
+    // Windows ClipCursor state onto the host desktop when Chromium is torn
+    // down mid-lock by Playwright / MCP automation.
+    if (isE2E()) return;
     const phase = useGameStore.getState().phase;
     if (phase !== 'playing' && phase !== 'wave-clear') return;
     void gl.domElement.requestPointerLock();
   }, [gl.domElement]);
 
+  /**
+   * Swallow lock-request failures so a failed attempt (e.g. the browser
+   * rejected the request because there was no user gesture) doesn't leave
+   * the system in a zombie "expecting lock" state. Keeps the local and
+   * module-scope flags in sync with reality.
+   */
+  const onPointerLockError = useCallback(() => {
+    isPointerLockedRef.current = false;
+    setIsPointerLocked(false);
+  }, []);
+
   useEffect(() => {
     const domElement = gl.domElement;
     domElement.addEventListener('click', onCanvasClick);
     document.addEventListener('pointerlockchange', onPointerLockChange);
+    document.addEventListener('pointerlockerror', onPointerLockError);
     document.addEventListener('mousemove', onMouseMove);
+
+    // Release pointer lock whenever the page loses focus or is being torn
+    // down. This is the durable fix for the Windows ClipCursor leak: if
+    // Chromium is killed (e.g. by Playwright / MCP automation) while pointer
+    // lock is held, the OS cursor clip rectangle leaks onto the real desktop
+    // until reboot. Explicitly exiting on visibility / focus loss and on
+    // pagehide prevents that.
+    const releaseIfLocked = (): void => {
+      if (document.pointerLockElement === domElement) {
+        document.exitPointerLock();
+      }
+    };
+    const onVisibilityChange = (): void => {
+      if (document.hidden) releaseIfLocked();
+    };
+    const onWindowBlur = (): void => {
+      releaseIfLocked();
+    };
+    const onPageHide = (): void => {
+      releaseIfLocked();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('blur', onWindowBlur);
+    window.addEventListener('pagehide', onPageHide);
+
     return () => {
       domElement.removeEventListener('click', onCanvasClick);
       document.removeEventListener('pointerlockchange', onPointerLockChange);
+      document.removeEventListener('pointerlockerror', onPointerLockError);
       document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('blur', onWindowBlur);
+      window.removeEventListener('pagehide', onPageHide);
       // Release pointer lock on unmount
       if (document.pointerLockElement === domElement) {
         document.exitPointerLock();
@@ -280,7 +326,7 @@ export function CameraSystemR3F() {
       // gap flagged for follow-up; fixing it is out of scope for this commit.
       resetPointerLockRefs();
     };
-  }, [gl.domElement, onCanvasClick, onPointerLockChange, onMouseMove]);
+  }, [gl.domElement, onCanvasClick, onPointerLockChange, onPointerLockError, onMouseMove]);
 
   // Priority -1: runs before WeaponSystemR3F (priority 0) so that
   // activeQuadrant is always written before the weapon system reads it.
